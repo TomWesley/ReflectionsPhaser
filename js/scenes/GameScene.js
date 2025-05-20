@@ -324,7 +324,7 @@ class GameScene extends Phaser.Scene {
       this.spawners.forEach(spawner => spawner.destroy());
       this.spawners = [];
       
-      // Define spawner positions - ensure they're outside the game boundaries
+      // Define spawner positions - ensure they're inside the game boundaries
       const outerMargin = -1; // Increased distance outside boundary
       
       // Possible positions for spawners (outside boundaries)
