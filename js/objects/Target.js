@@ -4,15 +4,18 @@ class Target {
     this.x = x;
     this.y = y;
     
-    // Target size - increased for better hit detection
-    const size = Math.min(scene.cameras.main.height, scene.cameras.main.width) * 0.08;
+    // Target size - visual representation
+    const visualSize = Math.min(scene.cameras.main.height, scene.cameras.main.width) * 0.08;
     
     // Create visual representation (a circle)
-    this.graphics = scene.add.circle(x, y, size/2, 0x00ff00, 0.6)
+    this.graphics = scene.add.circle(x, y, visualSize/2, 0x00ff00, 0.6)
       .setStrokeStyle(2, 0x00ff00);
     
-    // Create physics body with larger collision radius
-    this.body = scene.matter.add.circle(x, y, size, { // Using larger radius for collision
+    // Create physics body with more precise collision radius
+    // Make the collision radius smaller than the visual size for better precision
+    const collisionRadius = visualSize * 0.4; // 40% of visual size for tighter collision
+    
+    this.body = scene.matter.add.circle(x, y, collisionRadius, { 
       isSensor: true, // Make it a sensor so it doesn't affect physics
       isStatic: true, // Don't move when hit
       label: 'target',
@@ -22,8 +25,15 @@ class Target {
       }
     });
     
-    // Associate this object with the body for collision reference
-    this.body.gameObject = this;
+    // Important: Don't set gameObject property directly
+    // Instead, we'll check for the 'target' label in collision handling
+    
+    // Add debug visualization of the collision area if debug is enabled
+    if (scene.matter.world.debugGraphic) {
+      const debugGraphics = scene.add.graphics({ lineStyle: { width: 1, color: 0xff00ff } });
+      debugGraphics.strokeCircle(x, y, collisionRadius);
+      this.debugGraphics = debugGraphics;
+    }
     
     // Play a pulsing animation for visibility
     scene.tweens.add({
@@ -85,6 +95,11 @@ class Target {
     // Remove graphics
     if (this.graphics) {
       this.graphics.destroy();
+    }
+    
+    // Remove debug graphics if they exist
+    if (this.debugGraphics) {
+      this.debugGraphics.destroy();
     }
   }
 }

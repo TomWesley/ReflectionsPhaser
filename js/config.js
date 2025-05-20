@@ -1,4 +1,3 @@
-// Game configuration
 const config = {
     type: Phaser.AUTO,
     parent: 'game-container',
@@ -9,7 +8,7 @@ const config = {
       default: 'matter',
       matter: {
         gravity: { y: 0 }, // No gravity
-        debug: false
+        debug: true // Set to true to see hitboxes for testing
       }
     },
     scale: {

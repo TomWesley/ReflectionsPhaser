@@ -7,8 +7,8 @@ class Laser {
       this.x = x;
       this.y = y;
       
-      // Physics settings for Matter.js - create a simple circle body
-      this.body = scene.matter.add.circle(x, y, 5, {
+      // Physics settings for Matter.js - create a tiny circle body for ultra-precise collisions
+      this.body = scene.matter.add.circle(x, y, 1, { // Ultra-small for pixel-perfect collisions
         frictionAir: 0,
         friction: 0,
         restitution: 1, // Perfect bounce
@@ -21,6 +21,9 @@ class Laser {
       
       // Remove default Matter.js rendering of the body
       this.body.render.visible = false;
+      
+      // Create a visual representation of the laser that's larger than the physics body
+      this.visualSize = 5; // Visual laser size
       
       // Speed and direction
       this.speed = speed;

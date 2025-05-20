@@ -3,6 +3,315 @@ class GameScene extends Phaser.Scene {
       super({ key: 'GameScene' });
     }
     
+    setupInput() {
+      // Setup drag input handlers
+      this.input.on('dragstart', (pointer, gameObject) => {
+        if (this.isGameStarted) return; // Can't move objects after game starts
+        
+        // If the object is a Mirror, call its startDrag method
+        if (gameObject instanceof Mirror) {
+          gameObject.startDrag();
+        }
+      });
+      
+      this.input.on('drag', (pointer, gameObject, dragX, dragY) => {
+        if (this.isGameStarted) return; // Can't move objects after game starts
+        
+        // Move the object
+        gameObject.x = dragX;
+        gameObject.y = dragY;
+        
+        // Constrain to game boundaries
+        gameObject.x = Phaser.Math.Clamp(gameObject.x, this.leftBound + 30, this.rightBound - 30);
+        gameObject.y = Phaser.Math.Clamp(gameObject.y, this.topBound + 30, this.bottomBound - 30);
+      });
+      
+      this.input.on('dragend', (pointer, gameObject) => {
+        if (this.isGameStarted) return; // Can't move objects after game starts
+        
+        // If the object is a Mirror, call its stopDrag method
+        if (gameObject instanceof Mirror) {
+          gameObject.stopDrag();
+        }
+      });
+    }
+    
+    setupCollisions() {
+      // Main collision handling is in the Laser class
+    }
+    
+    startGame() {
+      if (this.isGameStarted) return;
+      
+      this.isGameStarted = true;
+      this.gameTime = 0;
+      this.targetHit = false;
+      this.totalReflections = 0; // For tracking total reflections
+      
+      // Hide start button
+      this.startButton.setVisible(false);
+      this.startText.setVisible(false);
+      
+      // Hide instructions
+      this.instructionsText.setVisible(false);
+      
+      // Lock all mirrors
+      this.mirrors.forEach(mirror => mirror.lock());
+      
+      // Launch lasers from each spawner
+      this.lasers = [];
+      this.spawners.forEach(spawner => {
+        // Create laser at spawner position with spawner direction
+        const laser = new Laser(this, spawner.position.x, spawner.position.y, spawner.direction);
+        
+        // Add to lasers array
+        this.lasers.push(laser);
+      });
+      
+      // Set time limit
+      this.timeLimit = 60; // 60 seconds
+      this.timeEvent = this.time.addEvent({
+        delay: this.timeLimit * 1000,
+        callback: this.gameOver,
+        callbackScope: this
+      });
+    }
+    
+    onLaserHitTarget(laser) {
+      if (!this.isGameStarted || this.targetHit) return;
+      
+      console.log('Laser hit target! Time:', this.gameTime.toFixed(3));
+      
+      // Mark target as hit
+      this.targetHit = true;
+      
+      // Calculate total reflections from all lasers
+      this.totalReflections = this.lasers.reduce((total, laser) => total + laser.reflectionCount, 0);
+      
+      // Call target's hit effect
+      this.target.onHit();
+      
+      // Game complete!
+      this.gameComplete();
+    }
+    
+    gameComplete() {
+      if (!this.isGameStarted || !this.targetHit) return;
+      
+      // Stop the game
+      this.isGameStarted = false;
+      
+      // If there's a time event, remove it
+      if (this.timeEvent) {
+        this.timeEvent.remove();
+      }
+      
+      // Stop all lasers (freeze them in place)
+      this.lasers.forEach(laser => {
+        if (laser.body) {
+          this.matter.body.setStatic(laser.body, true);
+        }
+      });
+      
+      console.log('Game completed! Showing completion panel.');
+      
+      // Update and show completion panel
+      this.finalScoreText.setText(`Time: ${this.gameTime.toFixed(3)}s`);
+      this.reflectionsText.setText(`Reflections: ${this.totalReflections}`);
+      this.gameCompletionPanel.setVisible(true);
+      
+      // Animate panel in with a bounce effect
+      this.tweens.add({
+        targets: this.gameCompletionPanel,
+        alpha: { from: 0, to: 1 },
+        scale: { from: 0.8, to: 1 },
+        duration: 600,
+        ease: 'Back.out'
+      });
+      
+      // Play success sound (if you want to add audio)
+      // this.sound.play('success');
+      
+      // Add celebration particles
+      this.createCelebrationEffect();
+    }
+    
+    createCelebrationEffect() {
+      // Add particle effects for celebration
+      const particles = this.add.particles('laser');
+      
+      // Confetti effect
+      const confetti = particles.createEmitter({
+        x: { min: this.leftBound, max: this.rightBound },
+        y: this.topBound - 50,
+        speed: { min: 200, max: 300 },
+        angle: { min: 80, max: 100 },
+        scale: { start: 0.1, end: 0 },
+        lifespan: 4000,
+        blendMode: 'ADD',
+        frequency: 50,
+        tint: [0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0xff00ff]
+      });
+      
+      // Stop after 3 seconds
+      this.time.delayedCall(3000, () => {
+        confetti.stop();
+        // Clean up particles after they're done
+        this.time.delayedCall(4000, () => {
+          particles.destroy();
+        });
+      });
+    }
+    
+    gameOver() {
+      if (!this.isGameStarted || this.targetHit) return;
+      
+      // Stop the game
+      this.isGameStarted = false;
+      
+      // Stop all lasers
+      this.lasers.forEach(laser => {
+        if (laser.body) {
+          this.matter.body.setStatic(laser.body, true);
+        }
+      });
+      
+      // Show game over panel with animation
+      this.gameOverPanel.setVisible(true);
+      this.gameOverPanel.alpha = 0;
+      
+      // Animate panel in
+      this.tweens.add({
+        targets: this.gameOverPanel,
+        alpha: 1,
+        duration: 500,
+        ease: 'Cubic.out'
+      });
+      
+      // Play game over sound (if you want to add audio)
+      // this.sound.play('gameover');
+    }
+    
+    restartGame() {
+      // Clean up current game elements
+      this.cleanupGame();
+      
+      // Hide UI panels
+      this.gameCompletionPanel.setVisible(false);
+      this.gameOverPanel.setVisible(false);
+      
+      // Reset game state
+      this.init();
+      
+      // Create new level elements
+      this.createBoundaries();
+      this.createTarget();
+      this.setupLevel();
+      
+      // Show start button and instructions
+      this.startButton.setVisible(true);
+      this.startText.setVisible(true);
+      this.instructionsText.setVisible(true);
+      
+      // Reset timer display
+      this.timerText.setText('Time: 0.000');
+    }
+    
+    cleanupGame() {
+      // Clean up lasers
+      this.lasers.forEach(laser => laser.destroy());
+      this.lasers = [];
+      
+      // Clean up mirrors
+      this.mirrors.forEach(mirror => mirror.destroy());
+      this.mirrors = [];
+      
+      // Clean up spawners
+      this.spawners.forEach(spawner => spawner.destroy());
+      this.spawners = [];
+      
+      // Clean up target
+      if (this.target) {
+        this.target.destroy();
+        this.target = null;
+      }
+      
+      // Remove physics bodies
+      if (this.matter.world) {
+        if (this.topWall) this.matter.world.remove(this.topWall);
+        if (this.bottomWall) this.matter.world.remove(this.bottomWall);
+        if (this.leftWall) this.matter.world.remove(this.leftWall);
+        if (this.rightWall) this.matter.world.remove(this.rightWall);
+      }
+      
+      // Remove game area visual
+      if (this.gameArea) this.gameArea.destroy();
+      
+      // Clear any running timers
+      if (this.timeEvent) this.timeEvent.remove();
+    }
+    
+    submitScore() {
+      // Prompt for player name
+      const playerName = prompt("Enter your name for the leaderboard:", "");
+      
+      if (playerName !== null && playerName.trim() !== '') {
+        // Show loading message
+        const loadingText = this.add.text(0, 0, 'Submitting score...', {
+          fontFamily: 'Arial',
+          fontSize: '18px',
+          color: '#ffffff'
+        }).setOrigin(0.5);
+        
+        try {
+          // Submit score to Firebase
+          if (typeof firebase !== 'undefined' && firebase.auth && firebase.firestore) {
+            signInAnonymously()
+              .then(() => {
+                return submitScoreToLeaderboard(playerName, this.gameTime);
+              })
+              .then(() => {
+                loadingText.setText('Score submitted successfully!');
+                
+                // Show leaderboard after a short delay
+                this.time.delayedCall(1000, () => {
+                  loadingText.destroy();
+                  this.scene.start('LeaderboardScene');
+                });
+              })
+              .catch(error => {
+                console.error("Error submitting score:", error);
+                loadingText.setText('Error submitting score. Please try again.');
+                
+                // Remove error message after a delay
+                this.time.delayedCall(2000, () => {
+                  loadingText.destroy();
+                });
+              });
+          } else {
+            // Firebase not available
+            loadingText.setText('Leaderboard service not available.');
+            this.time.delayedCall(2000, () => loadingText.destroy());
+          }
+        } catch (error) {
+          console.error("Error with Firebase:", error);
+          loadingText.setText('Leaderboard service not available.');
+          this.time.delayedCall(2000, () => loadingText.destroy());
+        }
+      }
+    }
+    
+    returnToMenu() {
+      // Clean up current game
+      this.cleanupGame();
+      
+      // Go to menu scene with fade transition
+      this.cameras.main.fadeOut(500, 0, 0, 0);
+      this.cameras.main.once('camerafadeoutcomplete', () => {
+        this.scene.start('MenuScene');
+      });
+    }
+    
     init() {
       // Game state
       this.isGameStarted = false;
@@ -51,7 +360,7 @@ class GameScene extends Phaser.Scene {
     
     update(time, delta) {
       // Update game timer if game has started
-      if (this.isGameStarted) {
+      if (this.isGameStarted && !this.targetHit) {
         this.gameTime += delta / 1000; // Convert ms to seconds
         this.timerText.setText(`Time: ${this.gameTime.toFixed(3)}`);
       }
@@ -108,64 +417,89 @@ class GameScene extends Phaser.Scene {
     }
     
     createCompletionPanel() {
-      this.gameCompletionPanel = this.add.container(0, 0).setAlpha(0).setVisible(false);
+      // Create a container to hold all elements
+      this.gameCompletionPanel = this.add.container(0, 0).setVisible(false);
       
-      const panel = this.add.rectangle(0, 0, 400, 300, 0x000000, 0.8);
-      const completeText = this.add.text(0, -100, 'TARGET HIT!', {
+      // Semitransparent background that covers the entire screen
+      const fullScreenBg = this.add.rectangle(
+        0, 0, 
+        this.cameras.main.width * 2, 
+        this.cameras.main.height * 2, 
+        0x000000, 0.7
+      );
+      
+      // Panel background
+      const panel = this.add.rectangle(0, 0, 400, 350, 0x111155, 0.9)
+        .setStrokeStyle(2, 0x3333ff);
+      
+      // Success text with glow effect
+      const completeText = this.add.text(0, -130, 'TARGET HIT!', {
+        fontFamily: 'Arial',
+        fontSize: '40px',
+        fontStyle: 'bold',
+        color: '#00ff00',
+        stroke: '#004400',
+        strokeThickness: 4,
+        shadow: { color: '#00ff00', blur: 10, stroke: true, fill: true }
+      }).setOrigin(0.5);
+      
+      // Congratulatory message
+      const congratsText = this.add.text(0, -80, 'Congratulations!', {
+        fontFamily: 'Arial',
+        fontSize: '28px',
+        color: '#ffffff'
+      }).setOrigin(0.5);
+      
+      this.finalScoreText = this.add.text(0, -30, 'Time: 0.000', {
         fontFamily: 'Arial',
         fontSize: '32px',
         fontStyle: 'bold',
-        color: '#00ff00'
+        color: '#ffff00'
       }).setOrigin(0.5);
       
-      this.finalScoreText = this.add.text(0, -40, 'Time: 0.000', {
+      const reflectionsText = this.add.text(0, 10, 'Reflections: 0', {
         fontFamily: 'Arial',
         fontSize: '24px',
         color: '#ffffff'
       }).setOrigin(0.5);
+      this.reflectionsText = reflectionsText; // Store for later update
       
-      const submitScoreButton = this.add.rectangle(0, 20, 250, 50, 0x4444ff, 0.8)
+      // Play again button
+      const playAgainButton = this.add.rectangle(0, 70, 250, 60, 0x22aa22, 0.9)
         .setInteractive({ useHandCursor: true })
-        .on('pointerdown', () => this.submitScore())
-        .on('pointerover', () => submitScoreButton.fillColor = 0x6666ff)
-        .on('pointerout', () => submitScoreButton.fillColor = 0x4444ff);
+        .on('pointerdown', () => this.restartGame())
+        .on('pointerover', () => playAgainButton.fillColor = 0x44cc44)
+        .on('pointerout', () => playAgainButton.fillColor = 0x22aa22);
       
-      const submitScoreText = this.add.text(0, 20, 'SUBMIT SCORE', {
+      const playAgainText = this.add.text(0, 70, 'PLAY AGAIN', {
         fontFamily: 'Arial',
-        fontSize: '20px',
+        fontSize: '24px',
+        fontStyle: 'bold',
         color: '#ffffff'
       }).setOrigin(0.5);
       
-      const playAgainButton = this.add.rectangle(0, 80, 250, 50, 0x444477, 0.8)
-        .setInteractive({ useHandCursor: true })
-        .on('pointerdown', () => this.scene.restart())
-        .on('pointerover', () => playAgainButton.fillColor = 0x5555aa)
-        .on('pointerout', () => playAgainButton.fillColor = 0x444477);
-      
-      const playAgainText = this.add.text(0, 80, 'PLAY AGAIN', {
-        fontFamily: 'Arial',
-        fontSize: '20px',
-        color: '#ffffff'
-      }).setOrigin(0.5);
-      
-      const menuButton = this.add.rectangle(0, 140, 250, 50, 0x666666, 0.8)
+      // Main menu button
+      const menuButton = this.add.rectangle(0, 140, 250, 60, 0x2244aa, 0.9)
         .setInteractive({ useHandCursor: true })
         .on('pointerdown', () => this.returnToMenu())
-        .on('pointerover', () => menuButton.fillColor = 0x888888)
-        .on('pointerout', () => menuButton.fillColor = 0x666666);
+        .on('pointerover', () => menuButton.fillColor = 0x4466cc)
+        .on('pointerout', () => menuButton.fillColor = 0x2244aa);
       
       const menuText = this.add.text(0, 140, 'MAIN MENU', {
         fontFamily: 'Arial',
-        fontSize: '20px',
+        fontSize: '24px',
+        fontStyle: 'bold',
         color: '#ffffff'
       }).setOrigin(0.5);
       
+      // Add everything to the container
       this.gameCompletionPanel.add([
+        fullScreenBg,
         panel, 
         completeText, 
+        congratsText,
         this.finalScoreText, 
-        submitScoreButton, 
-        submitScoreText, 
+        reflectionsText,
         playAgainButton, 
         playAgainText,
         menuButton,
@@ -174,50 +508,74 @@ class GameScene extends Phaser.Scene {
     }
     
     createGameOverPanel() {
-      this.gameOverPanel = this.add.container(0, 0).setAlpha(0).setVisible(false);
+      this.gameOverPanel = this.add.container(0, 0).setVisible(false);
       
-      const panel = this.add.rectangle(0, 0, 400, 300, 0x000000, 0.8);
-      const gameOverText = this.add.text(0, -100, 'TIME\'S UP', {
+      // Semitransparent background
+      const fullScreenBg = this.add.rectangle(
+        0, 0, 
+        this.cameras.main.width * 2, 
+        this.cameras.main.height * 2, 
+        0x000000, 0.7
+      );
+      
+      const panel = this.add.rectangle(0, 0, 400, 350, 0x331111, 0.9)
+        .setStrokeStyle(2, 0xff3333);
+      
+      const gameOverText = this.add.text(0, -130, 'TIME\'S UP', {
         fontFamily: 'Arial',
-        fontSize: '32px',
+        fontSize: '40px',
         fontStyle: 'bold',
-        color: '#ff0000'
+        color: '#ff0000',
+        stroke: '#440000',
+        strokeThickness: 4,
+        shadow: { color: '#ff0000', blur: 10, stroke: true, fill: true }
       }).setOrigin(0.5);
       
-      const messageText = this.add.text(0, -40, 'You ran out of time!', {
+      const messageText = this.add.text(0, -70, 'You ran out of time!', {
         fontFamily: 'Arial',
-        fontSize: '20px',
+        fontSize: '26px',
         color: '#ffffff'
       }).setOrigin(0.5);
       
-      const tryAgainButton = this.add.rectangle(0, 30, 250, 50, 0x4444ff, 0.8)
+      const hintText = this.add.text(0, -20, 'Try rearranging the mirrors\nfor a better path to the target.', {
+        fontFamily: 'Arial',
+        fontSize: '20px',
+        color: '#aaaaaa',
+        align: 'center'
+      }).setOrigin(0.5);
+      
+      const tryAgainButton = this.add.rectangle(0, 60, 250, 60, 0xaa2222, 0.9)
         .setInteractive({ useHandCursor: true })
-        .on('pointerdown', () => this.scene.restart())
-        .on('pointerover', () => tryAgainButton.fillColor = 0x6666ff)
-        .on('pointerout', () => tryAgainButton.fillColor = 0x4444ff);
+        .on('pointerdown', () => this.restartGame())
+        .on('pointerover', () => tryAgainButton.fillColor = 0xcc4444)
+        .on('pointerout', () => tryAgainButton.fillColor = 0xaa2222);
       
-      const tryAgainText = this.add.text(0, 30, 'TRY AGAIN', {
+      const tryAgainText = this.add.text(0, 60, 'TRY AGAIN', {
         fontFamily: 'Arial',
-        fontSize: '20px',
+        fontSize: '24px',
+        fontStyle: 'bold',
         color: '#ffffff'
       }).setOrigin(0.5);
       
-      const menuButton = this.add.rectangle(0, 100, 250, 50, 0x666666, 0.8)
+      const menuButton = this.add.rectangle(0, 130, 250, 60, 0x2244aa, 0.9)
         .setInteractive({ useHandCursor: true })
         .on('pointerdown', () => this.returnToMenu())
-        .on('pointerover', () => menuButton.fillColor = 0x888888)
-        .on('pointerout', () => menuButton.fillColor = 0x666666);
+        .on('pointerover', () => menuButton.fillColor = 0x4466cc)
+        .on('pointerout', () => menuButton.fillColor = 0x2244aa);
       
-      const menuText = this.add.text(0, 100, 'MAIN MENU', {
+      const menuText = this.add.text(0, 130, 'MAIN MENU', {
         fontFamily: 'Arial',
-        fontSize: '20px',
+        fontSize: '24px',
+        fontStyle: 'bold',
         color: '#ffffff'
       }).setOrigin(0.5);
       
       this.gameOverPanel.add([
+        fullScreenBg,
         panel, 
         gameOverText, 
         messageText, 
+        hintText,
         tryAgainButton, 
         tryAgainText,
         menuButton,
@@ -227,7 +585,7 @@ class GameScene extends Phaser.Scene {
     
     createBoundaries() {
       // Create boundary walls using Matter.js
-      const wallThickness = 20;
+      const wallThickness = 5; // Reduced from 20 to 5 for more precise collisions
       
       // Top wall
       this.topWall = this.matter.add.rectangle(0, this.topBound - wallThickness/2, this.gameWidth, wallThickness, {
@@ -271,10 +629,11 @@ class GameScene extends Phaser.Scene {
         }
       });
       
-      // Visual representation of game area
+      // Visual representation of game area - slightly inset from the actual physics boundaries
+      const visualInset = 1; // Visual inset from physics boundaries
       this.gameArea = this.add.rectangle(0, 0, 
-        this.rightBound - this.leftBound, 
-        this.bottomBound - this.topBound, 
+        this.rightBound - this.leftBound - visualInset*2, 
+        this.bottomBound - this.topBound - visualInset*2, 
         0x111144, 0.3)
         .setStrokeStyle(2, 0x3333aa);
     }
@@ -379,190 +738,6 @@ class GameScene extends Phaser.Scene {
         
         // Add to spawners array
         this.spawners.push(spawner);
-      }
-    }
-    
-    setupInput() {
-      // Setup drag input handlers
-      this.input.on('dragstart', (pointer, gameObject) => {
-        if (this.isGameStarted) return; // Can't move objects after game starts
-        
-        // If the object is a Mirror, call its startDrag method
-        if (gameObject instanceof Mirror) {
-          gameObject.startDrag();
-        }
-      });
-      
-      this.input.on('drag', (pointer, gameObject, dragX, dragY) => {
-        if (this.isGameStarted) return; // Can't move objects after game starts
-        
-        // Move the object
-        gameObject.x = dragX;
-        gameObject.y = dragY;
-        
-        // Constrain to game boundaries
-        gameObject.x = Phaser.Math.Clamp(gameObject.x, this.leftBound + 30, this.rightBound - 30);
-        gameObject.y = Phaser.Math.Clamp(gameObject.y, this.topBound + 30, this.bottomBound - 30);
-      });
-      
-      this.input.on('dragend', (pointer, gameObject) => {
-        if (this.isGameStarted) return; // Can't move objects after game starts
-        
-        // If the object is a Mirror, call its stopDrag method
-        if (gameObject instanceof Mirror) {
-          gameObject.stopDrag();
-        }
-      });
-    }
-    
-    setupCollisions() {
-      // Collision detection is handled in the Laser class
-    }
-    
-    startGame() {
-      if (this.isGameStarted) return;
-      
-      this.isGameStarted = true;
-      this.gameTime = 0;
-      this.targetHit = false;
-      
-      // Hide start button
-      this.startButton.setVisible(false);
-      this.startText.setVisible(false);
-      
-      // Hide instructions
-      this.instructionsText.setVisible(false);
-      
-      // Lock all mirrors
-      this.mirrors.forEach(mirror => mirror.lock());
-      
-      // Launch lasers from each spawner
-      this.lasers = [];
-      this.spawners.forEach(spawner => {
-        // Create laser at spawner position with spawner direction
-        const laser = new Laser(this, spawner.position.x, spawner.position.y, spawner.direction);
-        
-        // Add to lasers array
-        this.lasers.push(laser);
-      });
-      
-      // Set time limit
-      this.timeLimit = 60; // 60 seconds
-      this.timeEvent = this.time.addEvent({
-        delay: this.timeLimit * 1000,
-        callback: this.gameOver,
-        callbackScope: this
-      });
-    }
-    
-    onLaserHitTarget(laser) {
-      if (!this.isGameStarted || this.targetHit) return;
-      
-      console.log('Laser hit target! Time:', this.gameTime.toFixed(3));
-      
-      // Mark target as hit
-      this.targetHit = true;
-      
-      // Call target's hit effect
-      this.target.onHit();
-      
-      // Game complete!
-      this.gameComplete();
-    }
-    
-    gameComplete() {
-      if (!this.isGameStarted || !this.targetHit) return;
-      
-      // Stop the game
-      this.isGameStarted = false;
-      
-      // If there's a time event, remove it
-      if (this.timeEvent) {
-        this.timeEvent.remove();
-      }
-      
-      // Stop all lasers (freeze them in place)
-      this.lasers.forEach(laser => {
-        if (laser.body) {
-          this.matter.body.setStatic(laser.body, true);
-        }
-      });
-      
-      console.log('Game completed! Showing completion panel.');
-      
-      // Show completion panel
-      this.finalScoreText.setText(`Time: ${this.gameTime.toFixed(3)}`);
-      this.gameCompletionPanel.setVisible(true);
-      
-      // Animate panel in
-      this.tweens.add({
-        targets: this.gameCompletionPanel,
-        alpha: 1,
-        duration: 500,
-        ease: 'Cubic.out'
-      });
-    }
-    
-    gameOver() {
-      if (!this.isGameStarted || this.targetHit) return;
-      
-      // Stop the game
-      this.isGameStarted = false;
-      
-      // Stop all lasers
-      this.lasers.forEach(laser => {
-        if (laser.body) {
-          this.matter.body.setStatic(laser.body, true);
-        }
-      });
-      
-      // Show game over panel
-      this.gameOverPanel.setVisible(true);
-      
-      // Animate panel in
-      this.tweens.add({
-        targets: this.gameOverPanel,
-        alpha: 1,
-        duration: 500,
-        ease: 'Cubic.out'
-      });
-    }
-    
-    submitScore() {
-      // Prompt for player name
-      const playerName = prompt("Enter your name for the leaderboard:", "");
-      
-      if (playerName !== null) { // If user didn't cancel
-        // Show loading message
-        const loadingText = this.add.text(0, 0, 'Submitting score...', {
-          fontFamily: 'Arial',
-          fontSize: '18px',
-          color: '#ffffff'
-        }).setOrigin(0.5);
-        
-        // Submit score to Firebase
-        signInAnonymously()
-          .then(() => {
-            return submitScoreToLeaderboard(playerName, this.gameTime);
-          })
-          .then(() => {
-            loadingText.setText('Score submitted successfully!');
-            
-            // Show leaderboard after a short delay
-            this.time.delayedCall(1000, () => {
-              loadingText.destroy();
-              this.scene.start('LeaderboardScene');
-            });
-          })
-          .catch(error => {
-            console.error("Error submitting score:", error);
-            loadingText.setText('Error submitting score. Please try again.');
-            
-            // Remove error message after a delay
-            this.time.delayedCall(2000, () => {
-              loadingText.destroy();
-            });
-          });
       }
     }
     
