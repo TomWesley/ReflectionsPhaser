@@ -7,25 +7,23 @@ class GameScene extends Phaser.Scene {
       // Game state
       this.isGameStarted = false;
       this.gameTime = 0;
-      this.absorberCount = 0;
-      this.totalLasers = 0;
-      this.absorbedLasers = 0;
+      this.targetHit = false; // New variable for win condition
       
       // Object collections
       this.lasers = [];
       this.mirrors = [];
-      this.absorbers = [];
       this.spawners = [];
       
       // Game dimensions
       this.gameWidth = this.cameras.main.width;
       this.gameHeight = this.cameras.main.height;
       
-      // Game boundaries
-      this.leftBound = -this.gameWidth / 2 + 20;
-      this.rightBound = this.gameWidth / 2 - 20;
-      this.topBound = -this.gameHeight / 2 + 20;
-      this.bottomBound = this.gameHeight / 2 - 20;
+      // Game boundaries - reduced to make room for spawners outside
+      const margin = Math.min(this.gameWidth, this.gameHeight) * 0.08; // 8% margin
+      this.leftBound = -this.gameWidth / 2 + margin;
+      this.rightBound = this.gameWidth / 2 - margin;
+      this.topBound = -this.gameHeight / 2 + margin;
+      this.bottomBound = this.gameHeight / 2 - margin;
     }
     
     create() {
@@ -37,6 +35,9 @@ class GameScene extends Phaser.Scene {
       
       // Create game boundaries
       this.createBoundaries();
+      
+      // Create central target
+      this.createTarget();
       
       // Setup level
       this.setupLevel();
@@ -55,10 +56,7 @@ class GameScene extends Phaser.Scene {
         this.timerText.setText(`Time: ${this.gameTime.toFixed(3)}`);
       }
       
-      // Check for game completion
-      if (this.isGameStarted && this.absorbedLasers === this.totalLasers) {
-        this.gameComplete();
-      }
+      // No need to check for game completion - now handled by onLaserHitTarget
     }
     
     createUI() {
@@ -84,7 +82,7 @@ class GameScene extends Phaser.Scene {
       }).setOrigin(0.5);
       
       // Instructions text
-      this.instructionsText = this.add.text(0, this.topBound + 40, 'Position the mirrors to reflect the laser beams into the absorbers', {
+      this.instructionsText = this.add.text(0, this.topBound + 40, 'Position the mirrors to reflect the laser beam into the target', {
         fontFamily: 'Arial',
         fontSize: '18px',
         color: '#ffffff',
@@ -115,7 +113,7 @@ class GameScene extends Phaser.Scene {
       this.gameCompletionPanel = this.add.container(0, 0).setAlpha(0).setVisible(false);
       
       const panel = this.add.rectangle(0, 0, 400, 300, 0x000000, 0.8);
-      const completeText = this.add.text(0, -100, 'LEVEL COMPLETE!', {
+      const completeText = this.add.text(0, -100, 'TARGET HIT!', {
         fontFamily: 'Arial',
         fontSize: '32px',
         fontStyle: 'bold',
@@ -181,14 +179,14 @@ class GameScene extends Phaser.Scene {
       this.gameOverPanel = this.add.container(0, 0).setAlpha(0).setVisible(false);
       
       const panel = this.add.rectangle(0, 0, 400, 300, 0x000000, 0.8);
-      const gameOverText = this.add.text(0, -100, 'GAME OVER', {
+      const gameOverText = this.add.text(0, -100, 'TIME\'S UP', {
         fontFamily: 'Arial',
         fontSize: '32px',
         fontStyle: 'bold',
         color: '#ff0000'
       }).setOrigin(0.5);
       
-      const messageText = this.add.text(0, -40, 'Laser hit the boundary!', {
+      const messageText = this.add.text(0, -40, 'You ran out of time!', {
         fontFamily: 'Arial',
         fontSize: '20px',
         color: '#ffffff'
@@ -231,60 +229,66 @@ class GameScene extends Phaser.Scene {
     
     createBoundaries() {
       // Create boundary walls using Matter.js
-      const wallThickness = 50;
+      const wallThickness = 20;
       
       // Top wall
-      this.matter.add.rectangle(0, this.topBound - wallThickness/2, this.gameWidth, wallThickness, {
+      this.topWall = this.matter.add.rectangle(0, this.topBound - wallThickness/2, this.gameWidth, wallThickness, {
         isStatic: true,
         label: 'boundary',
+        restitution: 1, // Perfect bounce
         collisionFilter: {
           category: 0x0008 // Category 4: boundaries
         }
       });
       
       // Bottom wall
-      this.matter.add.rectangle(0, this.bottomBound + wallThickness/2, this.gameWidth, wallThickness, {
+      this.bottomWall = this.matter.add.rectangle(0, this.bottomBound + wallThickness/2, this.gameWidth, wallThickness, {
         isStatic: true,
         label: 'boundary',
+        restitution: 1, // Perfect bounce
         collisionFilter: {
           category: 0x0008
         }
       });
       
       // Left wall
-      this.matter.add.rectangle(this.leftBound - wallThickness/2, 0, wallThickness, this.gameHeight, {
+      this.leftWall = this.matter.add.rectangle(this.leftBound - wallThickness/2, 0, wallThickness, this.gameHeight, {
         isStatic: true,
         label: 'boundary',
+        restitution: 1, // Perfect bounce
         collisionFilter: {
           category: 0x0008
         }
       });
       
       // Right wall
-      this.matter.add.rectangle(this.rightBound + wallThickness/2, 0, wallThickness, this.gameHeight, {
+      this.rightWall = this.matter.add.rectangle(this.rightBound + wallThickness/2, 0, wallThickness, this.gameHeight, {
         isStatic: true,
         label: 'boundary',
+        restitution: 1, // Perfect bounce
         collisionFilter: {
           category: 0x0008
         }
       });
       
       // Visual representation of game area
-      this.add.rectangle(0, 0, 
+      this.gameArea = this.add.rectangle(0, 0, 
         this.rightBound - this.leftBound, 
         this.bottomBound - this.topBound, 
         0x111144, 0.3)
         .setStrokeStyle(2, 0x3333aa);
     }
     
+    createTarget() {
+      // Create a target in the center of the screen
+      this.target = new Target(this, 0, 0);
+    }
+    
     setupLevel() {
       // Create mirrors
       this.createMirrors();
       
-      // Create absorbers
-      this.createAbsorbers();
-      
-      // Create spawners (laser emitters)
+      // Create spawners (laser emitters) - now outside boundary
       this.createSpawners();
     }
     
@@ -300,7 +304,7 @@ class GameScene extends Phaser.Scene {
         do {
           x = Phaser.Math.Between(this.leftBound + 50, this.rightBound - 50);
           y = Phaser.Math.Between(this.topBound + 50, this.bottomBound - 50);
-        } while (Math.abs(x) < 100 && Math.abs(y) < 100); // Keep away from center
+        } while (Math.abs(x) < 60 && Math.abs(y) < 60); // Keep away from center target
         
         // Random mirror type and rotation
         const type = Phaser.Math.Between(1, 4);
@@ -315,79 +319,68 @@ class GameScene extends Phaser.Scene {
       }
     }
     
-    createAbsorbers() {
-      // Clear existing absorbers
-      this.absorbers.forEach(absorber => absorber.destroy());
-      this.absorbers = [];
-      
-      // Create 3 absorbers at random positions
-      for (let i = 0; i < 3; i++) {
-        // Random position ensuring not too close to center
-        let x, y;
-        do {
-          x = Phaser.Math.Between(this.leftBound + 70, this.rightBound - 70);
-          y = Phaser.Math.Between(this.topBound + 70, this.bottomBound - 70);
-        } while (Math.abs(x) < 120 && Math.abs(y) < 120); // Keep away from center
-        
-        // Create the absorber
-        const absorber = new Absorber(this, x, y);
-        
-        // Add to absorbers array
-        this.absorbers.push(absorber);
-      }
-      
-      // Set the absorber count for game completion check
-      this.absorberCount = this.absorbers.length;
-    }
-    
     createSpawners() {
       // Clear existing spawners
       this.spawners.forEach(spawner => spawner.destroy());
       this.spawners = [];
       
-      // Define possible positions for spawners (near the boundaries)
+      // Define spawner positions - now OUTSIDE the game boundaries
+      const outerMargin = 15; // Distance outside boundary
+      
+      // Possible positions for spawners (outside boundaries)
       const spawnerPositions = [
-        { x: this.leftBound + 30, y: 0 },                       // Left center
-        { x: this.rightBound - 30, y: 0 },                      // Right center
-        { x: 0, y: this.topBound + 30 },                        // Top center
-        { x: 0, y: this.bottomBound - 30 },                     // Bottom center
-        { x: this.leftBound + 60, y: this.topBound + 60 },      // Top left
-        { x: this.rightBound - 60, y: this.topBound + 60 },     // Top right
-        { x: this.leftBound + 60, y: this.bottomBound - 60 },   // Bottom left
-        { x: this.rightBound - 60, y: this.bottomBound - 60 }   // Bottom right
+        // Left wall spawners
+        { x: this.leftBound - outerMargin, y: this.topBound * 0.5 },
+        { x: this.leftBound - outerMargin, y: 0 },
+        { x: this.leftBound - outerMargin, y: this.bottomBound * 0.5 },
+        
+        // Right wall spawners
+        { x: this.rightBound + outerMargin, y: this.topBound * 0.5 },
+        { x: this.rightBound + outerMargin, y: 0 },
+        { x: this.rightBound + outerMargin, y: this.bottomBound * 0.5 },
+        
+        // Top wall spawners
+        { x: this.leftBound * 0.5, y: this.topBound - outerMargin },
+        { x: 0, y: this.topBound - outerMargin },
+        { x: this.rightBound * 0.5, y: this.topBound - outerMargin },
+        
+        // Bottom wall spawners
+        { x: this.leftBound * 0.5, y: this.bottomBound + outerMargin },
+        { x: 0, y: this.bottomBound + outerMargin },
+        { x: this.rightBound * 0.5, y: this.bottomBound + outerMargin }
       ];
       
-      // Randomly select 5 spawner positions
-      const selectedPositions = Phaser.Utils.Array.Shuffle([...spawnerPositions]).slice(0, 5);
+      // Randomly select 4 spawner positions
+      const selectedPositions = Phaser.Utils.Array.Shuffle([...spawnerPositions]).slice(0, 4);
       
       // Create spawners at selected positions
       for (const pos of selectedPositions) {
-        // Create spawner (simple image)
-        const spawner = this.add.image(pos.x, pos.y, 'spawner');
-        
-        // Calculate direction - pointing away from the center
+        // Calculate direction pointing toward the center
         const direction = new Phaser.Math.Vector2(-pos.x, -pos.y).normalize();
         
-        // Set rotation (point away from center)
+        // Create spawner as a simple triangle pointing inward
+        // Create a small triangle pointing inward
+        const size = 10;
         const angle = Math.atan2(direction.y, direction.x);
-        spawner.setRotation(angle);
         
-        // Add slight random variation to angle
-        const randomAngle = angle + Phaser.Math.FloatBetween(-0.2, 0.2);
-        spawner.setRotation(randomAngle);
+        const spawner = this.add.triangle(
+          pos.x, pos.y,
+          0, -size,
+          size, size,
+          -size, size,
+          0xff4500
+        );
         
-        // Store direction for later use when creating laser
-        spawner.direction = new Phaser.Math.Vector2(
-          Math.cos(randomAngle),
-          Math.sin(randomAngle)
-        ).normalize();
+        // Rotate to point toward center
+        spawner.rotation = angle + Math.PI / 2;
+        
+        // Store direction for later when creating laser
+        spawner.direction = direction;
+        spawner.position = new Phaser.Math.Vector2(pos.x, pos.y);
         
         // Add to spawners array
         this.spawners.push(spawner);
       }
-      
-      // Set the total number of lasers for game completion check
-      this.totalLasers = this.spawners.length;
     }
     
     setupInput() {
@@ -395,8 +388,8 @@ class GameScene extends Phaser.Scene {
       this.input.on('dragstart', (pointer, gameObject) => {
         if (this.isGameStarted) return; // Can't move objects after game starts
         
-        // If the object is a Mirror or Absorber, call its startDrag method
-        if (gameObject instanceof Mirror || gameObject instanceof Absorber) {
+        // If the object is a Mirror, call its startDrag method
+        if (gameObject instanceof Mirror) {
           gameObject.startDrag();
         }
       });
@@ -416,31 +409,16 @@ class GameScene extends Phaser.Scene {
       this.input.on('dragend', (pointer, gameObject) => {
         if (this.isGameStarted) return; // Can't move objects after game starts
         
-        // If the object is a Mirror or Absorber, call its stopDrag method
-        if (gameObject instanceof Mirror || gameObject instanceof Absorber) {
+        // If the object is a Mirror, call its stopDrag method
+        if (gameObject instanceof Mirror) {
           gameObject.stopDrag();
         }
       });
     }
     
     setupCollisions() {
-      // Setup collision event handler
-      this.matter.world.on('collisionstart', (event) => {
-        // Loop through all collision pairs
-        const pairs = event.pairs;
-        
-        for (const pair of pairs) {
-          const bodyA = pair.bodyA;
-          const bodyB = pair.bodyB;
-          
-          // Check for collisions with boundaries
-          if ((bodyA.label === 'boundary' && bodyB.parent.gameObject instanceof Laser) ||
-              (bodyB.label === 'boundary' && bodyA.parent.gameObject instanceof Laser)) {
-            // Laser hit boundary - game over!
-            this.gameOver();
-          }
-        }
-      });
+      // We don't need special collision handlers here
+      // All collision detection is now handled in the Laser class
     }
     
     startGame() {
@@ -448,7 +426,7 @@ class GameScene extends Phaser.Scene {
       
       this.isGameStarted = true;
       this.gameTime = 0;
-      this.absorbedLasers = 0;
+      this.targetHit = false;
       
       // Hide start button
       this.startButton.setVisible(false);
@@ -457,47 +435,58 @@ class GameScene extends Phaser.Scene {
       // Hide instructions
       this.instructionsText.setVisible(false);
       
-      // Lock all mirrors and absorbers
+      // Lock all mirrors
       this.mirrors.forEach(mirror => mirror.lock());
-      this.absorbers.forEach(absorber => absorber.lock());
       
       // Launch lasers from each spawner
       this.lasers = [];
       this.spawners.forEach(spawner => {
-        // Create laser
-        const laser = new Laser(this, spawner.x, spawner.y, spawner.direction);
+        // Create laser at spawner position with spawner direction
+        const laser = new Laser(this, spawner.position.x, spawner.position.y, spawner.direction);
         
         // Add to lasers array
         this.lasers.push(laser);
       });
+      
+      // Set time limit (optional)
+      this.timeLimit = 60; // 60 seconds
+      this.timeEvent = this.time.addEvent({
+        delay: this.timeLimit * 1000,
+        callback: this.gameOver,
+        callbackScope: this
+      });
     }
     
-    onLaserAbsorbed(laser) {
-      // Find the matching absorber
-      for (const absorber of this.absorbers) {
-        // Check if the laser is close to this absorber
-        if (Phaser.Math.Distance.Between(laser.x, laser.y, absorber.x, absorber.y) < 30) {
-          // Call absorber's absorbLaser method
-          absorber.absorbLaser();
-          
-          // Increment absorbed lasers count
-          this.absorbedLasers++;
-          
-          // Check if all lasers are absorbed
-          if (this.absorbedLasers === this.totalLasers) {
-            this.gameComplete();
-          }
-          
-          break;
-        }
-      }
+    onLaserHitTarget(laser) {
+      if (!this.isGameStarted || this.targetHit) return;
+      
+      // Mark target as hit
+      this.targetHit = true;
+      
+      // Call target's hit effect
+      this.target.onHit();
+      
+      // Game complete!
+      this.gameComplete();
     }
     
     gameComplete() {
-      if (!this.isGameStarted) return;
+      if (!this.isGameStarted || !this.targetHit) return;
       
       // Stop the game
       this.isGameStarted = false;
+      
+      // If there's a time event, remove it
+      if (this.timeEvent) {
+        this.timeEvent.remove();
+      }
+      
+      // Stop all lasers (freeze them in place)
+      this.lasers.forEach(laser => {
+        if (laser.body) {
+          this.matter.body.setStatic(laser.body, true);
+        }
+      });
       
       // Show completion panel
       this.finalScoreText.setText(`Time: ${this.gameTime.toFixed(3)}`);
@@ -510,47 +499,19 @@ class GameScene extends Phaser.Scene {
         duration: 500,
         ease: 'Cubic.out'
       });
-      
-      // Celebration effects
-      this.createCompletionEffects();
-    }
-    
-    createCompletionEffects() {
-      // Add some particle effects for celebration
-      const particles = this.add.particles('laser');
-      
-      const emitter = particles.createEmitter({
-        x: 0,
-        y: 0,
-        speed: { min: 100, max: 200 },
-        angle: { min: 0, max: 360 },
-        scale: { start: 0.3, end: 0 },
-        blendMode: 'ADD',
-        lifespan: 1000,
-        quantity: 1
-      });
-      
-      // Create burst emitters at each absorber
-      this.absorbers.forEach(absorber => {
-        emitter.explode(20, absorber.x, absorber.y);
-      });
-      
-      // Destroy particles after a few seconds
-      this.time.delayedCall(3000, () => {
-        particles.destroy();
-      });
     }
     
     gameOver() {
-      if (!this.isGameStarted) return;
+      if (!this.isGameStarted || this.targetHit) return;
       
       // Stop the game
       this.isGameStarted = false;
       
       // Stop all lasers
       this.lasers.forEach(laser => {
-        laser.setStatic(true);
-        laser.setVelocity(0, 0);
+        if (laser.body) {
+          this.matter.body.setStatic(laser.body, true);
+        }
       });
       
       // Show game over panel

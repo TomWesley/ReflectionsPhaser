@@ -9,7 +9,7 @@ class MenuScene extends Phaser.Scene {
       this.load.image('mirror2', 'assets/images/mirror2.png');
       this.load.image('mirror3', 'assets/images/mirror3.png');
       this.load.image('mirror4', 'assets/images/mirror4.png');
-      this.load.image('absorber', 'assets/images/absorber.png');
+    //   this.load.image('absorber', 'assets/images/absorber.png');
       this.load.image('laser', 'assets/images/laser.png');
       this.load.image('spawner', 'assets/images/spawner.png');
       
