@@ -7,7 +7,7 @@ class GameScene extends Phaser.Scene {
       // Game state
       this.isGameStarted = false;
       this.gameTime = 0;
-      this.targetHit = false; // New variable for win condition
+      this.targetHit = false; // Win condition
       
       // Object collections
       this.lasers = [];
@@ -55,8 +55,6 @@ class GameScene extends Phaser.Scene {
         this.gameTime += delta / 1000; // Convert ms to seconds
         this.timerText.setText(`Time: ${this.gameTime.toFixed(3)}`);
       }
-      
-      // No need to check for game completion - now handled by onLaserHitTarget
     }
     
     createUI() {
@@ -237,7 +235,8 @@ class GameScene extends Phaser.Scene {
         label: 'boundary',
         restitution: 1, // Perfect bounce
         collisionFilter: {
-          category: 0x0008 // Category 4: boundaries
+          category: 0x0008, // Category 4: boundaries
+          mask: 0x0001 // Only collide with lasers
         }
       });
       
@@ -247,7 +246,8 @@ class GameScene extends Phaser.Scene {
         label: 'boundary',
         restitution: 1, // Perfect bounce
         collisionFilter: {
-          category: 0x0008
+          category: 0x0008,
+          mask: 0x0001 // Only collide with lasers
         }
       });
       
@@ -288,7 +288,7 @@ class GameScene extends Phaser.Scene {
       // Create mirrors
       this.createMirrors();
       
-      // Create spawners (laser emitters) - now outside boundary
+      // Create spawners (laser emitters)
       this.createSpawners();
     }
     
@@ -304,7 +304,7 @@ class GameScene extends Phaser.Scene {
         do {
           x = Phaser.Math.Between(this.leftBound + 50, this.rightBound - 50);
           y = Phaser.Math.Between(this.topBound + 50, this.bottomBound - 50);
-        } while (Math.abs(x) < 60 && Math.abs(y) < 60); // Keep away from center target
+        } while (Math.abs(x) < 80 && Math.abs(y) < 80); // Keep away from center target
         
         // Random mirror type and rotation
         const type = Phaser.Math.Between(1, 4);
@@ -324,8 +324,8 @@ class GameScene extends Phaser.Scene {
       this.spawners.forEach(spawner => spawner.destroy());
       this.spawners = [];
       
-      // Define spawner positions - now OUTSIDE the game boundaries
-      const outerMargin = 15; // Distance outside boundary
+      // Define spawner positions - ensure they're outside the game boundaries
+      const outerMargin = 30; // Increased distance outside boundary
       
       // Possible positions for spawners (outside boundaries)
       const spawnerPositions = [
@@ -358,9 +358,8 @@ class GameScene extends Phaser.Scene {
         // Calculate direction pointing toward the center
         const direction = new Phaser.Math.Vector2(-pos.x, -pos.y).normalize();
         
-        // Create spawner as a simple triangle pointing inward
-        // Create a small triangle pointing inward
-        const size = 10;
+        // Create spawner as a smaller triangle pointing inward
+        const size = 6; // Reduced from 10 to make spawners smaller
         const angle = Math.atan2(direction.y, direction.x);
         
         const spawner = this.add.triangle(
@@ -417,8 +416,7 @@ class GameScene extends Phaser.Scene {
     }
     
     setupCollisions() {
-      // We don't need special collision handlers here
-      // All collision detection is now handled in the Laser class
+      // Collision detection is handled in the Laser class
     }
     
     startGame() {
@@ -448,7 +446,7 @@ class GameScene extends Phaser.Scene {
         this.lasers.push(laser);
       });
       
-      // Set time limit (optional)
+      // Set time limit
       this.timeLimit = 60; // 60 seconds
       this.timeEvent = this.time.addEvent({
         delay: this.timeLimit * 1000,

@@ -2,8 +2,8 @@ class Mirror extends Phaser.Physics.Matter.Image {
     constructor(scene, x, y, type) {
       super(scene.matter.world, x, y, `mirror${type}`);
       
-      // Make mirrors much smaller
-      this.setScale(0.3);  // Reduced scale significantly
+      // Make mirrors significantly smaller - changed from 0.3 to 0.06 (20% of original size)
+      this.setScale(0.06);
       
       // Set up physics body
       this.setFriction(0);
@@ -19,6 +19,7 @@ class Mirror extends Phaser.Physics.Matter.Image {
       
       // Set collision category and group for collision filtering
       this.setCollisionCategory(0x0002); // Category 2: mirrors
+      this.setCollidesWith(0x0001); // Only collide with lasers
       
       // Add to scene
       scene.add.existing(this);
@@ -67,4 +68,4 @@ class Mirror extends Phaser.Physics.Matter.Image {
       this.disableInteractive();
       this.setStatic(true);
     }
-  }
+}

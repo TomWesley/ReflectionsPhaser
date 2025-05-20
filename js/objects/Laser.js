@@ -12,7 +12,11 @@ class Laser {
         frictionAir: 0,
         friction: 0,
         restitution: 1, // Perfect bounce
-        label: 'laser'
+        label: 'laser',
+        collisionFilter: {
+          category: 0x0001, // Category 1: lasers
+          mask: 0x0002 | 0x0004 | 0x0008 // Collide with mirrors, targets, and boundaries
+        }
       });
       
       // Remove default Matter.js rendering of the body
@@ -27,10 +31,6 @@ class Laser {
         x: this.direction.x * this.speed,
         y: this.direction.y * this.speed
       });
-      
-      // Set collision categories
-      scene.matter.body.setCollisionCategory(this.body, 0x0001); // Category 1: lasers
-      scene.matter.body.setCollidesWith(this.body, [0x0002, 0x0008]); // Collide with mirrors, boundaries
       
       // Create line for laser beam
       this.line = scene.add.line(0, 0, 0, 0, 0, 0, 0xff0000).setLineWidth(2);
@@ -202,4 +202,4 @@ class Laser {
       // Set inactive
       this.active = false;
     }
-  }
+}

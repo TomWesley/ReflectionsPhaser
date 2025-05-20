@@ -4,74 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Reflection Game</title>
-    <style>
-        html, body {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            background-color: #000000;
-            touch-action: none;
-        }
-        #game-container {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 100%;
-            height: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        canvas {
-            display: block;
-            margin: 0 auto;
-        }
-        /* Mobile-specific enhancements to add to index.html */
-@media (max-width: 768px) {
-  #game-container {
-    width: 100%;
-    height: 100%;
-  }
-  
-  /* Prevent unwanted scrolling */
-  html, body {
-    overflow: hidden;
-    position: fixed;
-    width: 100%;
-    height: 100%;
-    touch-action: none;
-    -webkit-overflow-scrolling: none;
-  }
-  
-  /* Improve touch targets */
-  canvas {
-    touch-action: none;
-  }
-}
-
-/* Ensure the page stays black during loading */
-html {
-  background-color: black;
-}
-
-/* Hide any browser UI on iOS (fullscreen) */
-body {
-  -webkit-touch-callout: none; /* iOS Safari */
-  -webkit-user-select: none;   /* Safari */
-  -khtml-user-select: none;    /* Konqueror HTML */
-  -moz-user-select: none;      /* Firefox */
-  -ms-user-select: none;       /* Internet Explorer/Edge */
-  user-select: none;           /* Non-prefixed version */
-}
-    </style>
+    <!-- External CSS file -->
+    <link rel="stylesheet" href="style.css">
+    
     <!-- Firebase App (the core Firebase SDK) -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    
     <!-- Firebase services -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    
     <!-- Phaser -->
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
 </head>
@@ -84,7 +26,7 @@ body {
     <!-- Game Objects -->
     <script src="js/objects/Mirror.js"></script>
     <script src="js/objects/Laser.js"></script>
-    <script src="js/objects/Target.js"></script>  <!-- New Target object replacing Absorber -->
+    <script src="js/objects/Target.js"></script>
     
     <!-- Game Scenes -->
     <script src="js/scenes/MenuScene.js"></script>
