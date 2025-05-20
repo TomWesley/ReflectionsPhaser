@@ -325,7 +325,7 @@ class GameScene extends Phaser.Scene {
       this.spawners = [];
       
       // Define spawner positions - ensure they're outside the game boundaries
-      const outerMargin = 30; // Increased distance outside boundary
+      const outerMargin = -1; // Increased distance outside boundary
       
       // Possible positions for spawners (outside boundaries)
       const spawnerPositions = [
@@ -458,6 +458,8 @@ class GameScene extends Phaser.Scene {
     onLaserHitTarget(laser) {
       if (!this.isGameStarted || this.targetHit) return;
       
+      console.log('Laser hit target! Time:', this.gameTime.toFixed(3));
+      
       // Mark target as hit
       this.targetHit = true;
       
@@ -485,6 +487,8 @@ class GameScene extends Phaser.Scene {
           this.matter.body.setStatic(laser.body, true);
         }
       });
+      
+      console.log('Game completed! Showing completion panel.');
       
       // Show completion panel
       this.finalScoreText.setText(`Time: ${this.gameTime.toFixed(3)}`);

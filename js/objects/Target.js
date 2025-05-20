@@ -4,15 +4,15 @@ class Target {
     this.x = x;
     this.y = y;
     
-    // Target size (5% of screen height - make it much smaller, as a circle)
-    const size = Math.min(scene.cameras.main.height, scene.cameras.main.width) * 0.05;
+    // Target size - increased for better hit detection
+    const size = Math.min(scene.cameras.main.height, scene.cameras.main.width) * 0.08;
     
-    // Create visual representation (a circle instead of a square)
+    // Create visual representation (a circle)
     this.graphics = scene.add.circle(x, y, size/2, 0x00ff00, 0.6)
       .setStrokeStyle(2, 0x00ff00);
     
-    // Create physics body (a circle sensor)
-    this.body = scene.matter.add.circle(x, y, size/2, {
+    // Create physics body with larger collision radius
+    this.body = scene.matter.add.circle(x, y, size, { // Using larger radius for collision
       isSensor: true, // Make it a sensor so it doesn't affect physics
       isStatic: true, // Don't move when hit
       label: 'target',
@@ -21,6 +21,9 @@ class Target {
         mask: 0x0001 // Only collide with lasers (category 1)
       }
     });
+    
+    // Associate this object with the body for collision reference
+    this.body.gameObject = this;
     
     // Play a pulsing animation for visibility
     scene.tweens.add({

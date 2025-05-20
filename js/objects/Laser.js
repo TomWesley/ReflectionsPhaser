@@ -111,12 +111,13 @@ class Laser {
         
         for (const pair of pairs) {
           // Check if this laser is involved in the collision
-          if (pair.bodyA === this.body || pair.bodyB === this.body) {
+          if ((pair.bodyA === this.body || pair.bodyB === this.body) && this.active) {
             // Get the other body
             const otherBody = pair.bodyA === this.body ? pair.bodyB : pair.bodyA;
             
             // Check for target collision - game complete
             if (otherBody.label === 'target') {
+              console.log('Laser collision with target detected!');
               this.scene.onLaserHitTarget(this);
               return;
             }
@@ -138,7 +139,10 @@ class Laser {
     
     reflectWithNormal(normal) {
       // Get current velocity
-      const velocity = this.scene.matter.body.getVelocity(this.body);
+      const velocity = {
+        x: this.body.velocity.x,
+        y: this.body.velocity.y
+      };
       
       // Calculate reflection using the formula: v' = v - 2(v·n)n
       const dotProduct = velocity.x * normal.x + velocity.y * normal.y;
@@ -162,7 +166,10 @@ class Laser {
       const normal = mirror.getNormal();
       
       // Get current velocity
-      const velocity = this.scene.matter.body.getVelocity(this.body);
+      const velocity = {
+        x: this.body.velocity.x,
+        y: this.body.velocity.y
+      };
       const velocityVector = new Phaser.Math.Vector2(velocity.x, velocity.y);
       
       // Calculate reflection

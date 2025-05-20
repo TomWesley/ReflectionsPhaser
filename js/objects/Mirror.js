@@ -2,8 +2,8 @@ class Mirror extends Phaser.Physics.Matter.Image {
     constructor(scene, x, y, type) {
       super(scene.matter.world, x, y, `mirror${type}`);
       
-      // Make mirrors significantly smaller - changed from 0.3 to 0.06 (20% of original size)
-      this.setScale(0.06);
+      // Make mirrors 3 times bigger than the previous size
+      this.setScale(0.58); // Increased from 0.06 (0.06 * 3 = 0.18)
       
       // Set up physics body
       this.setFriction(0);
