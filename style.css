@@ -63,3 +63,22 @@ body {
     -ms-user-select: none;       /* Internet Explorer/Edge */
     user-select: none;           /* Non-prefixed version */
 }
+:root {
+    /* Mirror style variables - can be changed for custom appearance */
+    --mirror-line-color: #00ff00;       /* Green outline by default */
+    --mirror-line-thickness: 2;         /* Line thickness */
+    --mirror-fill-color: #000000;       /* Black fill */
+    --mirror-fill-alpha: 0.2;           /* Slight transparency for fill */
+    --mirror-hover-color: #44aaff;      /* Blue outline when hovering */
+    --mirror-drag-color: #aaaaff;       /* Light blue when dragging */
+    --mirror-locked-color: #999999;     /* Gray when locked (game started) */
+    
+    /* Target style variables */
+    --target-color: #00ff00;            /* Green by default */
+    --target-alpha: 0.6;                /* Semi-transparent */
+    
+    /* Laser style variables */
+    --laser-color: #ff0000;             /* Red laser */
+    --laser-trail-alpha: 0.5;           /* Semi-transparent trail */
+    --laser-line-width: 2;              /* Thickness of laser beam */
+  }

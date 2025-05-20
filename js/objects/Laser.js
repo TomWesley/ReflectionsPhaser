@@ -19,10 +19,13 @@ class Laser {
         }
       });
       
+      // Important: Don't set gameObject property on the body
+      // This causes issues with Phaser's event system
+      
       // Remove default Matter.js rendering of the body
       this.body.render.visible = false;
       
-      // Create a visual representation of the laser that's larger than the physics body
+      // Visual representation of the laser
       this.visualSize = 5; // Visual laser size
       
       // Speed and direction
@@ -40,7 +43,7 @@ class Laser {
       
       // Points for trail
       this.points = [];
-      this.maxPoints = 100; // Reduced max points for better performance
+      this.maxPoints = 100; // Set max points for performance
       
       // Update position on each frame
       scene.events.on('update', this.update, this);
@@ -62,6 +65,9 @@ class Laser {
       this.x = this.body.position.x;
       this.y = this.body.position.y;
       
+      // IMPORTANT: Check if laser is outside boundaries and force reflection if needed
+      this.checkBoundaries();
+      
       // Add current position to points array for trail
       this.points.push({
         x: this.x,
@@ -76,6 +82,65 @@ class Laser {
       
       // Update laser trail
       this.updateLaserBeam();
+    }
+    
+    // Check if laser is outside game boundaries and force reflection
+    checkBoundaries() {
+      const boundsCheck = {
+        leftBound: this.scene.leftBound,
+        rightBound: this.scene.rightBound,
+        topBound: this.scene.topBound,
+        bottomBound: this.scene.bottomBound
+      };
+      
+      let reflectionNeeded = false;
+      let normal = { x: 0, y: 0 };
+      
+      // Check against each boundary with a small buffer to ensure we're inside
+      const buffer = 2;
+      
+      // Left boundary check
+      if (this.x < boundsCheck.leftBound + buffer) {
+        reflectionNeeded = true;
+        normal = { x: 1, y: 0 }; // Normal pointing right
+        this.x = boundsCheck.leftBound + buffer; // Force position to be inside
+      }
+      // Right boundary check
+      else if (this.x > boundsCheck.rightBound - buffer) {
+        reflectionNeeded = true;
+        normal = { x: -1, y: 0 }; // Normal pointing left
+        this.x = boundsCheck.rightBound - buffer; // Force position to be inside
+      }
+      
+      // Top boundary check
+      if (this.y < boundsCheck.topBound + buffer) {
+        reflectionNeeded = true;
+        normal = { x: 0, y: 1 }; // Normal pointing down
+        this.y = boundsCheck.topBound + buffer; // Force position to be inside
+      }
+      // Bottom boundary check
+      else if (this.y > boundsCheck.bottomBound - buffer) {
+        reflectionNeeded = true;
+        normal = { x: 0, y: -1 }; // Normal pointing up
+        this.y = boundsCheck.bottomBound - buffer; // Force position to be inside
+      }
+      
+      // If we need to reflect, update position and perform reflection
+      if (reflectionNeeded) {
+        console.log('Forcing laser reflection at boundary');
+        
+        // Update physics body position
+        this.scene.matter.body.setPosition(this.body, {
+          x: this.x,
+          y: this.y
+        });
+        
+        // Perform reflection
+        this.reflectWithNormal(normal);
+        
+        // Increment reflection count
+        this.reflectionCount++;
+      }
     }
     
     updateLaserBeam() {
@@ -118,6 +183,11 @@ class Laser {
             // Get the other body
             const otherBody = pair.bodyA === this.body ? pair.bodyB : pair.bodyA;
             
+            // Collision point
+            const collisionPoint = pair.collision.supports.length > 0 
+              ? pair.collision.supports[0] 
+              : { x: this.x, y: this.y };
+            
             // Check for target collision - game complete
             if (otherBody.label === 'target') {
               console.log('Laser collision with target detected!');
@@ -125,9 +195,16 @@ class Laser {
               return;
             }
             
-            // Handle collision with mirror
-            if (otherBody.gameObject instanceof Mirror) {
-              this.reflectOffMirror(otherBody.gameObject);
+            // Handle collision with custom mirror
+            if (otherBody.label === 'mirror') {
+              // Find the mirror that owns this body
+              const mirror = this.scene.mirrors.find(m => m.body === otherBody);
+              if (mirror) {
+                this.reflectOffCustomMirror(mirror, collisionPoint);
+              } else {
+                // Regular boundary reflection as fallback
+                this.reflectWithNormal(pair.collision.normal);
+              }
             } else {
               // Regular boundary collision
               this.reflectWithNormal(pair.collision.normal);
@@ -164,9 +241,9 @@ class Laser {
       });
     }
     
-    reflectOffMirror(mirror) {
-      // Get mirror's normal vector
-      const normal = mirror.getNormal();
+    reflectOffCustomMirror(mirror, collisionPoint) {
+      // Get custom mirror's normal vector at the collision point
+      const normal = mirror.getNormal(collisionPoint);
       
       // Get current velocity
       const velocity = {
@@ -186,6 +263,23 @@ class Laser {
       this.scene.matter.body.setVelocity(this.body, {
         x: reflectedVelocity.x,
         y: reflectedVelocity.y
+      });
+      
+      // Optional: Add a visual flash at collision point
+      this.addCollisionFlash(collisionPoint.x, collisionPoint.y);
+    }
+    
+    addCollisionFlash(x, y) {
+      // Add a small flash effect at collision point
+      const flash = this.scene.add.circle(x, y, 3, 0xffffff, 1);
+      
+      // Fade out and destroy
+      this.scene.tweens.add({
+        targets: flash,
+        alpha: 0,
+        scale: 2,
+        duration: 200,
+        onComplete: () => flash.destroy()
       });
     }
     
