@@ -1,32 +1,39 @@
 // Custom Mirror class with shapes drawn directly from physics body
 class Mirror {
-    constructor(scene, x, y) {
-      this.scene = scene;
-      this.x = x;
-      this.y = y;
-      
-      // Load appearance settings from CSS classes
-      this.loadStyleFromCSS();
-      
-      // Randomly determine if this will be a triangle or quadrilateral
-      this.isTriangle = Math.random() < 0.5;
-      
-      // First, create the physics body
-      this.createPhysicsBody();
-      
-      // Then, create the graphics object for drawing
-      this.graphics = scene.add.graphics();
-      
-      // Draw the mirror based on physics body
-      this.drawFromPhysics();
-      
-      // Setup interactivity after drawing
-      this.makeInteractive();
-      
-      // Track state
-      this.isDragging = false;
-      this.isLocked = false;
-    }
+    constructor(scene, x, y, shapeType = null) {
+        this.scene = scene;
+        this.x = x;
+        this.y = y;
+        
+        // Store the requested shape type if provided
+        this.requestedShapeType = shapeType;
+        
+        // Load appearance settings from CSS classes
+        this.loadStyleFromCSS();
+        
+        // Create the physics body for the requested shape
+        this.createPhysicsBody();
+        
+        // Apply a random rotation to make the mirror more interesting
+        if (this.body) {
+          // Random rotation angle in radians
+          const randomAngle = Math.random() * Math.PI * 2;
+          this.scene.matter.body.setAngle(this.body, randomAngle);
+        }
+        
+        // Create the graphics object for drawing
+        this.graphics = scene.add.graphics();
+        
+        // Draw the mirror based on physics body
+        this.drawFromPhysics();
+        
+        // Setup interactivity after drawing
+        this.makeInteractive();
+        
+        // Track state
+        this.isDragging = false;
+        this.isLocked = false;
+      }
     
     // Load style settings from CSS classes
     loadStyleFromCSS() {
@@ -144,134 +151,262 @@ class Mirror {
     }
     
     createPhysicsBody() {
-      // Min and max size for the shape
-      const minSize = 40;
-      const maxSize = 90;
-      
-      // Random size for this mirror
-      const size = Phaser.Math.Between(minSize, maxSize);
-      
-      // Generate physics body based on shape type
-      if (this.isTriangle) {
-        // Create a random triangle physics body
-        const verts = [];
+        // Min and max size for the shape
+        const minSize = 40;
+        const maxSize = 90;
         
-        // Create a base triangle
-        const baseTriangle = [
-          { x: 0, y: -size },                // Top
-          { x: -size * 0.866, y: size * 0.5 }, // Bottom left
-          { x: size * 0.866, y: size * 0.5 }   // Bottom right
+        // Random size for this mirror
+        const size = Phaser.Math.Between(minSize, maxSize);
+        
+        // Choose a random shape type from the specified options, or use requested type
+        const shapeTypes = [
+          'rightTriangle',
+          'isoscelesTriangle',
+          'rectangle',
+          'trapezoid',
+          'semicircle',
+          
         ];
         
-        // Add random variation to each vertex
-        for (let i = 0; i < 3; i++) {
-          const variationX = Phaser.Math.Between(-size * 0.3, size * 0.3);
-          const variationY = Phaser.Math.Between(-size * 0.3, size * 0.3);
-          verts.push({ 
-            x: baseTriangle[i].x + variationX, 
-            y: baseTriangle[i].y + variationY 
-          });
+        // Use the requested shape type if provided, otherwise pick randomly
+        this.shapeType = this.requestedShapeType || Phaser.Utils.Array.GetRandom(shapeTypes);
+        
+        // Debug log the selected shape type
+        console.log(`Creating mirror with shape type: ${this.shapeType}`);
+        
+        // Generate vertices based on the chosen shape type
+        let verts = [];
+        
+        switch (this.shapeType) {
+          case 'rightTriangle':
+            verts = this.createRightTriangle(size);
+            break;
+          case 'isoscelesTriangle':
+            verts = this.createIsoscelesTriangle(size);
+            break;
+          case 'rectangle':
+            verts = this.createRectangle(size);
+            break;
+          case 'trapezoid':
+            verts = this.createTrapezoid(size);
+            break;
+          case 'semicircle':
+            verts = this.createSemicircle(size);
+            break;
+          
+          default:
+            // Fallback to rectangle if the shape type is unknown
+            console.warn(`Unknown shape type: ${this.shapeType}, falling back to rectangle`);
+            this.shapeType = 'rectangle';
+            verts = this.createRectangle(size);
         }
         
-        // Create the body
-        this.body = this.scene.matter.add.fromVertices(
-          this.x, this.y,
-          verts,
-          {
-            isStatic: true,
-            label: 'mirror',
-            friction: 0,
-            frictionAir: 0,
-            restitution: 1, // Perfect bounce
-            collisionFilter: {
-              category: 0x0002, // Category 2: mirrors
-              mask: 0x0001 // Only collide with lasers
+        // Debug log the vertex count
+        console.log(`Shape ${this.shapeType} has ${verts.length} vertices`);
+        
+        try {
+          // Create the physics body
+          this.body = this.scene.matter.add.fromVertices(
+            this.x, this.y,
+            verts,
+            {
+              isStatic: true,
+              label: 'mirror',
+              friction: 0,
+              frictionAir: 0,
+              restitution: 1, // Perfect bounce
+              collisionFilter: {
+                category: 0x0002, // Category 2: mirrors
+                mask: 0x0001 // Only collide with lasers
+              }
             }
+          );
+          
+          // Check if the body was created successfully
+          if (!this.body) {
+            console.error(`Failed to create body for ${this.shapeType}, falling back to rectangle`);
+            this.shapeType = 'rectangle';
+            verts = this.createRectangle(size);
+            this.body = this.scene.matter.add.fromVertices(this.x, this.y, verts, {
+              isStatic: true,
+              label: 'mirror',
+              friction: 0,
+              frictionAir: 0,
+              restitution: 1,
+              collisionFilter: {
+                category: 0x0002,
+                mask: 0x0001
+              }
+            });
           }
-        );
-      } else {
-        // Create a random quadrilateral physics body
-        const verts = [];
-        
-        // Create a base rectangle with random height
-        const width = size;
-        const height = Phaser.Math.Between(size * 0.5, size * 1.5);
-        
-        const baseRect = [
-          { x: -width / 2, y: -height / 2 }, // Top left
-          { x: width / 2, y: -height / 2 },  // Top right
-          { x: width / 2, y: height / 2 },   // Bottom right
-          { x: -width / 2, y: height / 2 }   // Bottom left
-        ];
-        
-        // Add random variation to each vertex
-        for (let i = 0; i < 4; i++) {
-          const variationX = Phaser.Math.Between(-size * 0.2, size * 0.2);
-          const variationY = Phaser.Math.Between(-size * 0.2, size * 0.2);
-          verts.push({ 
-            x: baseRect[i].x + variationX, 
-            y: baseRect[i].y + variationY 
-          });
+        } catch (e) {
+          console.error(`Error creating physics body for ${this.shapeType}:`, e);
+          // Fallback to a simple rectangle if there's an error
+          this.shapeType = 'rectangle';
+          verts = this.createRectangle(size);
+          try {
+            this.body = this.scene.matter.add.fromVertices(this.x, this.y, verts, {
+              isStatic: true,
+              label: 'mirror',
+              friction: 0,
+              frictionAir: 0,
+              restitution: 1,
+              collisionFilter: {
+                category: 0x0002,
+                mask: 0x0001
+              }
+            });
+          } catch (fallbackError) {
+            console.error('Even rectangle fallback failed, using basic rectangle:', fallbackError);
+            this.body = this.scene.matter.add.rectangle(this.x, this.y, size, size, {
+              isStatic: true,
+              label: 'mirror',
+              friction: 0,
+              frictionAir: 0,
+              restitution: 1,
+              collisionFilter: {
+                category: 0x0002,
+                mask: 0x0001
+              }
+            });
+          }
         }
-        
-        // Create the body
-        this.body = this.scene.matter.add.fromVertices(
-          this.x, this.y,
-          verts,
-          {
-            isStatic: true,
-            label: 'mirror',
-            friction: 0,
-            frictionAir: 0,
-            restitution: 1, // Perfect bounce
-            collisionFilter: {
-              category: 0x0002, // Category 2: mirrors
-              mask: 0x0001 // Only collide with lasers
-            }
-          }
-        );
       }
-    }
+      
+      // Generate a right triangle with a 90-degree angle
+      createRightTriangle(size) {
+        // Basic right triangle
+        return [
+          { x: -size/2, y: -size/2 }, // Top left
+          { x: size/2, y: -size/2 },  // Top right
+          { x: -size/2, y: size/2 }   // Bottom left (forms the right angle)
+        ];
+      }
+      
+      // Generate an isosceles triangle (two equal sides)
+      createIsoscelesTriangle(size) {
+        return [
+          { x: 0, y: -size/2 },         // Top
+          { x: -size/2, y: size/2 },    // Bottom left
+          { x: size/2, y: size/2 }      // Bottom right
+        ];
+      }
+      
+      // Generate a rectangle (might be a square if height is similar to width)
+      createRectangle(size) {
+        // Determine if it should be a square (25% chance)
+        const isSquare = Math.random() < 0.25;
+        
+        // For non-square rectangles, use a random height
+        const height = isSquare ? size : Phaser.Math.Between(size * 0.5, size * 1.5);
+        const width = size;
+        
+        return [
+          { x: -width/2, y: -height/2 }, // Top left
+          { x: width/2, y: -height/2 },  // Top right
+          { x: width/2, y: height/2 },   // Bottom right
+          { x: -width/2, y: height/2 }   // Bottom left
+        ];
+      }
+      
+      // Generate a symmetrical trapezoid
+      createTrapezoid(size) {
+        // Top width is smaller than bottom width
+        const topWidth = size * Phaser.Math.FloatBetween(0.4, 0.7);
+        const bottomWidth = size;
+        const height = size * Phaser.Math.FloatBetween(0.8, 1.2);
+        
+        return [
+          { x: -topWidth/2, y: -height/2 },    // Top left
+          { x: topWidth/2, y: -height/2 },     // Top right
+          { x: bottomWidth/2, y: height/2 },   // Bottom right
+          { x: -bottomWidth/2, y: height/2 }   // Bottom left
+        ];
+      }
+      
+      // Generate a semicircle (approximated with vertices)
+      createSemicircle(size) {
+        // A semicircle needs to be simplified for Matter.js to handle it properly
+        // We'll use a polygon approximation with fewer points
+        const points = [];
+        const segments = 8; // Fewer segments for better physics compatibility
+        
+        // Add the center point at the bottom
+        points.push({ x: 0, y: 0 });
+        
+        // Add points along the semicircle arc
+        for (let i = 0; i <= segments; i++) {
+          // Calculate angle from 0 to PI (half circle)
+          const angle = Math.PI * i / segments;
+          const x = size/2 * Math.cos(angle);
+          const y = -size/2 * Math.sin(angle); // Negative to make it face upward
+          points.push({ x, y });
+        }
+        
+        return points;
+      }
+      
     
     // Draw the mirror based on its physics body
     drawFromPhysics() {
-      // Clear any existing graphics
-      this.graphics.clear();
-      
-      // Get the vertices from the physics body
-      let vertices;
-      
-      if (this.body.parts && this.body.parts.length > 1) {
-        // For compound bodies, use the first part after the parent
-        vertices = this.body.parts[1].vertices;
-      } else {
-        // For simple bodies
-        vertices = this.body.vertices;
+        // Clear any existing graphics
+        this.graphics.clear();
+        
+        // Get the vertices from the physics body
+        let vertices;
+        
+        if (this.body.parts && this.body.parts.length > 1) {
+          // For compound bodies, use the first part after the parent
+          vertices = this.body.parts[1].vertices;
+        } else {
+          // For simple bodies
+          vertices = this.body.vertices;
+        }
+        
+        // Ensure we have vertices to draw
+        if (!vertices || vertices.length < 3) {
+          console.warn('Not enough vertices to draw mirror:', this.shapeType);
+          return;
+        }
+        
+        // Draw fill
+        this.graphics.fillStyle(this.style.fillColor, this.style.fillAlpha);
+        this.graphics.beginPath();
+        
+        // Start at the first vertex
+        this.graphics.moveTo(vertices[0].x, vertices[0].y);
+        
+        // Draw lines to each subsequent vertex
+        for (let i = 1; i < vertices.length; i++) {
+          this.graphics.lineTo(vertices[i].x, vertices[i].y);
+        }
+        
+        // Close the path back to the first vertex (ensures complete shape)
+        this.graphics.closePath();
+        this.graphics.fillPath();
+        
+        // Draw outline with default color
+        this.graphics.lineStyle(this.style.strokeWidth, this.style.strokeColor);
+        this.graphics.beginPath();
+        
+        // Start at the first vertex again
+        this.graphics.moveTo(vertices[0].x, vertices[0].y);
+        
+        // Draw lines to each vertex again for the outline
+        for (let i = 1; i < vertices.length; i++) {
+          this.graphics.lineTo(vertices[i].x, vertices[i].y);
+        }
+        
+        // Ensure the outline is properly closed
+        this.graphics.closePath();
+        this.graphics.strokePath();
+        
+        // Add debug info if needed
+        if (this.scene.matter.world.debugGraphic) {
+          // Log shape type and vertex count
+          console.log(`Mirror: ${this.shapeType}, Vertices: ${vertices.length}`);
+        }
       }
-      
-      // Draw fill
-      this.graphics.fillStyle(this.style.fillColor, this.style.fillAlpha);
-      this.graphics.beginPath();
-      
-      // Draw the shape
-      this.graphics.moveTo(vertices[0].x, vertices[0].y);
-      for (let i = 1; i < vertices.length; i++) {
-        this.graphics.lineTo(vertices[i].x, vertices[i].y);
-      }
-      this.graphics.closePath();
-      this.graphics.fillPath();
-      
-      // Draw outline
-      this.graphics.lineStyle(this.style.strokeWidth, this.style.strokeColor);
-      this.graphics.beginPath();
-      
-      this.graphics.moveTo(vertices[0].x, vertices[0].y);
-      for (let i = 1; i < vertices.length; i++) {
-        this.graphics.lineTo(vertices[i].x, vertices[i].y);
-      }
-      this.graphics.closePath();
-      this.graphics.strokePath();
-    }
     
     // Set up the mirror for interactivity
     makeInteractive() {
@@ -438,6 +573,7 @@ class Mirror {
     
     // Check if a position is valid (outside no-go zones)
     // Check if a position is valid (outside no-go zones)
+// Check if a position is valid (outside no-go zones)
 isPositionValid(x, y) {
     // Only apply constraints before game starts
     if (this.scene.isGameStarted) return true;
@@ -450,46 +586,74 @@ isPositionValid(x, y) {
     // Get vertices from the physics body - we'll simulate where they would be at the new position
     let vertices = [];
     
-    if (this.body.parts && this.body.parts.length > 1) {
-      vertices = this.body.parts[1].vertices;
-    } else {
-      vertices = this.body.vertices;
-    }
+    if (this.body) {
+      if (this.body.parts && this.body.parts.length > 1) {
+        vertices = this.body.parts[1].vertices;
+      } else {
+        vertices = this.body.vertices;
+      }
     
-    // Calculate the offset from current position to proposed position
-    const offsetX = x - this.x;
-    const offsetY = y - this.y;
-    
-    // Check if any vertex would be in a restricted zone after moving
-    for (const vertex of vertices) {
-      // Calculate new vertex position
-      const newVertexX = vertex.x + offsetX;
-      const newVertexY = vertex.y + offsetY;
+      // Calculate the offset from current position to proposed position
+      const offsetX = x - this.x;
+      const offsetY = y - this.y;
       
-      // Check distance from center (target)
-      const distanceFromCenter = Math.sqrt(newVertexX * newVertexX + newVertexY * newVertexY);
-      if (distanceFromCenter < constraints.targetSafeRadius) {
-        return false; // Vertex too close to target
+      // Check if any vertex would be in a restricted zone after moving
+      for (const vertex of vertices) {
+        // Calculate new vertex position
+        const newVertexX = vertex.x + offsetX;
+        const newVertexY = vertex.y + offsetY;
+        
+        // Check distance from center (target)
+        const distanceFromCenter = Math.sqrt(newVertexX * newVertexX + newVertexY * newVertexY);
+        if (distanceFromCenter < constraints.targetSafeRadius) {
+          console.log(`Invalid position: vertex too close to target (${distanceFromCenter} < ${constraints.targetSafeRadius})`);
+          return false; // Vertex too close to target
+        }
+        
+        // Check wall margins
+        const margin = constraints.wallSafeMargin;
+        
+        // Get game area boundaries
+        const leftBound = this.scene.leftBound;
+        const rightBound = this.scene.rightBound;
+        const topBound = this.scene.topBound;
+        const bottomBound = this.scene.bottomBound;
+        
+        // Too close to walls?
+        if (newVertexX < leftBound + margin || newVertexX > rightBound - margin ||
+            newVertexY < topBound + margin || newVertexY > bottomBound - margin) {
+          console.log(`Invalid position: vertex too close to wall`);
+          return false;
+        }
+      }
+      
+      // If no vertices are in restricted zones, position is valid
+      return true;
+    } else {
+      // If body doesn't exist yet, just check center point distance from target
+      const distanceFromCenter = Math.sqrt(x * x + y * y);
+      const safeRadius = constraints.targetSafeRadius * 1.2; // Add extra buffer
+      
+      if (distanceFromCenter < safeRadius) {
+        console.log(`Initial check: position too close to center (${distanceFromCenter} < ${safeRadius})`);
+        return false;
       }
       
       // Check wall margins
       const margin = constraints.wallSafeMargin;
-      
-      // Get game area boundaries
       const leftBound = this.scene.leftBound;
       const rightBound = this.scene.rightBound;
       const topBound = this.scene.topBound;
       const bottomBound = this.scene.bottomBound;
       
-      // Too close to walls?
-      if (newVertexX < leftBound + margin || newVertexX > rightBound - margin ||
-          newVertexY < topBound + margin || newVertexY > bottomBound - margin) {
+      if (x < leftBound + margin || x > rightBound - margin ||
+          y < topBound + margin || y > bottomBound - margin) {
+        console.log(`Initial check: position too close to wall`);
         return false;
       }
+      
+      return true;
     }
-    
-    // If no vertices are in restricted zones, position is valid
-    return true;
   }
     
     // Update the hit area to match the current physics body

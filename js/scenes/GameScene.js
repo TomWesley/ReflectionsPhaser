@@ -85,6 +85,23 @@ class GameScene extends Phaser.Scene {
       }
     });
     
+    // Optionally reduce target opacity when showing the completion panel
+    if (this.target) {
+      this.tweens.add({
+        targets: this.target.graphics,
+        alpha: 0.3,
+        duration: 300
+      });
+      
+      if (this.target.pulseContainer) {
+        this.tweens.add({
+          targets: this.target.pulseContainer,
+          alpha: 0.3,
+          duration: 300
+        });
+      }
+    }
+    
     console.log('Game completed! Showing completion panel.');
     
     // Update and show completion panel
@@ -107,6 +124,7 @@ class GameScene extends Phaser.Scene {
     // Add celebration particles
     this.createCelebrationEffect();
   }
+  
   
   createCelebrationEffect() {
     // Add particle effects for celebration
@@ -147,6 +165,23 @@ class GameScene extends Phaser.Scene {
         this.matter.body.setStatic(laser.body, true);
       }
     });
+    
+    // Optionally reduce target opacity when showing the game over panel
+    if (this.target) {
+      this.tweens.add({
+        targets: this.target.graphics,
+        alpha: 0.3,
+        duration: 300
+      });
+      
+      if (this.target.pulseContainer) {
+        this.tweens.add({
+          targets: this.target.pulseContainer,
+          alpha: 0.3,
+          duration: 300
+        });
+      }
+    }
     
     // Show game over panel with animation
     this.gameOverPanel.setVisible(true);
@@ -399,6 +434,9 @@ class GameScene extends Phaser.Scene {
     // Create a container to hold all elements
     this.gameCompletionPanel = this.add.container(0, 0).setVisible(false);
     
+    // Set a high depth to ensure it appears on top of everything
+    this.gameCompletionPanel.setDepth(1000);
+    
     // Semitransparent background that covers the entire screen
     const fullScreenBg = this.add.rectangle(
       0, 0, 
@@ -423,7 +461,7 @@ class GameScene extends Phaser.Scene {
     }).setOrigin(0.5);
     
     // Congratulatory message
-    const congratsText = this.add.text(0, -80, 'Congratulations!', {
+    const congratsText = this.add.text(0, -80, 'Thank You for Playing', {
       fontFamily: 'Arial',
       fontSize: '28px',
       color: '#ffffff'
@@ -481,6 +519,85 @@ class GameScene extends Phaser.Scene {
       reflectionsText,
       playAgainButton, 
       playAgainText,
+      menuButton,
+      menuText
+    ]);
+  }
+  
+  createGameOverPanel() {
+    this.gameOverPanel = this.add.container(0, 0).setVisible(false);
+    
+    // Set a high depth to ensure it appears on top of everything
+    this.gameOverPanel.setDepth(1000);
+    
+    // Semitransparent background
+    const fullScreenBg = this.add.rectangle(
+      0, 0, 
+      this.cameras.main.width * 2, 
+      this.cameras.main.height * 2, 
+      0x000000, 0.7
+    );
+    
+    const panel = this.add.rectangle(0, 0, 400, 350, 0x331111, 0.9)
+      .setStrokeStyle(2, 0xff3333);
+    
+    const gameOverText = this.add.text(0, -130, 'TIME\'S UP', {
+      fontFamily: 'Arial',
+      fontSize: '40px',
+      fontStyle: 'bold',
+      color: '#ff0000',
+      stroke: '#440000',
+      strokeThickness: 4,
+      shadow: { color: '#ff0000', blur: 10, stroke: true, fill: true }
+    }).setOrigin(0.5);
+    
+    const messageText = this.add.text(0, -70, 'You ran out of time!', {
+      fontFamily: 'Arial',
+      fontSize: '26px',
+      color: '#ffffff'
+    }).setOrigin(0.5);
+    
+    const hintText = this.add.text(0, -20, 'Try rearranging the mirrors\nfor a better path to the target.', {
+      fontFamily: 'Arial',
+      fontSize: '20px',
+      color: '#aaaaaa',
+      align: 'center'
+    }).setOrigin(0.5);
+    
+    const tryAgainButton = this.add.rectangle(0, 60, 250, 60, 0xaa2222, 0.9)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerdown', () => this.restartGame())
+      .on('pointerover', () => tryAgainButton.fillColor = 0xcc4444)
+      .on('pointerout', () => tryAgainButton.fillColor = 0xaa2222);
+    
+    const tryAgainText = this.add.text(0, 60, 'TRY AGAIN', {
+      fontFamily: 'Arial',
+      fontSize: '24px',
+      fontStyle: 'bold',
+      color: '#ffffff'
+    }).setOrigin(0.5);
+    
+    const menuButton = this.add.rectangle(0, 130, 250, 60, 0x2244aa, 0.9)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerdown', () => this.returnToMenu())
+      .on('pointerover', () => menuButton.fillColor = 0x4466cc)
+      .on('pointerout', () => menuButton.fillColor = 0x2244aa);
+    
+    const menuText = this.add.text(0, 130, 'MAIN MENU', {
+      fontFamily: 'Arial',
+      fontSize: '24px',
+      fontStyle: 'bold',
+      color: '#ffffff'
+    }).setOrigin(0.5);
+    
+    this.gameOverPanel.add([
+      fullScreenBg,
+      panel, 
+      gameOverText, 
+      messageText, 
+      hintText,
+      tryAgainButton, 
+      tryAgainText,
       menuButton,
       menuText
     ]);
@@ -695,25 +812,111 @@ class GameScene extends Phaser.Scene {
     this.mirrors = [];
     
     // Create 5 mirrors with different types and positions
-    for (let i = 0; i < 5; i++) {
-      // Random position ensuring not too close to center
+    const mirrorCount = 5;
+    const targetShapeTypes = [
+      'rightTriangle',
+      'isoscelesTriangle',
+      'rectangle',
+      'trapezoid',
+      'semicircle',
+      'crescent'
+    ];
+    
+    // Try to create at least one of each shape type if possible
+    let shapesCreated = [];
+    
+    // Define a safe radius away from the target
+    const safeRadius = Math.max(
+      this.placementConstraints.targetSafeRadius * 1.5,
+      150 // Minimum of 150 pixels away from center
+    );
+    
+    for (let i = 0; i < mirrorCount; i++) {
+      // Random position ensuring not too close to center or boundaries
       let x, y;
-      do {
-        x = Phaser.Math.Between(this.leftBound + 50, this.rightBound - 50);
-        y = Phaser.Math.Between(this.topBound + 50, this.bottomBound - 50);
-      } while (Math.abs(x) < 80 && Math.abs(y) < 80); // Keep away from center target
+      let validPosition = false;
       
-      // Random mirror type and rotation
-      const type = Phaser.Math.Between(1, 4);
-      const rotation = Phaser.Math.Between(0, 7) * 45 * Math.PI / 180; // Convert to radians
+      // Try positions until a valid one is found
+      const maxAttempts = 50;
+      let attempts = 0;
       
-      // Create the mirror
-      const mirror = new Mirror(this, x, y, type);
+      while (!validPosition && attempts < maxAttempts) {
+        // Method 1: Use an angle and distance to ensure mirrors are away from center
+        const angle = Math.random() * Math.PI * 2; // Random angle 0-2π
+        
+        // Random distance between safe radius and almost to the edge
+        const maxDistance = Math.min(
+          this.rightBound - this.leftBound,
+          this.bottomBound - this.topBound
+        ) * 0.4; // 40% of the smallest dimension
+        
+        const distance = safeRadius + Math.random() * (maxDistance - safeRadius);
+        
+        x = Math.cos(angle) * distance;
+        y = Math.sin(angle) * distance;
+        
+        // Verify position is within game bounds and away from walls
+        const margin = this.placementConstraints.wallSafeMargin;
+        validPosition = (
+          x > this.leftBound + margin && 
+          x < this.rightBound - margin &&
+          y > this.topBound + margin && 
+          y < this.bottomBound - margin
+        );
+        
+        attempts++;
+      }
       
+      // If we couldn't find a valid position, use a safe default
+      if (!validPosition) {
+        // Position along one of the diagonals
+        const angle = (Math.PI / 4) + (i * Math.PI / 2); // Distribute along diagonals
+        x = Math.cos(angle) * safeRadius;
+        y = Math.sin(angle) * safeRadius;
+        
+        console.log(`Using fallback position for mirror ${i} at angle ${angle.toFixed(2)}: (${x.toFixed(0)}, ${y.toFixed(0)})`);
+      }
       
-      // Add to mirrors array
-      this.mirrors.push(mirror);
+      // Choose shape type - try to use different shapes
+      let shapeType;
+      
+      // For variety, ensure we try to create different shapes
+      // First try to create shapes we haven't created yet
+      const unusedShapes = targetShapeTypes.filter(shape => !shapesCreated.includes(shape));
+      
+      if (unusedShapes.length > 0) {
+        shapeType = Phaser.Utils.Array.GetRandom(unusedShapes);
+      } else {
+        // If all shapes have been created, choose randomly
+        shapeType = Phaser.Utils.Array.GetRandom(targetShapeTypes);
+      }
+      
+      // Debug
+      console.log(`Creating mirror ${i} at (${x.toFixed(0)}, ${y.toFixed(0)}) with shape ${shapeType}`);
+      
+      try {
+        // Create the mirror at the valid position with the selected shape
+        const mirror = new Mirror(this, x, y, shapeType);
+        this.mirrors.push(mirror);
+        
+        // Keep track of which shapes we've successfully created
+        if (mirror.shapeType === shapeType) {
+          shapesCreated.push(shapeType);
+        }
+      } catch (e) {
+        console.error(`Error creating mirror with shape ${shapeType}:`, e);
+        
+        // Fallback to a rectangle on failure
+        try {
+          const mirror = new Mirror(this, x, y, 'rectangle');
+          this.mirrors.push(mirror);
+        } catch (fallbackError) {
+          console.error(`Even fallback mirror creation failed:`, fallbackError);
+        }
+      }
     }
+    
+    console.log(`Created mirrors with shapes: ${shapesCreated.join(', ')}`);
   }
   
   createSpawners() {

@@ -287,4 +287,17 @@ class Target {
       this.debugGraphics.destroy();
     }
   }
+  setAlpha(alpha) {
+    // Update the graphics alpha
+    if (this.graphics) {
+      this.graphics.alpha = alpha;
+    }
+    
+    // Update the pulse container alpha
+    if (this.pulseContainer) {
+      this.pulseContainer.alpha = alpha;
+    }
+    
+    return this;
+  }
 }// Custom Target class that uses drawn graphics for consistent hitbox
