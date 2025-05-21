@@ -152,8 +152,8 @@ class Mirror {
     
     createPhysicsBody() {
         // Min and max size for the shape
-        const minSize = 40;
-        const maxSize = 90;
+        const minSize = 70;
+        const maxSize = 150;
         
         // Random size for this mirror
         const size = Phaser.Math.Between(minSize, maxSize);
@@ -574,6 +574,7 @@ class Mirror {
     // Check if a position is valid (outside no-go zones)
     // Check if a position is valid (outside no-go zones)
 // Check if a position is valid (outside no-go zones)
+    // Check if a position is valid (outside no-go zones and not overlapping other mirrors)
 isPositionValid(x, y) {
     // Only apply constraints before game starts
     if (this.scene.isGameStarted) return true;
@@ -627,7 +628,13 @@ isPositionValid(x, y) {
         }
       }
       
-      // If no vertices are in restricted zones, position is valid
+      // Check for overlap with other mirrors
+      if (this.wouldOverlapOtherMirrors(x, y)) {
+        console.log(`Invalid position: would overlap with another mirror`);
+        return false;
+      }
+      
+      // If no vertices are in restricted zones and no overlaps, position is valid
       return true;
     } else {
       // If body doesn't exist yet, just check center point distance from target
@@ -748,6 +755,7 @@ isPositionValid(x, y) {
     
     // Find nearest valid position if current position is invalid
     // Find nearest valid position if current position is invalid
+    // Find nearest valid position if current position is invalid
 findNearestValidPosition(x, y) {
     // Get constraints and boundaries
     const constraints = this.scene.placementConstraints;
@@ -799,22 +807,45 @@ findNearestValidPosition(x, y) {
     }
     
     // Try increasingly larger offsets until we find a valid position
-    for (let dist = 10; dist <= 200; dist += 10) {
+    for (let dist = 20; dist <= 300; dist += 20) { // Increased distance increments to avoid mirrors
       for (const dir of directions) {
         validX = x + dir.x * dist;
         validY = y + dir.y * dist;
         
-        // Check if this position is valid
+        // Check if this position is valid (including no overlap with other mirrors)
         if (this.isPositionValid(validX, validY)) {
           return { x: validX, y: validY };
         }
       }
     }
     
+    // If still no valid position found, try placing along the edges of the safe zone
+    const edgePositions = [
+      // Top edge of safe zone
+      { x: 0, y: -(constraints.targetSafeRadius * 1.5) },
+      // Bottom edge of safe zone
+      { x: 0, y: constraints.targetSafeRadius * 1.5 },
+      // Left edge of safe zone
+      { x: -(constraints.targetSafeRadius * 1.5), y: 0 },
+      // Right edge of safe zone
+      { x: constraints.targetSafeRadius * 1.5, y: 0 },
+      // Diagonal positions
+      { x: constraints.targetSafeRadius * 1.2, y: constraints.targetSafeRadius * 1.2 },
+      { x: -constraints.targetSafeRadius * 1.2, y: constraints.targetSafeRadius * 1.2 },
+      { x: -constraints.targetSafeRadius * 1.2, y: -constraints.targetSafeRadius * 1.2 },
+      { x: constraints.targetSafeRadius * 1.2, y: -constraints.targetSafeRadius * 1.2 }
+    ];
+    
+    for (const pos of edgePositions) {
+      if (this.isPositionValid(pos.x, pos.y)) {
+        return pos;
+      }
+    }
+    
     // Fallback to a safe default position if no valid position found
     return { 
-      x: 0, 
-      y: Math.sign(y) * (constraints.targetSafeRadius + 50) 
+      x: Math.sign(x || 1) * (constraints.targetSafeRadius + 100), 
+      y: Math.sign(y || 1) * (constraints.targetSafeRadius + 100) 
     };
   }
     
@@ -951,4 +982,127 @@ findNearestValidPosition(x, y) {
         this.scene.matter.world.remove(this.body);
       }
     }
+    // Check if moving to a position would overlap with other mirrors
+wouldOverlapOtherMirrors(x, y) {
+    // Get all mirrors from the scene
+    if (!this.scene.mirrors || this.scene.mirrors.length <= 1) {
+      return false; // No other mirrors to check
+    }
+    
+    // Calculate the offset from current position to proposed position
+    const offsetX = x - this.x;
+    const offsetY = y - this.y;
+    
+    // Get our vertices at the new position
+    let ourVertices = [];
+    if (this.body) {
+      if (this.body.parts && this.body.parts.length > 1) {
+        ourVertices = this.body.parts[1].vertices;
+      } else {
+        ourVertices = this.body.vertices;
+      }
+      
+      // Transform our vertices to the new position
+      const ourNewVertices = ourVertices.map(vertex => ({
+        x: vertex.x + offsetX,
+        y: vertex.y + offsetY
+      }));
+      
+      // Check against all other mirrors
+      for (const otherMirror of this.scene.mirrors) {
+        // Skip checking against ourselves
+        if (otherMirror === this || !otherMirror.body) continue;
+        
+        // Get other mirror's vertices
+        let otherVertices = [];
+        if (otherMirror.body.parts && otherMirror.body.parts.length > 1) {
+          otherVertices = otherMirror.body.parts[1].vertices;
+        } else {
+          otherVertices = otherMirror.body.vertices;
+        }
+        
+        // Check if our new position would overlap with this other mirror
+        if (this.doPolygonsOverlap(ourNewVertices, otherVertices)) {
+          return true;
+        }
+      }
+    }
+    
+    return false;
+  }
+  
+  // Check if two polygons overlap using Separating Axis Theorem (SAT)
+  doPolygonsOverlap(poly1, poly2) {
+    // Simple bounding box check first for performance
+    const bounds1 = this.getPolygonBounds(poly1);
+    const bounds2 = this.getPolygonBounds(poly2);
+    
+    // Check if bounding boxes don't overlap
+    if (bounds1.right < bounds2.left || bounds2.right < bounds1.left ||
+        bounds1.bottom < bounds2.top || bounds2.bottom < bounds1.top) {
+      return false; // No overlap possible
+    }
+    
+    // More detailed check using distance between centers and minimum separation
+    const center1 = this.getPolygonCenter(poly1);
+    const center2 = this.getPolygonCenter(poly2);
+    
+    const distance = Math.sqrt(
+      Math.pow(center1.x - center2.x, 2) + Math.pow(center1.y - center2.y, 2)
+    );
+    
+    // Use a simple radius-based approach for performance
+    // Calculate approximate radius for each polygon
+    const radius1 = this.getPolygonRadius(poly1, center1);
+    const radius2 = this.getPolygonRadius(poly2, center2);
+    
+    // Add a small buffer to prevent mirrors from being too close
+    const buffer = 10;
+    
+    return distance < (radius1 + radius2 + buffer);
+  }
+  
+  // Get bounding box of a polygon
+  getPolygonBounds(vertices) {
+    let minX = Infinity, maxX = -Infinity;
+    let minY = Infinity, maxY = -Infinity;
+    
+    for (const vertex of vertices) {
+      minX = Math.min(minX, vertex.x);
+      maxX = Math.max(maxX, vertex.x);
+      minY = Math.min(minY, vertex.y);
+      maxY = Math.max(maxY, vertex.y);
+    }
+    
+    return { left: minX, right: maxX, top: minY, bottom: maxY };
+  }
+  
+  // Get center point of a polygon
+  getPolygonCenter(vertices) {
+    let sumX = 0, sumY = 0;
+    
+    for (const vertex of vertices) {
+      sumX += vertex.x;
+      sumY += vertex.y;
+    }
+    
+    return {
+      x: sumX / vertices.length,
+      y: sumY / vertices.length
+    };
+  }
+  
+  // Get approximate radius of a polygon from its center
+  getPolygonRadius(vertices, center) {
+    let maxDistance = 0;
+    
+    for (const vertex of vertices) {
+      const distance = Math.sqrt(
+        Math.pow(vertex.x - center.x, 2) + Math.pow(vertex.y - center.y, 2)
+      );
+      maxDistance = Math.max(maxDistance, distance);
+    }
+    
+    return maxDistance;
+  }
   }

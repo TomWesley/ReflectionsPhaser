@@ -812,14 +812,14 @@ class GameScene extends Phaser.Scene {
     this.mirrors = [];
     
     // Create 5 mirrors with different types and positions
-    const mirrorCount = 5;
+    const mirrorCount = 9;
     const targetShapeTypes = [
       'rightTriangle',
       'isoscelesTriangle',
       'rectangle',
       'trapezoid',
-      'semicircle',
-      'crescent'
+      'semicircle'
+      // Removed 'crescent' as requested
     ];
     
     // Try to create at least one of each shape type if possible
@@ -837,7 +837,7 @@ class GameScene extends Phaser.Scene {
       let validPosition = false;
       
       // Try positions until a valid one is found
-      const maxAttempts = 50;
+      const maxAttempts = 100; // Increased attempts to account for overlap checking
       let attempts = 0;
       
       while (!validPosition && attempts < maxAttempts) {
@@ -857,22 +857,36 @@ class GameScene extends Phaser.Scene {
         
         // Verify position is within game bounds and away from walls
         const margin = this.placementConstraints.wallSafeMargin;
-        validPosition = (
+        const withinBounds = (
           x > this.leftBound + margin && 
           x < this.rightBound - margin &&
           y > this.topBound + margin && 
           y < this.bottomBound - margin
         );
         
+        if (withinBounds) {
+          // Create a temporary mirror to check for overlaps with existing mirrors
+          const tempMirror = new Mirror(this, x, y, 'rectangle');
+          
+          // Check if this position would be valid (no overlaps)
+          validPosition = tempMirror.isPositionValid(x, y);
+          
+          // Clean up the temporary mirror
+          tempMirror.destroy();
+        }
+        
         attempts++;
       }
       
-      // If we couldn't find a valid position, use a safe default
+      // If we couldn't find a valid position, use a safe default with extra spacing
       if (!validPosition) {
-        // Position along one of the diagonals
+        // Position along one of the diagonals with extra spacing
         const angle = (Math.PI / 4) + (i * Math.PI / 2); // Distribute along diagonals
-        x = Math.cos(angle) * safeRadius;
-        y = Math.sin(angle) * safeRadius;
+        const extraSpacing = 50 * i; // Add extra spacing for each subsequent mirror
+        const finalRadius = safeRadius + extraSpacing;
+        
+        x = Math.cos(angle) * finalRadius;
+        y = Math.sin(angle) * finalRadius;
         
         console.log(`Using fallback position for mirror ${i} at angle ${angle.toFixed(2)}: (${x.toFixed(0)}, ${y.toFixed(0)})`);
       }
