@@ -7,6 +7,9 @@ class Laser {
       this.x = x;
       this.y = y;
       
+      // Load style from CSS
+      this.loadStyleFromCSS();
+      
       // Physics settings for Matter.js - create a tiny circle body for ultra-precise collisions
       this.body = scene.matter.add.circle(x, y, 1, { // Ultra-small for pixel-perfect collisions
         frictionAir: 0,
@@ -19,27 +22,25 @@ class Laser {
         }
       });
       
-      // Important: Don't set gameObject property on the body
-      // This causes issues with Phaser's event system
-      
       // Remove default Matter.js rendering of the body
       this.body.render.visible = false;
       
-      // Visual representation of the laser
-      this.visualSize = 5; // Visual laser size
-      
       // Speed and direction
       this.speed = speed;
-      this.direction = direction.normalize();
+      this.direction = new Phaser.Math.Vector2(direction.x, direction.y).normalize();
       
-      // Set velocity based on direction and speed
+      // Set velocity based on direction and speed - use direct velocity setting
       scene.matter.body.setVelocity(this.body, {
         x: this.direction.x * this.speed,
         y: this.direction.y * this.speed
       });
       
+      // Disable gravity, rotation, and other forces that might cause curved paths
+      scene.matter.body.setInertia(this.body, Infinity); // Prevents rotation
+      scene.matter.body.setAngularVelocity(this.body, 0); // No initial rotation
+      
       // Create line for laser beam
-      this.line = scene.add.line(0, 0, 0, 0, 0, 0, 0xff0000).setLineWidth(2);
+      this.line = scene.add.line(0, 0, 0, 0, 0, 0, this.style.color).setLineWidth(this.style.lineWidth);
       
       // Points for trail
       this.points = [];
@@ -56,6 +57,110 @@ class Laser {
       
       // Store active state
       this.active = true;
+    }
+    
+    loadStyleFromCSS() {
+      // Default style settings
+      this.style = {
+        color: 0xff0000,         // Red laser
+        trailAlpha: 0.5,         // Semi-transparent trail
+        lineWidth: 2,            // Thickness of laser beam
+        flashColor: 0xffffff     // Color of collision flash
+      };
+      
+      try {
+        // Get styles from CSS classes
+        const laserStyle = this.getComputedStyleForClass('laser');
+        const laserTrailStyle = this.getComputedStyleForClass('laser-trail');
+        const laserFlashStyle = this.getComputedStyleForClass('laser-flash');
+        
+        // Apply laser styles
+        if (laserStyle) {
+          if (laserStyle.stroke) {
+            this.style.color = this.cssColorToHex(laserStyle.stroke);
+          }
+          if (laserStyle['stroke-width']) {
+            this.style.lineWidth = parseInt(laserStyle['stroke-width']);
+          }
+        }
+        
+        // Apply trail styles
+        if (laserTrailStyle) {
+          if (laserTrailStyle.stroke) {
+            // Trail color can be different from main laser
+            const trailColor = this.cssColorToHex(laserTrailStyle.stroke);
+            if (trailColor !== null) {
+              this.style.trailColor = trailColor;
+            }
+          }
+          if (laserTrailStyle['stroke-opacity']) {
+            this.style.trailAlpha = parseFloat(laserTrailStyle['stroke-opacity']);
+          }
+        }
+        
+        // Apply flash styles
+        if (laserFlashStyle && laserFlashStyle.fill) {
+          this.style.flashColor = this.cssColorToHex(laserFlashStyle.fill);
+        }
+      } catch (e) {
+        console.warn('Could not load laser styles from CSS, using defaults.', e);
+      }
+    }
+    
+    // Helper method to get computed style for a CSS class
+    getComputedStyleForClass(className) {
+      // Create a temporary element to apply the class
+      const tempElement = document.createElement('div');
+      tempElement.className = className;
+      document.body.appendChild(tempElement);
+      
+      // Get computed style
+      const style = window.getComputedStyle(tempElement);
+      
+      // Extract relevant properties
+      const result = {
+        stroke: style.getPropertyValue('stroke'),
+        'stroke-width': style.getPropertyValue('stroke-width'),
+        'stroke-opacity': style.getPropertyValue('stroke-opacity'),
+        fill: style.getPropertyValue('fill')
+      };
+      
+      // Clean up
+      document.body.removeChild(tempElement);
+      
+      return result;
+    }
+    
+    // Helper function to convert CSS color to hex
+    cssColorToHex(color) {
+      if (!color) return null;
+      
+      // For hex values
+      if (color.startsWith('#')) {
+        return parseInt(color.substring(1), 16);
+      }
+      
+      // For rgb/rgba values
+      const rgbMatch = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*[\d.]+)?\)/);
+      if (rgbMatch) {
+        const r = parseInt(rgbMatch[1]);
+        const g = parseInt(rgbMatch[2]);
+        const b = parseInt(rgbMatch[3]);
+        return (r << 16) + (g << 8) + b;
+      }
+      
+      // Create a temporary canvas to convert named colors
+      if (color.match(/^[a-z]+$/i)) {
+        const ctx = document.createElement('canvas').getContext('2d');
+        ctx.fillStyle = color;
+        const hexColor = ctx.fillStyle;
+        if (hexColor.startsWith('#')) {
+          return parseInt(hexColor.substring(1), 16);
+        }
+      }
+      
+      // Default fallback
+      return 0xff0000; // Red
     }
     
     update() {
@@ -152,8 +257,27 @@ class Laser {
       
       this.line.setTo(prevPoint.x, prevPoint.y, lastPoint.x, lastPoint.y);
       
-      // Draw a line between all points for the trail
-      if (this.points.length > 2) {
+      // Remove any points that are too close to each other to avoid jagged lines
+      // This helps create smoother trails
+      const minDistance = 5; // Minimum distance between points in the trail
+      let filteredPoints = [this.points[0]];
+      
+      for (let i = 1; i < this.points.length; i++) {
+        const prevFilteredPoint = filteredPoints[filteredPoints.length - 1];
+        const currentPoint = this.points[i];
+        
+        const distance = Phaser.Math.Distance.Between(
+          prevFilteredPoint.x, prevFilteredPoint.y,
+          currentPoint.x, currentPoint.y
+        );
+        
+        if (distance >= minDistance) {
+          filteredPoints.push(currentPoint);
+        }
+      }
+      
+      // Draw a line between all filtered points for the trail
+      if (filteredPoints.length > 2) {
         if (!this.trail) {
           this.trail = this.scene.add.graphics();
         } else {
@@ -162,10 +286,10 @@ class Laser {
         
         this.trail.lineStyle(2, 0xff0000, 0.5);
         this.trail.beginPath();
-        this.trail.moveTo(this.points[0].x, this.points[0].y);
+        this.trail.moveTo(filteredPoints[0].x, filteredPoints[0].y);
         
-        for (let i = 1; i < this.points.length; i++) {
-          this.trail.lineTo(this.points[i].x, this.points[i].y);
+        for (let i = 1; i < filteredPoints.length; i++) {
+          this.trail.lineTo(filteredPoints[i].x, filteredPoints[i].y);
         }
         
         this.trail.strokePath();
@@ -218,54 +342,68 @@ class Laser {
     }
     
     reflectWithNormal(normal) {
+      // Normalize the normal vector to ensure it's a unit vector
+      const normalLength = Math.sqrt(normal.x * normal.x + normal.y * normal.y);
+      if (normalLength === 0) return; // Avoid division by zero
+      
+      const normalizedNormal = {
+        x: normal.x / normalLength,
+        y: normal.y / normalLength
+      };
+      
       // Get current velocity
       const velocity = {
         x: this.body.velocity.x,
         y: this.body.velocity.y
       };
       
+      // Calculate the dot product between velocity and normal
+      const dotProduct = velocity.x * normalizedNormal.x + velocity.y * normalizedNormal.y;
+      
       // Calculate reflection using the formula: v' = v - 2(v·n)n
-      const dotProduct = velocity.x * normal.x + velocity.y * normal.y;
+      const reflectedVx = velocity.x - 2 * dotProduct * normalizedNormal.x;
+      const reflectedVy = velocity.y - 2 * dotProduct * normalizedNormal.y;
       
-      const reflectedVx = velocity.x - 2 * dotProduct * normal.x;
-      const reflectedVy = velocity.y - 2 * dotProduct * normal.y;
+      // Get the current speed (magnitude of velocity)
+      const currentSpeed = Math.sqrt(velocity.x * velocity.x + velocity.y * velocity.y);
       
-      // Apply new velocity, maintaining speed
-      const currentSpeed = Math.sqrt(reflectedVx * reflectedVx + reflectedVy * reflectedVy);
-      const normalizedVx = reflectedVx / currentSpeed * this.speed;
-      const normalizedVy = reflectedVy / currentSpeed * this.speed;
+      // Normalize the reflected velocity and scale to maintain constant speed
+      const reflectedSpeed = Math.sqrt(reflectedVx * reflectedVx + reflectedVy * reflectedVy);
       
+      // Avoid division by zero
+      if (reflectedSpeed === 0) return;
+      
+      const normalizedVx = reflectedVx / reflectedSpeed * this.speed;
+      const normalizedVy = reflectedVy / reflectedSpeed * this.speed;
+      
+      // Apply the new velocity - ensure we use a constant speed
       this.scene.matter.body.setVelocity(this.body, {
         x: normalizedVx,
         y: normalizedVy
       });
+      
+      // Add a small displacement in the reflection direction to prevent multiple reflections
+      const displacementDistance = 3; // Small displacement to avoid re-collision
+      const newX = this.x + normalizedVx * displacementDistance / this.speed;
+      const newY = this.y + normalizedVy * displacementDistance / this.speed;
+      
+      this.scene.matter.body.setPosition(this.body, {
+        x: newX,
+        y: newY
+      });
+      
+      // Log reflection for debugging
+      console.log('Reflected with normal', normalizedNormal, 'new velocity', normalizedVx, normalizedVy);
     }
     
     reflectOffCustomMirror(mirror, collisionPoint) {
       // Get custom mirror's normal vector at the collision point
       const normal = mirror.getNormal(collisionPoint);
       
-      // Get current velocity
-      const velocity = {
-        x: this.body.velocity.x,
-        y: this.body.velocity.y
-      };
-      const velocityVector = new Phaser.Math.Vector2(velocity.x, velocity.y);
+      // Reflect using the improved reflection method
+      this.reflectWithNormal(normal);
       
-      // Calculate reflection
-      const dotProduct = velocityVector.dot(normal);
-      const reflectedVelocity = velocityVector.subtract(normal.scale(2 * dotProduct));
-      
-      // Normalize and apply speed
-      reflectedVelocity.normalize().scale(this.speed);
-      
-      // Apply new velocity
-      this.scene.matter.body.setVelocity(this.body, {
-        x: reflectedVelocity.x,
-        y: reflectedVelocity.y
-      });
-      
-      // Optional: Add a visual flash at collision point
+      // Add a visual flash at collision point
       this.addCollisionFlash(collisionPoint.x, collisionPoint.y);
     }
     

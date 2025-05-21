@@ -1,4 +1,4 @@
-// Custom Target class that uses drawn graphics for consistent hitbox
+// Custom Target class that uses drawn graphics directly matching its hitbox
 class Target {
   constructor(scene, x, y) {
     this.scene = scene;
@@ -8,125 +8,171 @@ class Target {
     // Load appearance settings from CSS variables if available
     this.loadStyleFromCSS();
     
-    // Create the visual representation
-    this.createVisual();
-    
-    // Create the physics body
+    // Create the physics body first to define the exact hitbox size
     this.createPhysicsBody();
+    
+    // Then create visual representation exactly matching the physics body
+    this.createVisual();
     
     // Start pulsing animation
     this.startPulseAnimation();
   }
   
-  // Load style settings from CSS variables if available
+  // Load style settings from CSS classes
   loadStyleFromCSS() {
-    // Default style settings - used if CSS variables not available
+    // Default style settings
     this.style = {
-      color: 0x00ff00,   // Green by default
-      alpha: 0.6,        // Semi-transparent
-      strokeWidth: 2,    // Outline thickness
-      hitboxSize: 0.4    // Physics hitbox size as proportion of visual size (40%)
+      color: 0x00ff00,            // Green by default
+      alpha: 0.6,                 // Semi-transparent
+      strokeWidth: 2,             // Outline thickness
+      pulseColor: 0x00ff00,       // Color of pulse animation
+      hitEffectColor: 0xffffff,   // Color of hit particle effect
+      size: 0.18                  // Target size as proportion of game size (8%)
     };
     
-    // Try to get style from CSS variables
     try {
-      // Get CSS variables from :root or html element
-      const computedStyle = getComputedStyle(document.documentElement);
+      // Get styles from CSS classes
+      const targetStyle = this.getComputedStyleForClass('target');
+      const targetPulseStyle = this.getComputedStyleForClass('target-pulse');
+      const targetHitStyle = this.getComputedStyleForClass('target-hit');
       
-      // Helper function to convert CSS color to hex
-      const cssColorToHex = (color) => {
-        if (color.startsWith('#')) {
-          return parseInt(color.substring(1), 16);
+      // Apply basic target styles
+      if (targetStyle) {
+        if (targetStyle.fill) {
+          this.style.color = this.cssColorToHex(targetStyle.fill);
         }
-        
-        // For rgb/rgba values
-        const rgbMatch = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*[\d.]+)?\)/);
-        if (rgbMatch) {
-          const r = parseInt(rgbMatch[1]);
-          const g = parseInt(rgbMatch[2]);
-          const b = parseInt(rgbMatch[3]);
-          return (r << 16) + (g << 8) + b;
+        if (targetStyle['fill-opacity']) {
+          this.style.alpha = parseFloat(targetStyle['fill-opacity']);
         }
-        
-        return null;
-      };
-      
-      // Get CSS variables with fallbacks
-      const getVar = (name, defaultValue) => {
-        const value = computedStyle.getPropertyValue(name).trim();
-        return value ? value : defaultValue;
-      };
-      
-      // Update style settings from CSS if available
-      const targetColor = getVar('--target-color', null);
-      if (targetColor) {
-        this.style.color = cssColorToHex(targetColor) || this.style.color;
+        if (targetStyle['stroke-width']) {
+          this.style.strokeWidth = parseInt(targetStyle['stroke-width']);
+        }
       }
       
-      const targetAlpha = getVar('--target-alpha', null);
-      if (targetAlpha) {
-        this.style.alpha = parseFloat(targetAlpha) || this.style.alpha;
+      // Apply pulse styles
+      if (targetPulseStyle && targetPulseStyle.fill) {
+        this.style.pulseColor = this.cssColorToHex(targetPulseStyle.fill);
+      }
+      
+      // Apply hit effect styles
+      if (targetHitStyle && targetHitStyle.fill) {
+        this.style.hitEffectColor = this.cssColorToHex(targetHitStyle.fill);
       }
     } catch (e) {
       console.warn('Could not load target styles from CSS, using defaults.', e);
     }
   }
   
-  createVisual() {
-    // Target size based on game dimensions
-    const visualSize = Math.min(this.scene.cameras.main.height, this.scene.cameras.main.width) * 0.08;
-    this.visualSize = visualSize;
+  // Helper method to get computed style for a CSS class
+  getComputedStyleForClass(className) {
+    // Create a temporary element to apply the class
+    const tempElement = document.createElement('div');
+    tempElement.className = className;
+    document.body.appendChild(tempElement);
     
-    // Create graphics object for the target
-    this.graphics = this.scene.add.graphics();
+    // Get computed style
+    const style = window.getComputedStyle(tempElement);
     
-    // Draw the target (a circle with stroke)
-    this.graphics.fillStyle(this.style.color, this.style.alpha);
-    this.graphics.fillCircle(this.x, this.y, visualSize/2);
+    // Extract relevant properties
+    const result = {
+      stroke: style.getPropertyValue('stroke'),
+      'stroke-width': style.getPropertyValue('stroke-width'),
+      fill: style.getPropertyValue('fill'),
+      'fill-opacity': style.getPropertyValue('fill-opacity')
+    };
     
-    this.graphics.lineStyle(this.style.strokeWidth, this.style.color, 1);
-    this.graphics.strokeCircle(this.x, this.y, visualSize/2);
+    // Clean up
+    document.body.removeChild(tempElement);
     
-    // Add inner circle for visual interest
-    this.graphics.lineStyle(1, this.style.color, 0.8);
-    this.graphics.strokeCircle(this.x, this.y, visualSize/3);
+    return result;
+  }
+  
+  // Helper function to convert CSS color to hex
+  cssColorToHex(color) {
+    if (!color) return null;
     
-    // Add a dot in the center
-    this.graphics.fillStyle(this.style.color, 1);
-    this.graphics.fillCircle(this.x, this.y, visualSize/10);
+    // For hex values
+    if (color.startsWith('#')) {
+      return parseInt(color.substring(1), 16);
+    }
+    
+    // For rgb/rgba values
+    const rgbMatch = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*[\d.]+)?\)/);
+    if (rgbMatch) {
+      const r = parseInt(rgbMatch[1]);
+      const g = parseInt(rgbMatch[2]);
+      const b = parseInt(rgbMatch[3]);
+      return (r << 16) + (g << 8) + b;
+    }
+    
+    // Create a temporary canvas to convert named colors
+    if (color.match(/^[a-z]+$/i)) {
+      const ctx = document.createElement('canvas').getContext('2d');
+      ctx.fillStyle = color;
+      const hexColor = ctx.fillStyle;
+      if (hexColor.startsWith('#')) {
+        return parseInt(hexColor.substring(1), 16);
+      }
+    }
+    
+    // Default fallback
+    return 0x00ff00; // Green
   }
   
   createPhysicsBody() {
-    // Create physics body with more precise collision radius
-    // Make the collision radius smaller than the visual size for better precision
-    const collisionRadius = this.visualSize * this.style.hitboxSize; // 40% of visual size for tighter collision
+    // Calculate target size based on game dimensions and style setting
+    const gameSize = Math.min(this.scene.cameras.main.height, this.scene.cameras.main.width);
+    this.visualSize = gameSize * this.style.size;
     
-    this.body = this.scene.matter.add.circle(this.x, this.y, collisionRadius, { 
+    // The collision radius is the EXACT same as the visual size 
+    // to ensure perfect matching of hitbox and visual
+    this.collisionRadius = this.visualSize / 2;
+    
+    // Create physics body
+    this.body = this.scene.matter.add.circle(this.x, this.y, this.collisionRadius, { 
       isSensor: true, // Make it a sensor so it doesn't affect physics
       isStatic: true, // Don't move when hit
-      label: 'target', // Use label to identify in collisions
+      label: 'target',
       collisionFilter: {
         category: 0x0004, // Category 3: target
         mask: 0x0001 // Only collide with lasers (category 1)
       }
     });
     
-    // Important: Don't set gameObject property on the body
-    // This causes issues with Phaser's event system
-    
     // Create debug visualization of the hitbox if debug is enabled
-    if (this.scene.matter.world.debugGraphic) {
-      this.debugGraphics = this.scene.add.graphics({ lineStyle: { width: 1, color: 0xff00ff } });
-      this.debugGraphics.strokeCircle(this.x, this.y, collisionRadius);
-    }
+    // if (this.scene.matter.world.debugGraphic) {
+    //   this.debugGraphics = this.scene.add.graphics({ lineStyle: { width: 1, color: 0xff00ff } });
+    //   this.debugGraphics.strokeCircle(this.x, this.y, this.collisionRadius);
+    // }
+  }
+  
+  createVisual() {
+    // Create graphics object for the target - EXACTLY matching the hitbox
+    this.graphics = this.scene.add.graphics();
+    
+    // Draw the target circle matching the physics body
+    this.graphics.fillStyle(this.style.color, this.style.alpha);
+    this.graphics.fillCircle(this.x, this.y, this.collisionRadius);
+    
+    // Draw the outline
+    this.graphics.lineStyle(this.style.strokeWidth, this.style.color, 1);
+    this.graphics.strokeCircle(this.x, this.y, this.collisionRadius);
+    
+    // Add inner circle for visual interest
+    this.graphics.lineStyle(1, this.style.color, 0.8);
+    this.graphics.strokeCircle(this.x, this.y, this.collisionRadius * 0.7);
+    
+    // Add a dot in the center
+    this.graphics.fillStyle(this.style.color, 1);
+    this.graphics.fillCircle(this.x, this.y, this.collisionRadius * 0.2);
   }
   
   startPulseAnimation() {
     // Create a container for the pulse effect
     this.pulseContainer = this.scene.add.container(this.x, this.y);
     
-    // Create a circle for pulsing
-    const pulseCircle = this.scene.add.circle(0, 0, this.visualSize/2, this.style.color, 0.4);
+    // Create a circle for pulsing - matching the collision radius
+    const pulseCircle = this.scene.add.circle(0, 0, this.collisionRadius, this.style.pulseColor, 0.4);
     this.pulseContainer.add(pulseCircle);
     
     // Add the pulse animation
@@ -163,17 +209,16 @@ class Target {
   
   createHitEffect() {
     // Add a particle effect when the target is hit
-    const particles = this.scene.add.particles('laser');
+    const particles = this.scene.add.particles('particle');
     
-    // If 'laser' image is not available, use a basic circle
-    if (!particles.texture.key) {
-      console.warn("Laser texture not found, using fallback for particles");
+    // Use a custom particle if 'particle' texture doesn't exist
+    if (!particles.texture || !particles.texture.key) {
       // Clean up failed particles
       particles.destroy();
       
       // Create explosion effect with graphics instead
       const explosionGraphics = this.scene.add.graphics();
-      explosionGraphics.fillStyle(this.style.color, 1);
+      explosionGraphics.fillStyle(this.style.hitEffectColor, 1);
       
       // Draw bursting circles
       for (let i = 0; i < 20; i++) {
@@ -208,7 +253,8 @@ class Target {
       angle: { min: 0, max: 360 },
       scale: { start: 0.2, end: 0 },
       blendMode: 'ADD',
-      lifespan: 800
+      lifespan: 800,
+      tint: this.style.hitEffectColor
     });
     
     // Emit particles once
@@ -241,4 +287,4 @@ class Target {
       this.debugGraphics.destroy();
     }
   }
-}
+}// Custom Target class that uses drawn graphics for consistent hitbox

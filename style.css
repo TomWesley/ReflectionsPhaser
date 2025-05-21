@@ -82,3 +82,59 @@ body {
     --laser-trail-alpha: 0.5;           /* Semi-transparent trail */
     --laser-line-width: 2;              /* Thickness of laser beam */
   }
+
+  /* Game element styling with CSS classes */
+
+/* Mirror styles */
+.mirror {
+    stroke: #fbff00;        /* Green outline by default */
+    stroke-width: 2;        /* Line thickness */
+    fill: #e4f7ab;          /* Black fill */
+    fill-opacity: 1;      /* Fill transparency */
+  }
+  
+  .mirror-hover {
+    stroke: #44aaff;        /* Blue outline when hovering */
+  }
+  
+  .mirror-drag {
+    stroke: #aaaaff;        /* Light blue when dragging */
+  }
+  
+  .mirror-locked {
+    stroke: #999999;        /* Gray when locked (game started) */
+  }
+  
+  /* Target styles */
+  .target {
+    stroke: #ff00b7;        /* Green outline */
+    stroke-width: 2;        /* Outline thickness */
+    fill: #f60039;          /* Green fill */
+    fill-opacity: 1;      /* Semi-transparent */
+  }
+  
+  .target-pulse {
+    fill: #00ff00;          /* Color of pulse animation */
+    fill-opacity: 0.4;      /* Transparency for pulse */
+  }
+  
+  .target-hit {
+    fill: #ffffff;          /* Color of hit particle effect */
+  }
+  
+  /* Laser styles */
+  .laser {
+    stroke: #ff0000;        /* Red laser */
+    stroke-width: 2;        /* Thickness of laser beam */
+  }
+  
+  .laser-trail {
+    stroke: #ff0000;        /* Red laser trail */
+    stroke-width: 2;        /* Thickness of trail */
+    stroke-opacity: 0.5;    /* Semi-transparent trail */
+  }
+  
+  .laser-flash {
+    fill: #ffffff;          /* Color of collision flash */
+  }
+  

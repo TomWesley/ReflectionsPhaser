@@ -1,130 +1,164 @@
-// Custom Mirror class with randomly generated shapes
+// Custom Mirror class with shapes drawn directly from physics body
 class Mirror {
     constructor(scene, x, y) {
       this.scene = scene;
       this.x = x;
       this.y = y;
       
-      // Load appearance settings from CSS variables if available
+      // Load appearance settings from CSS classes
       this.loadStyleFromCSS();
       
       // Randomly determine if this will be a triangle or quadrilateral
       this.isTriangle = Math.random() < 0.5;
       
-      // Create the shape
-      this.createRandomShape();
-      
-      // Setup input handlers in the scene directly
-      this.setupInteractivity();
-      
-      // Create the physics body
+      // First, create the physics body
       this.createPhysicsBody();
       
-      // Track dragging state
+      // Then, create the graphics object for drawing
+      this.graphics = scene.add.graphics();
+      
+      // Draw the mirror based on physics body
+      this.drawFromPhysics();
+      
+      // Setup interactivity after drawing
+      this.makeInteractive();
+      
+      // Track state
       this.isDragging = false;
       this.isLocked = false;
     }
     
-    // Load style settings from CSS variables if available
+    // Load style settings from CSS classes
     loadStyleFromCSS() {
-      // Default style settings - used if CSS variables not available
+      // Default style settings
       this.style = {
-        lineColor: 0x00ff00,    // Green outline
-        lineThickness: 2,       // Line thickness
-        fillColor: 0x000000,    // Black fill
-        fillAlpha: 0.2,         // Slight transparency for fill
-        hoverLineColor: 0x44aaff, // Blue outline when hovering
-        dragLineColor: 0xaaaaff,  // Light blue when dragging
-        lockedLineColor: 0x999999 // Gray when locked (game started)
+        strokeColor: 0x00ff00,     // Green outline
+        strokeWidth: 2,            // Line thickness
+        fillColor: 0x000000,       // Black fill
+        fillAlpha: 0.3,            // Transparency for fill
+        hoverStrokeColor: 0x44aaff, // Blue outline when hovering
+        dragStrokeColor: 0xaaaaff,  // Light blue when dragging
+        lockedStrokeColor: 0x999999 // Gray when locked (game started)
       };
       
-      // Try to get style from CSS variables
       try {
-        // Get CSS variables from :root or html element
-        const computedStyle = getComputedStyle(document.documentElement);
+        // Get styles from CSS classes
+        const mirrorStyle = this.getComputedStyleForClass('mirror');
+        const mirrorHoverStyle = this.getComputedStyleForClass('mirror-hover');
+        const mirrorDragStyle = this.getComputedStyleForClass('mirror-drag');
+        const mirrorLockedStyle = this.getComputedStyleForClass('mirror-locked');
         
-        // Helper function to convert CSS color to hex
-        const cssColorToHex = (color) => {
-          // For hex values
-          if (color.startsWith('#')) {
-            return parseInt(color.substring(1), 16);
+        // Apply basic mirror styles
+        if (mirrorStyle) {
+          if (mirrorStyle.stroke) {
+            this.style.strokeColor = this.cssColorToHex(mirrorStyle.stroke);
           }
-          
-          // For rgb/rgba values
-          const rgbMatch = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*[\d.]+)?\)/);
-          if (rgbMatch) {
-            const r = parseInt(rgbMatch[1]);
-            const g = parseInt(rgbMatch[2]);
-            const b = parseInt(rgbMatch[3]);
-            return (r << 16) + (g << 8) + b;
+          if (mirrorStyle['stroke-width']) {
+            this.style.strokeWidth = parseInt(mirrorStyle['stroke-width']);
           }
-          
-          // Return default if cannot parse
-          return null;
-        };
-        
-        // Get CSS variables with fallbacks
-        const getVar = (name, defaultValue) => {
-          const value = computedStyle.getPropertyValue(name).trim();
-          return value ? value : defaultValue;
-        };
-        
-        // Update style settings from CSS if available
-        const mirrorLineColor = getVar('--mirror-line-color', null);
-        if (mirrorLineColor) {
-          this.style.lineColor = cssColorToHex(mirrorLineColor) || this.style.lineColor;
+          if (mirrorStyle.fill) {
+            this.style.fillColor = this.cssColorToHex(mirrorStyle.fill);
+          }
+          if (mirrorStyle['fill-opacity']) {
+            this.style.fillAlpha = parseFloat(mirrorStyle['fill-opacity']);
+          }
         }
         
-        const mirrorLineThickness = getVar('--mirror-line-thickness', null);
-        if (mirrorLineThickness) {
-          this.style.lineThickness = parseInt(mirrorLineThickness) || this.style.lineThickness;
+        // Apply hover styles
+        if (mirrorHoverStyle && mirrorHoverStyle.stroke) {
+          this.style.hoverStrokeColor = this.cssColorToHex(mirrorHoverStyle.stroke);
         }
         
-        const mirrorFillColor = getVar('--mirror-fill-color', null);
-        if (mirrorFillColor) {
-          this.style.fillColor = cssColorToHex(mirrorFillColor) || this.style.fillColor;
+        // Apply drag styles
+        if (mirrorDragStyle && mirrorDragStyle.stroke) {
+          this.style.dragStrokeColor = this.cssColorToHex(mirrorDragStyle.stroke);
         }
         
-        const mirrorFillAlpha = getVar('--mirror-fill-alpha', null);
-        if (mirrorFillAlpha) {
-          this.style.fillAlpha = parseFloat(mirrorFillAlpha) || this.style.fillAlpha;
-        }
-        
-        const mirrorHoverColor = getVar('--mirror-hover-color', null);
-        if (mirrorHoverColor) {
-          this.style.hoverLineColor = cssColorToHex(mirrorHoverColor) || this.style.hoverLineColor;
-        }
-        
-        const mirrorDragColor = getVar('--mirror-drag-color', null);
-        if (mirrorDragColor) {
-          this.style.dragLineColor = cssColorToHex(mirrorDragColor) || this.style.dragLineColor;
-        }
-        
-        const mirrorLockedColor = getVar('--mirror-locked-color', null);
-        if (mirrorLockedColor) {
-          this.style.lockedLineColor = cssColorToHex(mirrorLockedColor) || this.style.lockedLineColor;
+        // Apply locked styles
+        if (mirrorLockedStyle && mirrorLockedStyle.stroke) {
+          this.style.lockedStrokeColor = this.cssColorToHex(mirrorLockedStyle.stroke);
         }
       } catch (e) {
         console.warn('Could not load mirror styles from CSS, using defaults.', e);
       }
     }
     
-    createRandomShape() {
-      // Min and max size for the shape - increased by ~30%
-      const minSize = 40;  // Increased from 30
-      const maxSize = 90;  // Increased from 70
+    // Helper method to get computed style for a CSS class
+    getComputedStyleForClass(className) {
+      // Create a temporary element to apply the class
+      const tempElement = document.createElement('div');
+      tempElement.className = className;
+      document.body.appendChild(tempElement);
+      
+      // Get computed style
+      const style = window.getComputedStyle(tempElement);
+      
+      // Extract relevant properties
+      const result = {
+        stroke: style.getPropertyValue('stroke'),
+        'stroke-width': style.getPropertyValue('stroke-width'),
+        fill: style.getPropertyValue('fill'),
+        'fill-opacity': style.getPropertyValue('fill-opacity')
+      };
+      
+      // Clean up
+      document.body.removeChild(tempElement);
+      
+      return result;
+    }
+    
+    // Helper function to convert CSS color to hex
+    cssColorToHex(color) {
+      if (!color) return null;
+      
+      // For hex values
+      if (color.startsWith('#')) {
+        return parseInt(color.substring(1), 16);
+      }
+      
+      // For rgb/rgba values
+      const rgbMatch = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*[\d.]+)?\)/);
+      if (rgbMatch) {
+        const r = parseInt(rgbMatch[1]);
+        const g = parseInt(rgbMatch[2]);
+        const b = parseInt(rgbMatch[3]);
+        return (r << 16) + (g << 8) + b;
+      }
+      
+      // For named colors
+      if (color.match(/^[a-z]+$/i)) {
+        try {
+          const ctx = document.createElement('canvas').getContext('2d');
+          ctx.fillStyle = color;
+          const hexColor = ctx.fillStyle;
+          if (hexColor.startsWith('#')) {
+            return parseInt(hexColor.substring(1), 16);
+          }
+        } catch (e) {
+          // If canvas method fails, fall back to default
+        }
+      }
+      
+      // Default fallback
+      return 0x00ff00; // Green
+    }
+    
+    createPhysicsBody() {
+      // Min and max size for the shape
+      const minSize = 40;
+      const maxSize = 90;
       
       // Random size for this mirror
       const size = Phaser.Math.Between(minSize, maxSize);
       
-      // Generate vertices based on shape type
-      this.vertices = [];
-      
+      // Generate physics body based on shape type
       if (this.isTriangle) {
-        // Create a random triangle
-        // We'll use a base triangle and then randomly offset each vertex
+        // Create a random triangle physics body
+        const verts = [];
+        
+        // Create a base triangle
         const baseTriangle = [
-          { x: 0, y: -size },            // Top
+          { x: 0, y: -size },                // Top
           { x: -size * 0.866, y: size * 0.5 }, // Bottom left
           { x: size * 0.866, y: size * 0.5 }   // Bottom right
         ];
@@ -133,14 +167,33 @@ class Mirror {
         for (let i = 0; i < 3; i++) {
           const variationX = Phaser.Math.Between(-size * 0.3, size * 0.3);
           const variationY = Phaser.Math.Between(-size * 0.3, size * 0.3);
-          this.vertices.push({
-            x: this.x + baseTriangle[i].x + variationX,
-            y: this.y + baseTriangle[i].y + variationY
+          verts.push({ 
+            x: baseTriangle[i].x + variationX, 
+            y: baseTriangle[i].y + variationY 
           });
         }
+        
+        // Create the body
+        this.body = this.scene.matter.add.fromVertices(
+          this.x, this.y,
+          verts,
+          {
+            isStatic: true,
+            label: 'mirror',
+            friction: 0,
+            frictionAir: 0,
+            restitution: 1, // Perfect bounce
+            collisionFilter: {
+              category: 0x0002, // Category 2: mirrors
+              mask: 0x0001 // Only collide with lasers
+            }
+          }
+        );
       } else {
-        // Create a random quadrilateral
-        // We'll create a base rectangle and then randomly offset each vertex
+        // Create a random quadrilateral physics body
+        const verts = [];
+        
+        // Create a base rectangle with random height
         const width = size;
         const height = Phaser.Math.Between(size * 0.5, size * 1.5);
         
@@ -155,92 +208,189 @@ class Mirror {
         for (let i = 0; i < 4; i++) {
           const variationX = Phaser.Math.Between(-size * 0.2, size * 0.2);
           const variationY = Phaser.Math.Between(-size * 0.2, size * 0.2);
-          this.vertices.push({
-            x: this.x + baseRect[i].x + variationX,
-            y: this.y + baseRect[i].y + variationY
+          verts.push({ 
+            x: baseRect[i].x + variationX, 
+            y: baseRect[i].y + variationY 
           });
         }
-      }
-      
-      // Create the graphics object
-      this.graphics = this.scene.add.graphics();
-      this.redraw();
-    }
-    
-    setupInteractivity() {
-      // Make sure the graphics object is interactive
-      this.graphics.setInteractive({
-        hitArea: new Phaser.Geom.Polygon(this.vertices),
-        hitAreaCallback: Phaser.Geom.Polygon.Contains,
-        draggable: true,
-        useHandCursor: true,
-        pixelPerfect: false // No need for pixel perfect detection
-      });
-      
-      // Hover effects
-      this.graphics.on('pointerover', () => {
-        if (!this.isDragging && !this.isLocked) {
-          this.redraw(this.style.hoverLineColor);
-        }
-      });
-      
-      this.graphics.on('pointerout', () => {
-        if (!this.isDragging && !this.isLocked) {
-          this.redraw(this.style.lineColor);
-        }
-      });
-    }
-    
-    createPhysicsBody() {
-      // Create physics body using the exact same vertices as the visual shape
-      // Format the vertices for Matter.js
-      const physicsVertices = [];
-      for (const vert of this.vertices) {
-        physicsVertices.push({ x: vert.x - this.x, y: vert.y - this.y });
-      }
-      
-      // Create the body
-      this.body = this.scene.matter.add.fromVertices(
-        this.x, this.y,
-        physicsVertices,
-        {
-          isStatic: true,
-          label: 'mirror',
-          friction: 0,
-          frictionAir: 0,
-          restitution: 1, // Perfect bounce
-          collisionFilter: {
-            category: 0x0002, // Category 2: mirrors
-            mask: 0x0001 // Only collide with lasers
+        
+        // Create the body
+        this.body = this.scene.matter.add.fromVertices(
+          this.x, this.y,
+          verts,
+          {
+            isStatic: true,
+            label: 'mirror',
+            friction: 0,
+            frictionAir: 0,
+            restitution: 1, // Perfect bounce
+            collisionFilter: {
+              category: 0x0002, // Category 2: mirrors
+              mask: 0x0001 // Only collide with lasers
+            }
           }
-        }
-      );
-      
-      // Important: DON'T set gameObject property on the body
-      // This causes issues with Phaser's event system
+        );
+      }
     }
     
-    redraw(lineColor = this.style.lineColor) {
+    // Draw the mirror based on its physics body
+    drawFromPhysics() {
+      // Clear any existing graphics
       this.graphics.clear();
+      
+      // Get the vertices from the physics body
+      let vertices;
+      
+      if (this.body.parts && this.body.parts.length > 1) {
+        // For compound bodies, use the first part after the parent
+        vertices = this.body.parts[1].vertices;
+      } else {
+        // For simple bodies
+        vertices = this.body.vertices;
+      }
       
       // Draw fill
       this.graphics.fillStyle(this.style.fillColor, this.style.fillAlpha);
       this.graphics.beginPath();
       
-      this.graphics.moveTo(this.vertices[0].x, this.vertices[0].y);
-      for (let i = 1; i < this.vertices.length; i++) {
-        this.graphics.lineTo(this.vertices[i].x, this.vertices[i].y);
+      // Draw the shape
+      this.graphics.moveTo(vertices[0].x, vertices[0].y);
+      for (let i = 1; i < vertices.length; i++) {
+        this.graphics.lineTo(vertices[i].x, vertices[i].y);
       }
       this.graphics.closePath();
       this.graphics.fillPath();
       
       // Draw outline
-      this.graphics.lineStyle(this.style.lineThickness, lineColor);
+      this.graphics.lineStyle(this.style.strokeWidth, this.style.strokeColor);
       this.graphics.beginPath();
       
-      this.graphics.moveTo(this.vertices[0].x, this.vertices[0].y);
-      for (let i = 1; i < this.vertices.length; i++) {
-        this.graphics.lineTo(this.vertices[i].x, this.vertices[i].y);
+      this.graphics.moveTo(vertices[0].x, vertices[0].y);
+      for (let i = 1; i < vertices.length; i++) {
+        this.graphics.lineTo(vertices[i].x, vertices[i].y);
+      }
+      this.graphics.closePath();
+      this.graphics.strokePath();
+    }
+    
+    // Set up the mirror for interactivity
+    makeInteractive() {
+      // Get vertices from the physics body for hit testing
+      let vertices = [];
+      
+      if (this.body.parts && this.body.parts.length > 1) {
+        vertices = this.body.parts[1].vertices;
+      } else {
+        vertices = this.body.vertices;
+      }
+      
+      // Create polygon points array for Phaser
+      const polygonPoints = [];
+      for (const vertex of vertices) {
+        polygonPoints.push(vertex.x);
+        polygonPoints.push(vertex.y);
+      }
+      
+      // Create polygon for hit area
+      const hitArea = new Phaser.Geom.Polygon(polygonPoints);
+      
+      // Make the graphics object interactive with properly defined callback
+      this.graphics.setInteractive({
+        hitArea: hitArea,
+        hitAreaCallback: Phaser.Geom.Polygon.Contains,
+        useHandCursor: true,
+        draggable: true
+      });
+      
+      // Add input handlers
+      this.graphics.on('pointerover', () => {
+        if (!this.isDragging && !this.isLocked) {
+          this.setColor(this.style.hoverStrokeColor);
+        }
+      });
+      
+      this.graphics.on('pointerout', () => {
+        if (!this.isDragging && !this.isLocked) {
+          this.setColor(this.style.strokeColor);
+        }
+      });
+      
+      // Drag start - store initial pointer position relative to mirror
+      this.graphics.on('dragstart', (pointer) => {
+        if (!this.isLocked) {
+          // Store offset between pointer and mirror center to maintain during drag
+          this.dragOffsetX = this.x - pointer.x;
+          this.dragOffsetY = this.y - pointer.y;
+          this.startDrag();
+        }
+      });
+      
+      // Drag - use the stored offset to maintain relative position
+      this.graphics.on('drag', (pointer, dragX, dragY) => {
+        if (!this.isLocked && this.isDragging) {
+          // Apply the offset to keep the mirror position relative to the pointer
+          const adjustedX = pointer.x + (this.dragOffsetX || 0);
+          const adjustedY = pointer.y + (this.dragOffsetY || 0);
+          
+          // Constrain to game boundaries
+          const bounds = this.scene;
+          let finalX = adjustedX;
+          let finalY = adjustedY;
+          
+          if (bounds.leftBound !== undefined && bounds.rightBound !== undefined) {
+            finalX = Phaser.Math.Clamp(adjustedX, bounds.leftBound + 30, bounds.rightBound - 30);
+          }
+          if (bounds.topBound !== undefined && bounds.bottomBound !== undefined) {
+            finalY = Phaser.Math.Clamp(adjustedY, bounds.topBound + 30, bounds.bottomBound - 30);
+          }
+          
+          this.drag(finalX, finalY);
+        }
+      });
+      
+      // Drag end
+      this.graphics.on('dragend', () => {
+        if (!this.isLocked && this.isDragging) {
+          this.stopDrag();
+          // Clear drag offsets
+          delete this.dragOffsetX;
+          delete this.dragOffsetY;
+        }
+      });
+    }
+    
+    // Change color (for hover, drag, etc.)
+    setColor(color) {
+      // Clear and redraw with new color
+      this.graphics.clear();
+      
+      // Get the vertices from the physics body
+      let vertices;
+      
+      if (this.body.parts && this.body.parts.length > 1) {
+        vertices = this.body.parts[1].vertices;
+      } else {
+        vertices = this.body.vertices;
+      }
+      
+      // Draw fill
+      this.graphics.fillStyle(this.style.fillColor, this.style.fillAlpha);
+      this.graphics.beginPath();
+      
+      this.graphics.moveTo(vertices[0].x, vertices[0].y);
+      for (let i = 1; i < vertices.length; i++) {
+        this.graphics.lineTo(vertices[i].x, vertices[i].y);
+      }
+      this.graphics.closePath();
+      this.graphics.fillPath();
+      
+      // Draw outline with the new color
+      this.graphics.lineStyle(this.style.strokeWidth, color);
+      this.graphics.beginPath();
+      
+      this.graphics.moveTo(vertices[0].x, vertices[0].y);
+      for (let i = 1; i < vertices.length; i++) {
+        this.graphics.lineTo(vertices[i].x, vertices[i].y);
       }
       this.graphics.closePath();
       this.graphics.strokePath();
@@ -250,96 +400,213 @@ class Mirror {
     startDrag() {
       if (this.isLocked) return;
       
+      console.log('Mirror drag started');
       this.isDragging = true;
       this.scene.matter.body.setStatic(this.body, false);
-      this.redraw(this.style.dragLineColor);
+      this.setColor(this.style.dragStrokeColor);
     }
     
     // During drag - update position
     drag(dragX, dragY) {
       if (this.isLocked || !this.isDragging) return;
       
-      // Calculate movement delta
-      const deltaX = dragX - this.x;
-      const deltaY = dragY - this.y;
+      // Check if the position is within valid placement bounds
+      if (this.isPositionValid(dragX, dragY)) {
+        // Move the physics body to the new position
+        this.scene.matter.body.setPosition(this.body, {
+          x: dragX,
+          y: dragY
+        });
+        
+        // Update our stored position
+        this.x = dragX;
+        this.y = dragY;
+        
+        // Redraw at the new position
+        this.drawFromPhysics();
+        
+        // Update the hit area to match the new position
+        this.updateHitArea();
+        
+        // Reset to normal drag color
+        this.setColor(this.style.dragStrokeColor);
+      } else {
+        // Invalid position - show visual feedback (red)
+        this.setColor(0xff0000);
+      }
+    }
+    
+    // Check if a position is valid (outside no-go zones)
+    isPositionValid(x, y) {
+      // Only apply constraints before game starts
+      if (this.scene.isGameStarted) return true;
       
-      // Update stored position
-      this.x = dragX;
-      this.y = dragY;
+      // Get constraints from scene if available
+      const constraints = this.scene.placementConstraints;
+      if (!constraints) return true; // No constraints defined
       
-      // Update all vertices
-      for (let i = 0; i < this.vertices.length; i++) {
-        this.vertices[i].x += deltaX;
-        this.vertices[i].y += deltaY;
+      // Check distance from center (target)
+      const distanceFromCenter = Math.sqrt(x * x + y * y);
+      if (distanceFromCenter < constraints.targetSafeRadius) {
+        return false; // Too close to target
       }
       
-      // Update physics body position
-      this.scene.matter.body.setPosition(this.body, {
-        x: this.x,
-        y: this.y
-      });
+      // Check wall margins
+      const margin = constraints.wallSafeMargin;
       
-      // Redraw with updated position
-      this.redraw(this.style.dragLineColor);
+      // Get game area boundaries
+      const leftBound = this.scene.leftBound;
+      const rightBound = this.scene.rightBound;
+      const topBound = this.scene.topBound;
+      const bottomBound = this.scene.bottomBound;
+      
+      // Too close to walls?
+      if (x < leftBound + margin || x > rightBound - margin ||
+          y < topBound + margin || y > bottomBound - margin) {
+        return false;
+      }
+      
+      return true;
+    }
+    
+    // Update the hit area to match the current physics body
+    updateHitArea() {
+      if (!this.graphics || !this.graphics.input || !this.body) return;
+      
+      // Get vertices from the physics body
+      let vertices = [];
+      
+      if (this.body.parts && this.body.parts.length > 1) {
+        vertices = this.body.parts[1].vertices;
+      } else {
+        vertices = this.body.vertices;
+      }
+      
+      // Create polygon points array for Phaser
+      const polygonPoints = [];
+      for (const vertex of vertices) {
+        polygonPoints.push(vertex.x);
+        polygonPoints.push(vertex.y);
+      }
+      
+      // Create new polygon for hit area
+      const hitArea = new Phaser.Geom.Polygon(polygonPoints);
+      
+      // Update the hit area
+      this.graphics.input.hitArea = hitArea;
     }
     
     // End dragging
     stopDrag() {
-      if (this.isLocked) return;
+      if (this.isLocked || !this.isDragging) return;
       
+      console.log('Mirror drag ended');
       this.isDragging = false;
-      this.scene.matter.body.setStatic(this.body, true);
-      this.redraw(this.style.lineColor);
       
       // Optional: Snap to grid
       const gridSize = 10;
       const newX = Math.round(this.x / gridSize) * gridSize;
       const newY = Math.round(this.y / gridSize) * gridSize;
       
-      // Calculate the distance to move
-      const deltaX = newX - this.x;
-      const deltaY = newY - this.y;
+      // Check if the final position is valid
+      if (this.isPositionValid(newX, newY)) {
+        // Move the physics body to the snapped position
+        this.scene.matter.body.setPosition(this.body, {
+          x: newX,
+          y: newY
+        });
+        
+        // Update our stored position
+        this.x = newX;
+        this.y = newY;
+        
+        // Make static again
+        this.scene.matter.body.setStatic(this.body, true);
+        
+        // Redraw at the final position
+        this.drawFromPhysics();
+        
+        // Update the hit area to match the final position
+        this.updateHitArea();
+        
+        // Reset to normal color
+        this.setColor(this.style.strokeColor);
+      } else {
+        // If position is invalid, find a valid position nearby
+        const validPos = this.findNearestValidPosition(newX, newY);
+        
+        // Move to valid position
+        this.scene.matter.body.setPosition(this.body, {
+          x: validPos.x,
+          y: validPos.y
+        });
+        
+        // Update our stored position
+        this.x = validPos.x;
+        this.y = validPos.y;
+        
+        // Make static again
+        this.scene.matter.body.setStatic(this.body, true);
+        
+        // Redraw at the final position
+        this.drawFromPhysics();
+        
+        // Update the hit area
+        this.updateHitArea();
+        
+        // Reset to normal color
+        this.setColor(this.style.strokeColor);
+      }
+    }
+    
+    // Find nearest valid position if current position is invalid
+    findNearestValidPosition(x, y) {
+      // Get constraints and boundaries
+      const constraints = this.scene.placementConstraints;
+      const leftBound = this.scene.leftBound;
+      const rightBound = this.scene.rightBound;
+      const topBound = this.scene.topBound;
+      const bottomBound = this.scene.bottomBound;
       
-      // Update position
-      this.x = newX;
-      this.y = newY;
+      // If no constraints, return original position
+      if (!constraints) return { x, y };
       
-      // Move physics body
-      this.scene.matter.body.setPosition(this.body, {
-        x: this.x,
-        y: this.y
-      });
+      // Check target distance
+      const distanceFromCenter = Math.sqrt(x * x + y * y);
+      let validX = x;
+      let validY = y;
       
-      // Update all vertices
-      for (const vertex of this.vertices) {
-        vertex.x += deltaX;
-        vertex.y += deltaY;
+      // If too close to target, move outward
+      if (distanceFromCenter < constraints.targetSafeRadius) {
+        // Calculate direction vector from center to mirror
+        const angle = Math.atan2(y, x);
+        // Move to minimum safe distance in same direction
+        validX = Math.cos(angle) * constraints.targetSafeRadius;
+        validY = Math.sin(angle) * constraints.targetSafeRadius;
       }
       
-      // Redraw with updated position
-      this.redraw();
+      // Adjust for wall boundaries
+      const margin = constraints.wallSafeMargin;
       
-      // IMPORTANT: Update the hit area to match the new position
-      // This was the key issue preventing multiple drags
-      this.updateHitArea();
-    }
-    
-    // Update the interactive hit area after movement
-    updateHitArea() {
-      // Create a new polygon from the current vertices
-      const polygon = new Phaser.Geom.Polygon(this.vertices);
+      // Too close to left wall?
+      if (validX < leftBound + margin) {
+        validX = leftBound + margin;
+      }
+      // Too close to right wall?
+      else if (validX > rightBound - margin) {
+        validX = rightBound - margin;
+      }
       
-      // Update the hit area
-      this.graphics.input.hitArea = polygon;
-      this.graphics.input.hitAreaCallback = Phaser.Geom.Polygon.Contains;
-    }
-    
-    // Lock mirror once game starts
-    lock() {
-      this.isLocked = true;
-      this.graphics.disableInteractive();
-      this.scene.matter.body.setStatic(this.body, true);
-      this.redraw(this.style.lockedLineColor);
+      // Too close to top wall?
+      if (validY < topBound + margin) {
+        validY = topBound + margin;
+      }
+      // Too close to bottom wall?
+      else if (validY > bottomBound - margin) {
+        validY = bottomBound - margin;
+      }
+      
+      return { x: validX, y: validY };
     }
     
     // Get normal vector for the closest edge to the collision point
@@ -348,9 +615,18 @@ class Mirror {
       let closestEdge = null;
       let minDistance = Infinity;
       
-      for (let i = 0; i < this.vertices.length; i++) {
-        const start = this.vertices[i];
-        const end = this.vertices[(i + 1) % this.vertices.length];
+      // Get vertices from the physics body
+      let vertices;
+      if (this.body.parts && this.body.parts.length > 1) {
+        vertices = this.body.parts[1].vertices;
+      } else {
+        vertices = this.body.vertices;
+      }
+      
+      // Check each edge
+      for (let i = 0; i < vertices.length; i++) {
+        const start = vertices[i];
+        const end = vertices[(i + 1) % vertices.length];
         
         // Calculate the closest point on this edge to the collision point
         const closest = this.closestPointOnLine(collisionPoint, start, end);
@@ -361,6 +637,7 @@ class Mirror {
           closest.x, closest.y
         );
         
+        // Update closest edge if this is closer
         if (distance < minDistance) {
           minDistance = distance;
           closestEdge = { start, end };
@@ -369,16 +646,42 @@ class Mirror {
       
       // Calculate the normal of the closest edge
       if (closestEdge) {
+        // Find the edge direction
         const dx = closestEdge.end.x - closestEdge.start.x;
         const dy = closestEdge.end.y - closestEdge.start.y;
         
-        // Perpendicular vector (normal to the edge)
-        const normalX = -dy;
-        const normalY = dx;
+        // Edge length
+        const length = Math.sqrt(dx * dx + dy * dy);
         
-        // Normalize
-        const length = Math.sqrt(normalX * normalX + normalY * normalY);
-        return new Phaser.Math.Vector2(normalX / length, normalY / length);
+        // Normalized edge direction
+        const edgeX = dx / length;
+        const edgeY = dy / length;
+        
+        // Get the midpoint of the edge
+        const midpoint = {
+          x: (closestEdge.start.x + closestEdge.end.x) / 2,
+          y: (closestEdge.start.y + closestEdge.end.y) / 2
+        };
+        
+        // Vector from midpoint to collision point
+        const toCollision = {
+          x: collisionPoint.x - midpoint.x,
+          y: collisionPoint.y - midpoint.y
+        };
+        
+        // Possible normals (perpendicular to edge)
+        const normal1 = { x: -edgeY, y: edgeX };   // 90 degrees counterclockwise
+        const normal2 = { x: edgeY, y: -edgeX };   // 90 degrees clockwise
+        
+        // Dot product to determine which normal faces outward
+        const dot1 = toCollision.x * normal1.x + toCollision.y * normal1.y;
+        
+        // Choose the normal that gives positive dot product with vector to collision
+        const normal = (dot1 > 0) ? normal1 : normal2;
+        
+        // Normalize and return
+        const normalLength = Math.sqrt(normal.x * normal.x + normal.y * normal.y);
+        return new Phaser.Math.Vector2(normal.x / normalLength, normal.y / normalLength);
       }
       
       // Fallback if no edge found (shouldn't happen)
@@ -405,6 +708,25 @@ class Mirror {
         x: lineStart.x + t * dx,
         y: lineStart.y + t * dy
       };
+    }
+    
+    // Lock the mirror once game starts
+    lock() {
+      this.isLocked = true;
+      this.isDragging = false; // Ensure dragging is stopped
+      
+      // Make sure it's static and not draggable
+      this.scene.matter.body.setStatic(this.body, true);
+      
+      // Disable interaction
+      if (this.graphics && this.graphics.input) {
+        this.graphics.disableInteractive();
+      }
+      
+      // Change color to locked state
+      this.setColor(this.style.lockedStrokeColor);
+      
+      console.log('Mirror locked');
     }
     
     // Clean up when destroying

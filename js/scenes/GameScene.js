@@ -4,52 +4,8 @@ class GameScene extends Phaser.Scene {
   }
   
   setupInput() {
-    // Setup drag input handlers for custom mirrors
-    this.input.on('dragstart', (pointer, gameObject) => {
-      if (this.isGameStarted) return; // Can't move objects after game starts
-      
-      // Find the mirror associated with this graphics object
-      const mirror = this.mirrors.find(m => m.graphics === gameObject);
-      if (mirror) {
-        mirror.startDrag();
-        
-        // Store the initial pointer offset from the mirror center
-        // This helps with more natural dragging
-        mirror.dragOffsetX = mirror.x - pointer.x;
-        mirror.dragOffsetY = mirror.y - pointer.y;
-      }
-    });
-    
-    this.input.on('drag', (pointer, gameObject) => {
-      if (this.isGameStarted) return; // Can't move objects after game starts
-      
-      // Find the mirror associated with this graphics object
-      const mirror = this.mirrors.find(m => m.graphics === gameObject);
-      if (mirror) {
-        // Use pointer coordinates directly
-        const dragX = pointer.x + (mirror.dragOffsetX || 0);
-        const dragY = pointer.y + (mirror.dragOffsetY || 0);
-        
-        // Constrain to game boundaries
-        const constrainedX = Phaser.Math.Clamp(dragX, this.leftBound + 30, this.rightBound - 30);
-        const constrainedY = Phaser.Math.Clamp(dragY, this.topBound + 30, this.bottomBound - 30);
-        
-        mirror.drag(constrainedX, constrainedY);
-      }
-    });
-    
-    this.input.on('dragend', (pointer, gameObject) => {
-      if (this.isGameStarted) return; // Can't move objects after game starts
-      
-      // Find the mirror associated with this graphics object
-      const mirror = this.mirrors.find(m => m.graphics === gameObject);
-      if (mirror) {
-        mirror.stopDrag();
-        // Clear drag offsets
-        delete mirror.dragOffsetX;
-        delete mirror.dragOffsetY;
-      }
-    });
+    // The Mirror class now handles its own input
+    // No need for any setup here
   }
   
   setupCollisions() {
@@ -250,6 +206,13 @@ class GameScene extends Phaser.Scene {
     if (this.target) {
       this.target.destroy();
       this.target = null;
+    }
+    
+    // Clean up placement boundary
+    if (this.placementBoundary) {
+      this.placementBoundary.clear();
+      this.placementBoundary.destroy();
+      this.placementBoundary = null;
     }
     
     // Remove physics bodies
@@ -654,6 +617,63 @@ class GameScene extends Phaser.Scene {
       this.bottomBound - this.topBound - visualInset*2, 
       0x111144, 0.3)
       .setStrokeStyle(2, 0x3333aa);
+    
+    // Create placement boundary area (no-go zone for mirrors)
+    this.createPlacementBoundary();
+  }
+  
+  createPlacementBoundary() {
+    // Define the no-go zone sizes
+    const targetSafeRadius = 120; // Safe zone around target
+    const wallSafeMargin = 40;   // Safe zone near walls
+    
+    // Create graphics for placement boundary visualization
+    this.placementBoundary = this.add.graphics();
+    
+    // Light pink color with some transparency
+    this.placementBoundary.fillStyle(0xFF9999, 0.3);
+    
+    // Draw target no-go zone (circle around center)
+    this.placementBoundary.fillCircle(0, 0, targetSafeRadius);
+    
+    // Draw wall no-go zones (rectangles along each wall)
+    // Top wall
+    this.placementBoundary.fillRect(
+      this.leftBound,
+      this.topBound,
+      this.rightBound - this.leftBound,
+      wallSafeMargin
+    );
+    
+    // Bottom wall
+    this.placementBoundary.fillRect(
+      this.leftBound,
+      this.bottomBound - wallSafeMargin,
+      this.rightBound - this.leftBound,
+      wallSafeMargin
+    );
+    
+    // Left wall
+    this.placementBoundary.fillRect(
+      this.leftBound,
+      this.topBound + wallSafeMargin,
+      wallSafeMargin,
+      this.bottomBound - this.topBound - (2 * wallSafeMargin)
+    );
+    
+    // Right wall
+    this.placementBoundary.fillRect(
+      this.rightBound - wallSafeMargin,
+      this.topBound + wallSafeMargin,
+      wallSafeMargin,
+      this.bottomBound - this.topBound - (2 * wallSafeMargin)
+    );
+    
+    // Store the boundary values for mirror placement validation
+    this.placementConstraints = {
+      targetSafeRadius,
+      wallSafeMargin
+    };
   }
   
   createTarget() {
@@ -758,7 +778,6 @@ class GameScene extends Phaser.Scene {
       this.spawners.push(spawner);
     }
   }
-
     returnToMenu() {
       this.scene.start('MenuScene');
     }
