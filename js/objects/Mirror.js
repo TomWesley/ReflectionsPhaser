@@ -437,18 +437,39 @@ class Mirror {
     }
     
     // Check if a position is valid (outside no-go zones)
-    isPositionValid(x, y) {
-      // Only apply constraints before game starts
-      if (this.scene.isGameStarted) return true;
-      
-      // Get constraints from scene if available
-      const constraints = this.scene.placementConstraints;
-      if (!constraints) return true; // No constraints defined
+    // Check if a position is valid (outside no-go zones)
+isPositionValid(x, y) {
+    // Only apply constraints before game starts
+    if (this.scene.isGameStarted) return true;
+    
+    // Get constraints from scene if available
+    const constraints = this.scene.placementConstraints;
+    if (!constraints) return true; // No constraints defined
+    
+    // Instead of just checking the center point, we need to check all vertices of the mirror
+    // Get vertices from the physics body - we'll simulate where they would be at the new position
+    let vertices = [];
+    
+    if (this.body.parts && this.body.parts.length > 1) {
+      vertices = this.body.parts[1].vertices;
+    } else {
+      vertices = this.body.vertices;
+    }
+    
+    // Calculate the offset from current position to proposed position
+    const offsetX = x - this.x;
+    const offsetY = y - this.y;
+    
+    // Check if any vertex would be in a restricted zone after moving
+    for (const vertex of vertices) {
+      // Calculate new vertex position
+      const newVertexX = vertex.x + offsetX;
+      const newVertexY = vertex.y + offsetY;
       
       // Check distance from center (target)
-      const distanceFromCenter = Math.sqrt(x * x + y * y);
+      const distanceFromCenter = Math.sqrt(newVertexX * newVertexX + newVertexY * newVertexY);
       if (distanceFromCenter < constraints.targetSafeRadius) {
-        return false; // Too close to target
+        return false; // Vertex too close to target
       }
       
       // Check wall margins
@@ -461,13 +482,15 @@ class Mirror {
       const bottomBound = this.scene.bottomBound;
       
       // Too close to walls?
-      if (x < leftBound + margin || x > rightBound - margin ||
-          y < topBound + margin || y > bottomBound - margin) {
+      if (newVertexX < leftBound + margin || newVertexX > rightBound - margin ||
+          newVertexY < topBound + margin || newVertexY > bottomBound - margin) {
         return false;
       }
-      
-      return true;
     }
+    
+    // If no vertices are in restricted zones, position is valid
+    return true;
+  }
     
     // Update the hit area to match the current physics body
     updateHitArea() {
@@ -560,54 +583,76 @@ class Mirror {
     }
     
     // Find nearest valid position if current position is invalid
-    findNearestValidPosition(x, y) {
-      // Get constraints and boundaries
-      const constraints = this.scene.placementConstraints;
-      const leftBound = this.scene.leftBound;
-      const rightBound = this.scene.rightBound;
-      const topBound = this.scene.topBound;
-      const bottomBound = this.scene.bottomBound;
-      
-      // If no constraints, return original position
-      if (!constraints) return { x, y };
-      
-      // Check target distance
-      const distanceFromCenter = Math.sqrt(x * x + y * y);
-      let validX = x;
-      let validY = y;
-      
-      // If too close to target, move outward
-      if (distanceFromCenter < constraints.targetSafeRadius) {
-        // Calculate direction vector from center to mirror
-        const angle = Math.atan2(y, x);
-        // Move to minimum safe distance in same direction
-        validX = Math.cos(angle) * constraints.targetSafeRadius;
-        validY = Math.sin(angle) * constraints.targetSafeRadius;
-      }
-      
-      // Adjust for wall boundaries
-      const margin = constraints.wallSafeMargin;
-      
-      // Too close to left wall?
-      if (validX < leftBound + margin) {
-        validX = leftBound + margin;
-      }
-      // Too close to right wall?
-      else if (validX > rightBound - margin) {
-        validX = rightBound - margin;
-      }
-      
-      // Too close to top wall?
-      if (validY < topBound + margin) {
-        validY = topBound + margin;
-      }
-      // Too close to bottom wall?
-      else if (validY > bottomBound - margin) {
-        validY = bottomBound - margin;
-      }
-      
-      return { x: validX, y: validY };
+    // Find nearest valid position if current position is invalid
+findNearestValidPosition(x, y) {
+    // Get constraints and boundaries
+    const constraints = this.scene.placementConstraints;
+    const leftBound = this.scene.leftBound;
+    const rightBound = this.scene.rightBound;
+    const topBound = this.scene.topBound;
+    const bottomBound = this.scene.bottomBound;
+    
+    // If no constraints, return original position
+    if (!constraints) return { x, y };
+    
+    // Get vertices from the physics body
+    let vertices = [];
+    if (this.body.parts && this.body.parts.length > 1) {
+      vertices = this.body.parts[1].vertices;
+    } else {
+      vertices = this.body.vertices;
     }
+    
+    // Start with proposed position
+    let validX = x;
+    let validY = y;
+    
+    // Try different directions with increasing distance until we find a valid position
+    const directions = [
+      { x: 1, y: 0 },    // right
+      { x: 0, y: 1 },    // down
+      { x: -1, y: 0 },   // left
+      { x: 0, y: -1 },   // up
+      { x: 1, y: 1 },    // down-right
+      { x: -1, y: 1 },   // down-left
+      { x: -1, y: -1 },  // up-left
+      { x: 1, y: -1 }    // up-right
+    ];
+    
+    // If too close to target, first try moving directly outward
+    const distanceFromCenter = Math.sqrt(x * x + y * y);
+    if (distanceFromCenter < constraints.targetSafeRadius * 1.5) {
+      // Calculate direction vector from center to mirror
+      const angle = Math.atan2(y, x);
+      // Start at safe distance in same direction
+      validX = Math.cos(angle) * (constraints.targetSafeRadius * 1.5);
+      validY = Math.sin(angle) * (constraints.targetSafeRadius * 1.5);
+      
+      // If this position is valid, return it
+      if (this.isPositionValid(validX, validY)) {
+        return { x: validX, y: validY };
+      }
+    }
+    
+    // Try increasingly larger offsets until we find a valid position
+    for (let dist = 10; dist <= 200; dist += 10) {
+      for (const dir of directions) {
+        validX = x + dir.x * dist;
+        validY = y + dir.y * dist;
+        
+        // Check if this position is valid
+        if (this.isPositionValid(validX, validY)) {
+          return { x: validX, y: validY };
+        }
+      }
+    }
+    
+    // Fallback to a safe default position if no valid position found
+    return { 
+      x: 0, 
+      y: Math.sign(y) * (constraints.targetSafeRadius + 50) 
+    };
+  }
     
     // Get normal vector for the closest edge to the collision point
     getNormal(collisionPoint) {
