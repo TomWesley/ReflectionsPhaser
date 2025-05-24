@@ -67,8 +67,8 @@ class GameScene extends Phaser.Scene {
       // Launch lasers from each spawner
       this.lasers = [];
       this.spawners.forEach(spawner => {
-        // Create laser at spawner position with spawner direction
-        const laser = new Laser(this, spawner.position.x, spawner.position.y, spawner.direction);
+        // Create laser at spawner position with spawner direction (with scale factor)
+        const laser = new Laser(this, spawner.position.x, spawner.position.y, spawner.direction, 5 * this.scaleFactor);
         
         // Add to lasers array
         this.lasers.push(laser);
@@ -464,6 +464,32 @@ class GameScene extends Phaser.Scene {
       this.updateUIPositions();
       this.updateGameArea();
       this.updateMirrorConstraints();
+      
+      // Recreate game objects with new scale factor
+      this.recreateGameObjects();
+    }
+    
+    recreateGameObjects() {
+      // Only recreate if game hasn't started (to avoid disrupting gameplay)
+      if (!this.isGameStarted) {
+        // Recreate target with new scale
+        if (this.target) {
+          this.target.destroy();
+          this.target = new Target(this, 0, 0);
+        }
+        
+        // Update existing mirrors with new scale factor instead of recreating them
+        this.mirrors.forEach(mirror => {
+          if (mirror.updateScale) {
+            mirror.updateScale(this.scaleFactor);
+          }
+        });
+        
+        // Recreate spawners with new scale
+        this.spawners.forEach(spawner => spawner.destroy());
+        this.spawners = [];
+        this.createSpawners();
+      }
     }
     
     updateUIPositions() {
@@ -601,9 +627,9 @@ class GameScene extends Phaser.Scene {
     updatePlacementBoundary() {
       if (!this.placementBoundary) return;
       
-      // Define the no-go zone sizes (scaled)
-      const targetSafeRadius = 120 * this.scaleFactor;
-      const wallSafeMargin = 40 * this.scaleFactor;
+      // Define the no-go zone sizes (scaled) - adjusted for smaller mirrors
+      const targetSafeRadius = 80 * this.scaleFactor;  // Reduced from 120
+      const wallSafeMargin = 30 * this.scaleFactor;    // Reduced from 40
       
       // Clear and redraw placement boundary
       this.placementBoundary.clear();
@@ -1270,9 +1296,9 @@ class GameScene extends Phaser.Scene {
     }
     
     createPlacementBoundary() {
-      // Define the no-go zone sizes (scaled)
-      const targetSafeRadius = 120 * this.scaleFactor; // Safe zone around target
-      const wallSafeMargin = 40 * this.scaleFactor;   // Safe zone near walls
+      // Define the no-go zone sizes (scaled) - adjusted for smaller mirrors
+      const targetSafeRadius = 80 * this.scaleFactor; // Reduced from 120 due to smaller mirrors
+      const wallSafeMargin = 30 * this.scaleFactor;   // Reduced from 40 due to smaller mirrors
       
       // Create graphics for placement boundary visualization
       this.placementBoundary = this.add.graphics();
@@ -1356,10 +1382,10 @@ class GameScene extends Phaser.Scene {
       // Try to create at least one of each shape type if possible
       let shapesCreated = [];
       
-      // Define a safe radius away from the target (scaled)
+      // Define a safe radius away from the target (scaled) - adjusted for smaller mirrors
       const safeRadius = Math.max(
         this.placementConstraints.targetSafeRadius * 1.5,
-        150 * this.scaleFactor // Minimum distance scaled
+        100 * this.scaleFactor // Reduced minimum distance (was 150)
       );
       
       for (let i = 0; i < mirrorCount; i++) {
@@ -1411,9 +1437,9 @@ class GameScene extends Phaser.Scene {
         
         // If we couldn't find a valid position, use a safe default with extra spacing
         if (!validPosition) {
-          // Position along one of the diagonals with extra spacing
+          // Position along one of the diagonals with extra spacing (reduced for smaller mirrors)
           const angle = (Math.PI / 4) + (i * Math.PI / 2);
-          const extraSpacing = 50 * this.scaleFactor * i;
+          const extraSpacing = 30 * this.scaleFactor * i; // Reduced from 50
           const finalRadius = safeRadius + extraSpacing;
           
           x = Math.cos(angle) * finalRadius;
@@ -1499,8 +1525,8 @@ class GameScene extends Phaser.Scene {
         // Calculate direction pointing toward the center
         const direction = new Phaser.Math.Vector2(-pos.x, -pos.y).normalize();
         
-        // Create spawner as a smaller triangle pointing inward (scaled)
-        const size = 6 * this.scaleFactor;
+        // Create spawner as a smaller triangle pointing inward (SCALED!)
+        const size = Math.max(4, 6 * this.scaleFactor); // Ensure minimum size but scale appropriately
         const angle = Math.atan2(direction.y, direction.x);
         
         const spawner = this.add.triangle(
@@ -1510,6 +1536,9 @@ class GameScene extends Phaser.Scene {
           -size, size,
           0xff4500
         );
+        
+        // Scale the spawner visual
+        spawner.setScale(this.scaleFactor);
         
         // Rotate to point toward center
         spawner.rotation = angle + Math.PI / 2;
