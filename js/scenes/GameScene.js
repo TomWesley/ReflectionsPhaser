@@ -68,7 +68,7 @@ class GameScene extends Phaser.Scene {
       this.lasers = [];
       this.spawners.forEach(spawner => {
         // Create laser at spawner position with spawner direction (with scale factor)
-        const laser = new Laser(this, spawner.position.x, spawner.position.y, spawner.direction, 5 * this.scaleFactor);
+        const laser = new Laser(this, spawner.position.x, spawner.position.y, spawner.direction, 1 * this.scaleFactor);
         
         // Add to lasers array
         this.lasers.push(laser);
@@ -420,7 +420,7 @@ class GameScene extends Phaser.Scene {
       this.footerY = this.screenHeight / 2 - this.footerHeight / 2;
       
       // Scale factor for responsive elements
-      this.scaleFactor = this.gameSize / 800; // Assuming 800px as base size
+      this.scaleFactor = this.gameSize / 500; // Assuming 800px as base size
     }
     
     create() {
@@ -741,7 +741,7 @@ class GameScene extends Phaser.Scene {
       }).setOrigin(0.5).setAlpha(0.7);
       
       // Instructions text with modern styling
-      this.instructionsText = this.add.text(centerX, this.headerY - 25 * this.scaleFactor, 'Position mirrors to reflect the laser into the target', {
+      this.instructionsText = this.add.text(centerX, this.headerY - 25 * this.scaleFactor, 'Position mirrors to protect the center target from being hit by the incoming lasers', {
         fontFamily: 'Arial, sans-serif',
         fontSize: `${textFontSize}px`,
         color: '#e0e0e0',
@@ -988,7 +988,7 @@ class GameScene extends Phaser.Scene {
       }).setOrigin(0.5);
       
       // Congratulatory message
-      const congratsText = this.add.text(0, -panelHeight/2 + 120 * this.scaleFactor, 'Excellent work!', {
+      const congratsText = this.add.text(0, -panelHeight/2 + 120 * this.scaleFactor, 'GAME OVER', {
         fontFamily: 'Arial, sans-serif',
         fontSize: `${textFontSize}px`,
         color: '#ecf0f1'
