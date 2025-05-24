@@ -152,8 +152,8 @@ class Mirror {
     
     createPhysicsBody() {
         // Min and max size for the shape
-        const minSize = 70;
-        const maxSize = 150;
+        const minSize = 50;
+        const maxSize = 70;
         
         // Random size for this mirror
         const size = Phaser.Math.Between(minSize, maxSize);
