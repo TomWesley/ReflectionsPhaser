@@ -39,7 +39,7 @@ class Mirror {
     loadStyleFromCSS() {
       // Default style settings
       this.style = {
-        strokeColor: 0x00ff00,     // Green outline
+        strokeColor: 0x00ff00,     // Green outline by default
         strokeWidth: 2,            // Line thickness
         fillColor: 0x000000,       // Black fill
         fillAlpha: 0.3,            // Transparency for fill
@@ -151,9 +151,12 @@ class Mirror {
     }
     
     createPhysicsBody() {
-        // Min and max size for the shape
-        const minSize = 50;
-        const maxSize = 70;
+        // Get scale factor from scene
+        const scaleFactor = this.scene.scaleFactor || 1;
+        
+        // Min and max size for the shape (scaled)
+        const minSize = 50 * scaleFactor;
+        const maxSize = 70 * scaleFactor;
         
         // Random size for this mirror
         const size = Phaser.Math.Between(minSize, maxSize);
@@ -967,6 +970,37 @@ findNearestValidPosition(x, y) {
       this.setColor(this.style.lockedStrokeColor);
       
       console.log('Mirror locked');
+    }
+    
+    // Update scale of the mirror when screen resizes
+    updateScale(newScaleFactor) {
+      // Store current rotation and position
+      const currentRotation = this.body.angle;
+      const currentX = this.x;
+      const currentY = this.y;
+      
+      // Remove old physics body
+      if (this.body && this.scene.matter.world) {
+        this.scene.matter.world.remove(this.body);
+      }
+      
+      // Recreate physics body with new scale
+      this.createPhysicsBody();
+      
+      // Restore rotation and position
+      if (this.body) {
+        this.scene.matter.body.setAngle(this.body, currentRotation);
+        this.scene.matter.body.setPosition(this.body, {
+          x: currentX,
+          y: currentY
+        });
+      }
+      
+      // Redraw graphics
+      this.drawFromPhysics();
+      
+      // Update hit area
+      this.updateHitArea();
     }
     
     // Clean up when destroying
