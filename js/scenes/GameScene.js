@@ -405,22 +405,40 @@ class GameScene extends Phaser.Scene {
       this.gameAreaWidth = this.screenWidth - (this.sideMargin * 2);
       this.gameAreaHeight = this.screenHeight - this.headerHeight - this.footerHeight;
       
-      // Use the smaller dimension to maintain square aspect ratio
-      this.gameSize = Math.min(this.gameAreaWidth, this.gameAreaHeight);
+      // Create a rectangular game area that's 40% wider than tall
+      const aspectRatio = 1.4; // Width is 140% of height
+      
+      // Determine game dimensions based on available space
+      let gameWidth, gameHeight;
+      
+      // Check if we're constrained by width or height
+      if (this.gameAreaWidth / this.gameAreaHeight < aspectRatio) {
+        // Constrained by width
+        gameWidth = this.gameAreaWidth;
+        gameHeight = gameWidth / aspectRatio;
+      } else {
+        // Constrained by height
+        gameHeight = this.gameAreaHeight;
+        gameWidth = gameHeight * aspectRatio;
+      }
+      
+      // Store both dimensions
+      this.gameWidth = gameWidth;
+      this.gameHeight = gameHeight;
       
       // Calculate game boundaries (centered in available area)
-      const gameMargin = this.gameSize * 0.08; // 8% internal margin for spawners
-      this.leftBound = -this.gameSize / 2 + gameMargin;
-      this.rightBound = this.gameSize / 2 - gameMargin;
-      this.topBound = -this.gameSize / 2 + gameMargin;
-      this.bottomBound = this.gameSize / 2 - gameMargin;
+      const gameMargin = Math.min(gameWidth, gameHeight) * 0.08; // 8% internal margin for spawners
+      this.leftBound = -gameWidth / 2 + gameMargin;
+      this.rightBound = gameWidth / 2 - gameMargin;
+      this.topBound = -gameHeight / 2 + gameMargin;
+      this.bottomBound = gameHeight / 2 - gameMargin;
       
       // Calculate UI positions (in screen coordinates, not game coordinates)
       this.headerY = -this.screenHeight / 2 + this.headerHeight / 2;
       this.footerY = this.screenHeight / 2 - this.footerHeight / 2;
       
-      // Scale factor for responsive elements
-      this.scaleFactor = this.gameSize / 500; // Assuming 800px as base size
+      // Scale factor for responsive elements (based on the smaller dimension)
+      this.scaleFactor = Math.min(gameWidth, gameHeight) / 500; // Assuming 500px as base size
     }
     
     create() {
@@ -662,22 +680,22 @@ class GameScene extends Phaser.Scene {
         this.matter.world.remove([this.topWall, this.bottomWall, this.leftWall, this.rightWall]);
         
         // Create new walls with updated dimensions
-        this.topWall = this.matter.add.rectangle(0, this.topBound - wallThickness/2, this.gameSize, wallThickness, {
+        this.topWall = this.matter.add.rectangle(0, this.topBound - wallThickness/2, this.gameWidth, wallThickness, {
           isStatic: true, label: 'boundary', restitution: 1,
           collisionFilter: { category: 0x0008, mask: 0x0001 }
         });
         
-        this.bottomWall = this.matter.add.rectangle(0, this.bottomBound + wallThickness/2, this.gameSize, wallThickness, {
+        this.bottomWall = this.matter.add.rectangle(0, this.bottomBound + wallThickness/2, this.gameWidth, wallThickness, {
           isStatic: true, label: 'boundary', restitution: 1,
           collisionFilter: { category: 0x0008, mask: 0x0001 }
         });
         
-        this.leftWall = this.matter.add.rectangle(this.leftBound - wallThickness/2, 0, wallThickness, this.gameSize, {
+        this.leftWall = this.matter.add.rectangle(this.leftBound - wallThickness/2, 0, wallThickness, this.gameHeight, {
           isStatic: true, label: 'boundary', restitution: 1,
           collisionFilter: { category: 0x0008, mask: 0x0001 }
         });
         
-        this.rightWall = this.matter.add.rectangle(this.rightBound + wallThickness/2, 0, wallThickness, this.gameSize, {
+        this.rightWall = this.matter.add.rectangle(this.rightBound + wallThickness/2, 0, wallThickness, this.gameHeight, {
           isStatic: true, label: 'boundary', restitution: 1,
           collisionFilter: { category: 0x0008, mask: 0x0001 }
         });
@@ -1218,7 +1236,7 @@ class GameScene extends Phaser.Scene {
       const wallThickness = 5 * this.scaleFactor;
       
       // Top wall
-      this.topWall = this.matter.add.rectangle(0, this.topBound - wallThickness/2, this.gameSize, wallThickness, {
+      this.topWall = this.matter.add.rectangle(0, this.topBound - wallThickness/2, this.gameWidth, wallThickness, {
         isStatic: true,
         label: 'boundary',
         restitution: 1, // Perfect bounce
@@ -1229,7 +1247,7 @@ class GameScene extends Phaser.Scene {
       });
       
       // Bottom wall
-      this.bottomWall = this.matter.add.rectangle(0, this.bottomBound + wallThickness/2, this.gameSize, wallThickness, {
+      this.bottomWall = this.matter.add.rectangle(0, this.bottomBound + wallThickness/2, this.gameWidth, wallThickness, {
         isStatic: true,
         label: 'boundary',
         restitution: 1, // Perfect bounce
@@ -1240,7 +1258,7 @@ class GameScene extends Phaser.Scene {
       });
       
       // Left wall
-      this.leftWall = this.matter.add.rectangle(this.leftBound - wallThickness/2, 0, wallThickness, this.gameSize, {
+      this.leftWall = this.matter.add.rectangle(this.leftBound - wallThickness/2, 0, wallThickness, this.gameHeight, {
         isStatic: true,
         label: 'boundary',
         restitution: 1, // Perfect bounce
@@ -1251,7 +1269,7 @@ class GameScene extends Phaser.Scene {
       });
       
       // Right wall
-      this.rightWall = this.matter.add.rectangle(this.rightBound + wallThickness/2, 0, wallThickness, this.gameSize, {
+      this.rightWall = this.matter.add.rectangle(this.rightBound + wallThickness/2, 0, wallThickness, this.gameHeight, {
         isStatic: true,
         label: 'boundary',
         restitution: 1, // Perfect bounce
