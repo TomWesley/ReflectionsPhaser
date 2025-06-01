@@ -27,7 +27,7 @@ class Target {
       strokeWidth: 2,             // Outline thickness
       pulseColor: 0x00ff00,       // Color of pulse animation
       hitEffectColor: 0xffffff,   // Color of hit particle effect
-      size: 0.18                  // Target size as proportion of game size (8%)
+      size: 0.08                  // Target size as proportion of game size
     };
     
     try {
@@ -120,9 +120,14 @@ class Target {
   }
   
   createPhysicsBody() {
-    // Calculate target size based on game dimensions and style setting
-    const gameSize = Math.min(this.scene.cameras.main.height, this.scene.cameras.main.width);
-    this.visualSize = gameSize * this.style.size;
+    // Get target size from scaling manager if available
+    if (this.scene.scalingManager) {
+      this.visualSize = this.scene.scalingManager.elementSizes.target;
+    } else {
+      // Fallback calculation
+      const gameSize = Math.min(this.scene.cameras.main.height, this.scene.cameras.main.width);
+      this.visualSize = gameSize * this.style.size;
+    }
     
     // The collision radius is the EXACT same as the visual size 
     // to ensure perfect matching of hitbox and visual
@@ -138,28 +143,27 @@ class Target {
         mask: 0x0001 // Only collide with lasers (category 1)
       }
     });
-    
-    // Create debug visualization of the hitbox if debug is enabled
-    // if (this.scene.matter.world.debugGraphic) {
-    //   this.debugGraphics = this.scene.add.graphics({ lineStyle: { width: 1, color: 0xff00ff } });
-    //   this.debugGraphics.strokeCircle(this.x, this.y, this.collisionRadius);
-    // }
   }
   
   createVisual() {
     // Create graphics object for the target - EXACTLY matching the hitbox
     this.graphics = this.scene.add.graphics();
     
+    // Get scaled stroke width
+    const strokeWidth = this.scene.scalingManager ? 
+                       this.scene.scalingManager.getScaledValue(this.style.strokeWidth) :
+                       this.style.strokeWidth;
+    
     // Draw the target circle matching the physics body
     this.graphics.fillStyle(this.style.color, this.style.alpha);
     this.graphics.fillCircle(this.x, this.y, this.collisionRadius);
     
     // Draw the outline
-    this.graphics.lineStyle(this.style.strokeWidth, this.style.color, 1);
+    this.graphics.lineStyle(strokeWidth, this.style.color, 1);
     this.graphics.strokeCircle(this.x, this.y, this.collisionRadius);
     
     // Add inner circle for visual interest
-    this.graphics.lineStyle(1, this.style.color, 0.8);
+    this.graphics.lineStyle(strokeWidth * 0.5, this.style.color, 0.8);
     this.graphics.strokeCircle(this.x, this.y, this.collisionRadius * 0.7);
     
     // Add a dot in the center
@@ -226,10 +230,14 @@ class Target {
         const distance = Math.random() * this.visualSize;
         const size = Math.random() * 5 + 2;
         
+        // Scale the size if scaling manager is available
+        const scaledSize = this.scene.scalingManager ? 
+                          this.scene.scalingManager.getScaledValue(size) : size;
+        
         const x = this.x + Math.cos(angle) * distance;
         const y = this.y + Math.sin(angle) * distance;
         
-        explosionGraphics.fillCircle(x, y, size);
+        explosionGraphics.fillCircle(x, y, scaledSize);
       }
       
       // Fade out and remove
@@ -281,12 +289,8 @@ class Target {
     if (this.pulseContainer) {
       this.pulseContainer.destroy();
     }
-    
-    // Remove debug graphics if they exist
-    if (this.debugGraphics) {
-      this.debugGraphics.destroy();
-    }
   }
+  
   setAlpha(alpha) {
     // Update the graphics alpha
     if (this.graphics) {
@@ -300,4 +304,4 @@ class Target {
     
     return this;
   }
-}// Custom Target class that uses drawn graphics for consistent hitbox
+}

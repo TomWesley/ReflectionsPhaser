@@ -10,6 +10,12 @@ class Laser {
       // Load style from CSS
       this.loadStyleFromCSS();
       
+      // Get scaled speed
+      this.baseSpeed = speed;
+      this.speed = this.scene.scalingManager ? 
+                   this.scene.scalingManager.getScaledValue(speed) : 
+                   speed;
+      
       // Physics settings for Matter.js - create a tiny circle body for ultra-precise collisions
       this.body = scene.matter.add.circle(x, y, 1, { // Ultra-small for pixel-perfect collisions
         frictionAir: 0,
@@ -25,8 +31,7 @@ class Laser {
       // Remove default Matter.js rendering of the body
       this.body.render.visible = false;
       
-      // Speed and direction
-      this.speed = speed;
+      // Direction vector
       this.direction = new Phaser.Math.Vector2(direction.x, direction.y).normalize();
       
       // Set velocity based on direction and speed - use direct velocity setting
@@ -191,12 +196,19 @@ class Laser {
     
     // Check if laser is outside game boundaries and force reflection
     checkBoundaries() {
-      const boundsCheck = {
-        leftBound: this.scene.leftBound,
-        rightBound: this.scene.rightBound,
-        topBound: this.scene.topBound,
-        bottomBound: this.scene.bottomBound
-      };
+      // Get bounds from scaling manager if available
+      let bounds;
+      if (this.scene.scalingManager) {
+        bounds = this.scene.scalingManager.gameBounds;
+      } else {
+        // Fallback to scene bounds
+        bounds = {
+          left: this.scene.leftBound,
+          right: this.scene.rightBound,
+          top: this.scene.topBound,
+          bottom: this.scene.bottomBound
+        };
+      }
       
       let reflectionNeeded = false;
       let normal = { x: 0, y: 0 };
@@ -205,35 +217,33 @@ class Laser {
       const buffer = 2;
       
       // Left boundary check
-      if (this.x < boundsCheck.leftBound + buffer) {
+      if (this.x < bounds.left + buffer) {
         reflectionNeeded = true;
         normal = { x: 1, y: 0 }; // Normal pointing right
-        this.x = boundsCheck.leftBound + buffer; // Force position to be inside
+        this.x = bounds.left + buffer; // Force position to be inside
       }
       // Right boundary check
-      else if (this.x > boundsCheck.rightBound - buffer) {
+      else if (this.x > bounds.right - buffer) {
         reflectionNeeded = true;
         normal = { x: -1, y: 0 }; // Normal pointing left
-        this.x = boundsCheck.rightBound - buffer; // Force position to be inside
+        this.x = bounds.right - buffer; // Force position to be inside
       }
       
       // Top boundary check
-      if (this.y < boundsCheck.topBound + buffer) {
+      if (this.y < bounds.top + buffer) {
         reflectionNeeded = true;
         normal = { x: 0, y: 1 }; // Normal pointing down
-        this.y = boundsCheck.topBound + buffer; // Force position to be inside
+        this.y = bounds.top + buffer; // Force position to be inside
       }
       // Bottom boundary check
-      else if (this.y > boundsCheck.bottomBound - buffer) {
+      else if (this.y > bounds.bottom - buffer) {
         reflectionNeeded = true;
         normal = { x: 0, y: -1 }; // Normal pointing up
-        this.y = boundsCheck.bottomBound - buffer; // Force position to be inside
+        this.y = bounds.bottom - buffer; // Force position to be inside
       }
       
       // If we need to reflect, update position and perform reflection
       if (reflectionNeeded) {
-        console.log('Forcing laser reflection at boundary');
-        
         // Update physics body position
         this.scene.matter.body.setPosition(this.body, {
           x: this.x,
@@ -259,7 +269,8 @@ class Laser {
       
       // Remove any points that are too close to each other to avoid jagged lines
       // This helps create smoother trails
-      const minDistance = 5; // Minimum distance between points in the trail
+      const minDistance = this.scene.scalingManager ? 
+                          this.scene.scalingManager.getScaledValue(5) : 5;
       let filteredPoints = [this.points[0]];
       
       for (let i = 1; i < this.points.length; i++) {
@@ -284,7 +295,11 @@ class Laser {
           this.trail.clear();
         }
         
-        this.trail.lineStyle(2, 0xff0000, 0.5);
+        const trailColor = this.style.trailColor || this.style.color;
+        const lineWidth = this.scene.scalingManager ? 
+                         this.scene.scalingManager.getScaledValue(2) : 2;
+        
+        this.trail.lineStyle(lineWidth, trailColor, this.style.trailAlpha);
         this.trail.beginPath();
         this.trail.moveTo(filteredPoints[0].x, filteredPoints[0].y);
         
@@ -322,7 +337,11 @@ class Laser {
             // Handle collision with custom mirror
             if (otherBody.label === 'mirror') {
               // Find the mirror that owns this body
-              const mirror = this.scene.mirrors.find(m => m.body === otherBody);
+              const mirrors = this.scene.mirrors || 
+                            (this.scene.levelManager && this.scene.levelManager.mirrors) || 
+                            [];
+              const mirror = mirrors.find(m => m.body === otherBody);
+              
               if (mirror) {
                 this.reflectOffCustomMirror(mirror, collisionPoint);
               } else {
@@ -383,7 +402,8 @@ class Laser {
       });
       
       // Add a small displacement in the reflection direction to prevent multiple reflections
-      const displacementDistance = 3; // Small displacement to avoid re-collision
+      const displacementDistance = this.scene.scalingManager ? 
+                                  this.scene.scalingManager.getScaledValue(3) : 3;
       const newX = this.x + normalizedVx * displacementDistance / this.speed;
       const newY = this.y + normalizedVy * displacementDistance / this.speed;
       
@@ -391,9 +411,6 @@ class Laser {
         x: newX,
         y: newY
       });
-      
-      // Log reflection for debugging
-      console.log('Reflected with normal', normalizedNormal, 'new velocity', normalizedVx, normalizedVy);
     }
     
     reflectOffCustomMirror(mirror, collisionPoint) {
@@ -409,7 +426,9 @@ class Laser {
     
     addCollisionFlash(x, y) {
       // Add a small flash effect at collision point
-      const flash = this.scene.add.circle(x, y, 3, 0xffffff, 1);
+      const flashSize = this.scene.scalingManager ? 
+                       this.scene.scalingManager.getScaledValue(3) : 3;
+      const flash = this.scene.add.circle(x, y, flashSize, this.style.flashColor, 1);
       
       // Fade out and destroy
       this.scene.tweens.add({

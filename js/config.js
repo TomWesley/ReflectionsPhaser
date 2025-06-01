@@ -8,7 +8,7 @@ const config = {
       default: 'matter',
       matter: {
         gravity: { y: 0 }, // No gravity
-        debug: true // Set to true to see hitboxes for testing
+        debug: false // Debug mode turned off for production
       }
     },
     scale: {

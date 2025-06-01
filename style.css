@@ -117,59 +117,77 @@ body {
     --laser-color: #ff0000;             /* Red laser */
     --laser-trail-alpha: 0.5;           /* Semi-transparent trail */
     --laser-line-width: 2;              /* Thickness of laser beam */
-  }
+}
 
-  /* Game element styling with CSS classes */
+/* Game element styling with CSS classes */
 
 /* Mirror styles */
 .mirror {
-    stroke: #fbff00;        /* Green outline by default */
+    stroke: #fbff00;        /* Yellow outline */
     stroke-width: 2;        /* Line thickness */
-    fill: #e4f7ab;          /* Black fill */
-    fill-opacity: 1;      /* Fill transparency */
-  }
-  
-  .mirror-hover {
+    fill: #e4f7ab;          /* Light yellow fill */
+    fill-opacity: 1;        /* Fill transparency */
+}
+
+.mirror-hover {
     stroke: #44aaff;        /* Blue outline when hovering */
-  }
-  
-  .mirror-drag {
+}
+
+.mirror-drag {
     stroke: #aaaaff;        /* Light blue when dragging */
-  }
-  
-  .mirror-locked {
+}
+
+.mirror-locked {
     stroke: #999999;        /* Gray when locked (game started) */
-  }
-  
-  /* Target styles */
-  .target {
-    stroke: #ff00b7;        /* Green outline */
+}
+
+/* Target styles */
+.target {
+    stroke: #ff00b7;        /* Pink outline */
     stroke-width: 2;        /* Outline thickness */
-    fill: #f60039;          /* Green fill */
-    fill-opacity: 1;      /* Semi-transparent */
-  }
-  
-  .target-pulse {
+    fill: #f60039;          /* Red fill */
+    fill-opacity: 1;        /* Fill transparency */
+}
+
+.target-pulse {
     fill: #00ff00;          /* Color of pulse animation */
     fill-opacity: 0.4;      /* Transparency for pulse */
-  }
-  
-  .target-hit {
+}
+
+.target-hit {
     fill: #ffffff;          /* Color of hit particle effect */
-  }
-  
-  /* Laser styles */
-  .laser {
+}
+
+/* Laser styles */
+.laser {
     stroke: #ff0000;        /* Red laser */
     stroke-width: 2;        /* Thickness of laser beam */
-  }
-  
-  .laser-trail {
+}
+
+.laser-trail {
     stroke: #ff0000;        /* Red laser trail */
     stroke-width: 2;        /* Thickness of trail */
     stroke-opacity: 0.5;    /* Semi-transparent trail */
-  }
-  
-  .laser-flash {
+}
+
+.laser-flash {
     fill: #ffffff;          /* Color of collision flash */
-  }
+}
+
+/* Prevent hover effects from moving elements */
+button:hover,
+.button:hover,
+.interactive:hover {
+    transform: none !important;
+    position: relative !important;
+    top: 0 !important;
+    left: 0 !important;
+}
+
+/* Ensure smooth transitions without position changes */
+button,
+.button,
+.interactive {
+    transition: opacity 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
+    transform: none !important;
+}
