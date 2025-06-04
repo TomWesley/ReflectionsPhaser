@@ -1,4 +1,4 @@
-// GameUI.js - Manages all UI elements for the game
+
 class GameUI {
     constructor(scene, scalingManager) {
       this.scene = scene;
@@ -71,10 +71,10 @@ class GameUI {
       this.elements.footerBg = this.scene.add.graphics();
       this.drawFooterBackground();
       
-      // Button dimensions
-      const buttonWidth = this.scaling.getScaledValue(200);
-      const buttonHeight = this.scaling.getScaledValue(50);
-      const homeButtonWidth = this.scaling.getScaledValue(120);
+      // Button dimensions - larger on mobile for touch
+      const buttonWidth = this.scaling.getTouchSize(200);
+      const buttonHeight = this.scaling.getTouchSize(50);
+      const homeButtonWidth = this.scaling.getTouchSize(120);
       const borderRadius = this.scaling.getScaledValue(25);
       
       // Start button background
@@ -108,8 +108,10 @@ class GameUI {
         }
       ).setOrigin(0.5);
       
-      // Home button
-      const homeButtonX = -screenWidth / 2 + sideMargin + homeButtonWidth/2;
+      // Home button - position adjusted for mobile
+      const homeButtonX = this.scaling.isMobile ? 
+        -screenWidth / 2 + sideMargin + homeButtonWidth/2 + 10 : // Extra margin on mobile
+        -screenWidth / 2 + sideMargin + homeButtonWidth/2;
       
       this.elements.homeButtonBg = this.scene.add.graphics();
       this.drawHomeButton();
@@ -277,24 +279,28 @@ class GameUI {
     }
     
     createPanelButton(x, y, width, height, text, color, callback) {
+      // Ensure minimum touch size on mobile
+      const buttonHeight = this.scaling.getTouchSize(height);
+      const buttonWidth = Math.max(width, this.scaling.getTouchSize(200));
+      
       const bg = this.scene.add.graphics();
       bg.fillStyle(color, 0.9);
-      bg.fillRoundedRect(x - width/2, y - height/2, width, height, this.scaling.getScaledValue(25));
+      bg.fillRoundedRect(x - buttonWidth/2, y - buttonHeight/2, buttonWidth, buttonHeight, this.scaling.getScaledValue(25));
       bg.lineStyle(this.scaling.getScaledValue(2), color * 0.7, 1);
-      bg.strokeRoundedRect(x - width/2, y - height/2, width, height, this.scaling.getScaledValue(25));
+      bg.strokeRoundedRect(x - buttonWidth/2, y - buttonHeight/2, buttonWidth, buttonHeight, this.scaling.getScaledValue(25));
       
-      const button = this.scene.add.rectangle(x, y, width, height, 0x000000, 0)
+      const button = this.scene.add.rectangle(x, y, buttonWidth, buttonHeight, 0x000000, 0)
         .setInteractive({ useHandCursor: true })
         .on('pointerdown', callback)
         .on('pointerover', () => {
           bg.clear();
           bg.fillStyle(color, 1);
-          bg.fillRoundedRect(x - width/2, y - height/2, width, height, this.scaling.getScaledValue(25));
+          bg.fillRoundedRect(x - buttonWidth/2, y - buttonHeight/2, buttonWidth, buttonHeight, this.scaling.getScaledValue(25));
         })
         .on('pointerout', () => {
           bg.clear();
           bg.fillStyle(color, 0.9);
-          bg.fillRoundedRect(x - width/2, y - height/2, width, height, this.scaling.getScaledValue(25));
+          bg.fillRoundedRect(x - buttonWidth/2, y - buttonHeight/2, buttonWidth, buttonHeight, this.scaling.getScaledValue(25));
         });
       
       const btnText = this.scene.add.text(x, y, text, {
@@ -355,8 +361,8 @@ class GameUI {
     }
     
     drawStartButton() {
-      const buttonWidth = this.scaling.getScaledValue(200);
-      const buttonHeight = this.scaling.getScaledValue(50);
+      const buttonWidth = this.scaling.getTouchSize(200);
+      const buttonHeight = this.scaling.getTouchSize(50);
       const borderRadius = this.scaling.getScaledValue(25);
       const { uiPositions } = this.scaling;
       
@@ -375,9 +381,11 @@ class GameUI {
     
     drawHomeButton() {
       const { screenWidth, sideMargin, uiPositions } = this.scaling;
-      const homeButtonWidth = this.scaling.getScaledValue(120);
-      const buttonHeight = this.scaling.getScaledValue(50);
-      const homeButtonX = -screenWidth / 2 + sideMargin + homeButtonWidth/2;
+      const homeButtonWidth = this.scaling.getTouchSize(120);
+      const buttonHeight = this.scaling.getTouchSize(50);
+      const homeButtonX = this.scaling.isMobile ? 
+        -screenWidth / 2 + sideMargin + homeButtonWidth/2 + 10 :
+        -screenWidth / 2 + sideMargin + homeButtonWidth/2;
       
       this.elements.homeButtonBg.clear();
       this.elements.homeButtonBg.fillStyle(0x2c3e50, 0.9);
@@ -525,14 +533,22 @@ class GameUI {
       this.elements.timerText.setPosition(uiPositions.centerX, uiPositions.headerY);
       this.elements.instructionsText.setPosition(uiPositions.centerX, uiPositions.headerY - this.scaling.getScaledValue(30));
       
+      // Update button sizes and positions
+      const buttonWidth = this.scaling.getTouchSize(200);
+      const buttonHeight = this.scaling.getTouchSize(50);
+      const homeButtonWidth = this.scaling.getTouchSize(120);
+      
       this.elements.startButton.setPosition(uiPositions.centerX, uiPositions.footerY);
+      this.elements.startButton.setSize(buttonWidth, buttonHeight);
       this.elements.startText.setPosition(uiPositions.centerX, uiPositions.footerY);
       
       const { screenWidth, sideMargin } = this.scaling;
-      const homeButtonWidth = this.scaling.getScaledValue(120);
-      const homeButtonX = -screenWidth / 2 + sideMargin + homeButtonWidth/2;
+      const homeButtonX = this.scaling.isMobile ? 
+        -screenWidth / 2 + sideMargin + homeButtonWidth/2 + 10 :
+        -screenWidth / 2 + sideMargin + homeButtonWidth/2;
       
       this.elements.homeButton.setPosition(homeButtonX, uiPositions.footerY);
+      this.elements.homeButton.setSize(homeButtonWidth, buttonHeight - 10);
       this.elements.homeText.setPosition(homeButtonX, uiPositions.footerY);
       
       // Update font sizes

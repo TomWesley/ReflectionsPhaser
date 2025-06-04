@@ -269,20 +269,50 @@ class GameScene extends Phaser.Scene {
       // Only update level manager if game hasn't started
       // This prevents spawners from moving during gameplay
       if (!this.gameState.isPlaying()) {
-        this.levelManager.handleResize();
+        // Store mirror data before resize
+        const mirrorData = this.mirrors.map(mirror => ({
+          x: mirror.x,
+          y: mirror.y,
+          rotation: mirror.body ? mirror.body.angle : (mirror.initialRotation || 0),
+          shapeType: mirror.shapeType,
+          isLocked: mirror.isLocked
+        }));
         
-        // Update references
-        this.mirrors = this.levelManager.mirrors;
-        this.spawners = this.levelManager.spawners;
-        this.target = this.levelManager.target;
-      } else {
-        // If game is playing, only update mirrors to ensure they stay within bounds
-        // but don't recreate spawners
-        this.levelManager.mirrors.forEach(mirror => {
-          // Update mirror scale
-          if (mirror.updateScale) {
-            mirror.updateScale(this.scalingManager.scaleFactor);
+        // Clear and recreate mirrors to ensure proper display
+        this.mirrors.forEach(mirror => mirror.destroy());
+        this.mirrors = [];
+        
+        // Recreate mirrors with stored data
+        mirrorData.forEach(data => {
+          const mirror = new Mirror(this, data.x, data.y, data.shapeType);
+          if (mirror.body && data.rotation) {
+            this.matter.body.setAngle(mirror.body, data.rotation);
           }
+          mirror.isLocked = data.isLocked;
+          if (data.isLocked) {
+            mirror.setColor(mirror.style.lockedStrokeColor);
+          }
+          this.mirrors.push(mirror);
+        });
+        
+        // Update level manager references
+        this.levelManager.mirrors = this.mirrors;
+        
+        // Recreate spawners
+        this.levelManager.createSpawners();
+        this.spawners = this.levelManager.spawners;
+        
+        // Recreate target
+        if (this.target) {
+          this.target.destroy();
+          this.target = new Target(this, 0, 0);
+          this.levelManager.target = this.target;
+        }
+      } else {
+        // If game is playing, just ensure mirrors stay visible and within bounds
+        this.mirrors.forEach(mirror => {
+          // Force redraw
+          mirror.drawFromPhysics();
           
           // Verify position is still valid
           if (!this.levelManager.verifyMirrorPosition(mirror)) {

@@ -9,7 +9,6 @@ class MenuScene extends Phaser.Scene {
       this.load.image('mirror2', 'assets/images/mirror2.png');
       this.load.image('mirror3', 'assets/images/mirror3.png');
       this.load.image('mirror4', 'assets/images/mirror4.png');
-    //   this.load.image('absorber', 'assets/images/absorber.png');
       this.load.image('laser', 'assets/images/laser.png');
       this.load.image('spawner', 'assets/images/spawner.png');
       
@@ -65,67 +64,83 @@ class MenuScene extends Phaser.Scene {
       const width = this.cameras.main.width;
       const height = this.cameras.main.height;
       
+      // Detect if mobile
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      
       // Background with subtle pattern
       this.add.rectangle(0, 0, width, height, 0x000033).setOrigin(0);
       
       // Add some floating mirrors in the background for visual effect
       this.createBackgroundElements();
       
+      // Scale factor for mobile
+      const scaleFactor = Math.min(width / 800, height / 600);
+      const mobileMultiplier = isMobile ? 1.2 : 1;
+      
       // Title text
+      const titleFontSize = Math.max(32, 64 * scaleFactor) * mobileMultiplier;
       const titleText = this.add.text(width / 2, height / 4, 'REFLECTION', {
         fontFamily: 'Arial',
-        fontSize: 64,
+        fontSize: titleFontSize,
         fontStyle: 'bold',
         color: '#ffffff',
         stroke: '#000000',
-        strokeThickness: 6
+        strokeThickness: 6 * scaleFactor
       }).setOrigin(0.5);
       
       // Subtitle
-      const subtitleText = this.add.text(width / 2, height / 4 + 70, 'A puzzle of light and mirrors', {
+      const subtitleFontSize = Math.max(16, 24 * scaleFactor) * mobileMultiplier;
+      const subtitleText = this.add.text(width / 2, height / 4 + 70 * scaleFactor, 'A puzzle of light and mirrors', {
         fontFamily: 'Arial',
-        fontSize: 24,
+        fontSize: subtitleFontSize,
         color: '#aaaaff'
       }).setOrigin(0.5);
       
+      // Button dimensions - larger on mobile
+      const buttonWidth = Math.max(200, 200 * scaleFactor) * (isMobile ? 1.5 : 1);
+      const buttonHeight = Math.max(60, 60 * scaleFactor) * (isMobile ? 1.3 : 1);
+      const buttonFontSize = Math.max(20, 32 * scaleFactor) * mobileMultiplier;
+      
       // Play button
-      const playButton = this.add.rectangle(width / 2, height / 2 + 50, 200, 60, 0x4444ff, 0.8)
+      const playButton = this.add.rectangle(width / 2, height / 2 + 50 * scaleFactor, buttonWidth, buttonHeight, 0x4444ff, 0.8)
         .setInteractive({ useHandCursor: true })
         .on('pointerdown', () => this.startGame())
         .on('pointerover', () => playButton.fillColor = 0x6666ff)
         .on('pointerout', () => playButton.fillColor = 0x4444ff);
       
-      const playText = this.add.text(width / 2, height / 2 + 50, 'PLAY', {
+      const playText = this.add.text(width / 2, height / 2 + 50 * scaleFactor, 'PLAY', {
         fontFamily: 'Arial',
-        fontSize: 32,
+        fontSize: buttonFontSize,
         fontStyle: 'bold',
         color: '#ffffff'
       }).setOrigin(0.5);
       
       // Leaderboard button
-      const leaderboardButton = this.add.rectangle(width / 2, height / 2 + 130, 300, 60, 0x444477, 0.8)
+      const leaderboardButton = this.add.rectangle(width / 2, height / 2 + 130 * scaleFactor, buttonWidth * 1.5, buttonHeight, 0x444477, 0.8)
         .setInteractive({ useHandCursor: true })
         .on('pointerdown', () => this.scene.start('LeaderboardScene'))
         .on('pointerover', () => leaderboardButton.fillColor = 0x5555aa)
         .on('pointerout', () => leaderboardButton.fillColor = 0x444477);
       
-      const leaderboardText = this.add.text(width / 2, height / 2 + 130, 'LEADERBOARD', {
+      const leaderboardFontSize = Math.max(18, 28 * scaleFactor) * mobileMultiplier;
+      const leaderboardText = this.add.text(width / 2, height / 2 + 130 * scaleFactor, 'LEADERBOARD', {
         fontFamily: 'Arial',
-        fontSize: 28,
+        fontSize: leaderboardFontSize,
         color: '#ffffff'
       }).setOrigin(0.5);
       
       // Credits text
-      const creditsText = this.add.text(width / 2, height - 30, '© 2025 Your Name - All Rights Reserved', {
+      const creditsFontSize = Math.max(12, 14 * scaleFactor);
+      const creditsText = this.add.text(width / 2, height - 30 * scaleFactor, '© 2025 Your Name - All Rights Reserved', {
         fontFamily: 'Arial',
-        fontSize: 14,
+        fontSize: creditsFontSize,
         color: '#888888'
       }).setOrigin(0.5);
       
       // Add animation to title
       this.tweens.add({
         targets: titleText,
-        y: titleText.y - 10,
+        y: titleText.y - 10 * scaleFactor,
         duration: 2000,
         ease: 'Sine.easeInOut',
         yoyo: true,
@@ -141,6 +156,14 @@ class MenuScene extends Phaser.Scene {
         yoyo: true,
         repeat: -1
       });
+      
+      // Handle resize
+      this.scale.on('resize', this.handleResize, this);
+    }
+    
+    handleResize(gameSize, baseSize, displaySize, resolution) {
+      // Re-center camera
+      this.cameras.main.centerOn(gameSize.width / 2, gameSize.height / 2);
     }
     
     createBackgroundElements() {

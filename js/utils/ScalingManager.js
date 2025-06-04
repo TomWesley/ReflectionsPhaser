@@ -1,7 +1,9 @@
-// ScalingManager.js - Centralized scaling logic for consistent gameplay
 class ScalingManager {
     constructor(scene) {
       this.scene = scene;
+      
+      // Detect if mobile
+      this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
       
       // Fixed aspect ratio for the game area (16:9)
       this.GAME_ASPECT_RATIO = 16 / 9;
@@ -14,21 +16,24 @@ class ScalingManager {
       this.MIN_GAME_WIDTH = 800;
       this.MIN_GAME_HEIGHT = 450;
       
-      // UI space allocations (as percentages)
-      this.UI_HEADER_RATIO = 0.12;
-      this.UI_FOOTER_RATIO = 0.12;
-      this.UI_SIDE_MARGIN_RATIO = 0.03;
+      // UI space allocations (as percentages) - adjusted for mobile
+      this.UI_HEADER_RATIO = this.isMobile ? 0.15 : 0.12;
+      this.UI_FOOTER_RATIO = this.isMobile ? 0.15 : 0.12;
+      this.UI_SIDE_MARGIN_RATIO = this.isMobile ? 0.02 : 0.03;
       
       // Game element size ratios (relative to game area)
       this.TARGET_SIZE_RATIO = 0.08;
-      this.MIRROR_MIN_SIZE_RATIO = 0.06;
-      this.MIRROR_MAX_SIZE_RATIO = 0.09;
+      this.MIRROR_MIN_SIZE_RATIO = this.isMobile ? 0.08 : 0.06;
+      this.MIRROR_MAX_SIZE_RATIO = this.isMobile ? 0.11 : 0.09;
       this.SPAWNER_SIZE_RATIO = 0.015;
       
       // Placement constraints (as ratios of game size)
       this.TARGET_SAFE_ZONE_RATIO = 0.15;
       this.WALL_SAFE_MARGIN_RATIO = 0.05;
-      this.MIRROR_SPACING_RATIO = 0.08;
+      this.MIRROR_SPACING_RATIO = this.isMobile ? 0.1 : 0.08;
+      
+      // Touch-specific settings
+      this.MIN_TOUCH_TARGET_SIZE = 44; // Minimum size for touch targets in pixels
       
       // Initialize dimensions
       this.calculateDimensions();
@@ -109,14 +114,23 @@ class ScalingManager {
       };
     }
     
-    // Get responsive font size
+    // Get responsive font size - larger on mobile for readability
     getFontSize(baseSize) {
-      return Math.max(12, Math.round(baseSize * this.scaleFactor));
+      const minSize = this.isMobile ? 14 : 12;
+      const scaledSize = Math.round(baseSize * this.scaleFactor);
+      const mobileMultiplier = this.isMobile ? 1.2 : 1;
+      return Math.max(minSize, scaledSize * mobileMultiplier);
     }
     
     // Get responsive dimension
     getScaledValue(baseValue) {
       return baseValue * this.scaleFactor;
+    }
+    
+    // Get touch-friendly dimension
+    getTouchSize(baseSize) {
+      const scaled = this.getScaledValue(baseSize);
+      return this.isMobile ? Math.max(scaled, this.MIN_TOUCH_TARGET_SIZE) : scaled;
     }
     
     // Check if a position is within game bounds

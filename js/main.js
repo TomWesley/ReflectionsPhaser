@@ -23,4 +23,37 @@ document.addEventListener('DOMContentLoaded', function() {
         }
       }
     });
+    
+    // Mobile orientation handling
+    function handleOrientationChange() {
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      
+      if (isMobile) {
+        // Force a scale refresh after orientation change
+        setTimeout(() => {
+          game.scale.refresh();
+        }, 100);
+      }
+    }
+    
+    // Listen for orientation changes
+    window.addEventListener('orientationchange', handleOrientationChange);
+    
+    // Also listen for resize as some devices don't fire orientationchange
+    window.addEventListener('resize', handleOrientationChange);
+    
+    // Prevent zoom on mobile
+    document.addEventListener('gesturestart', function(e) {
+      e.preventDefault();
+    });
+    
+    // Prevent double-tap zoom
+    let lastTouchEnd = 0;
+    document.addEventListener('touchend', function(event) {
+      const now = Date.now();
+      if (now - lastTouchEnd <= 300) {
+        event.preventDefault();
+      }
+      lastTouchEnd = now;
+    }, false);
   });

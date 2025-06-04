@@ -13,11 +13,21 @@ const config = {
     },
     scale: {
       mode: Phaser.Scale.RESIZE,
-      autoCenter: Phaser.Scale.CENTER_BOTH
+      autoCenter: Phaser.Scale.CENTER_BOTH,
+      parent: 'game-container',
+      width: '100%',
+      height: '100%'
     },
     scene: [
       MenuScene,
       GameScene,
       LeaderboardScene
-    ]
+    ],
+    // Mobile optimizations
+    input: {
+      activePointers: 1, // Support only 1 pointer for simplicity
+      smoothFactor: 0.2
+    },
+    // Prevent context menu on long press
+    disableContextMenu: true
   };

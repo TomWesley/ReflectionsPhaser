@@ -2,7 +2,11 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="screen-orientation" content="landscape">
     <title>Reflection Game</title>
     <!-- External CSS file -->
     <link rel="stylesheet" href="style.css">
@@ -18,6 +22,19 @@
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
 </head>
 <body>
+    <!-- Orientation message for mobile portrait mode -->
+    <div id="orientation-message">
+        <h1>Please Rotate Your Device</h1>
+        <div class="rotate-icon">
+            <svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="20" y="30" width="60" height="40" rx="4" stroke="white" stroke-width="3"/>
+                <path d="M85 50L95 50M95 50L90 45M95 50L90 55" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="50" cy="50" r="3" fill="white"/>
+            </svg>
+        </div>
+        <p>This game is best played in landscape mode. Please rotate your device to continue.</p>
+    </div>
+    
     <div id="game-container"></div>
     
     <!-- Firebase Configuration -->
@@ -45,5 +62,37 @@
     <!-- Game Configuration and Initialization -->
     <script src="js/config.js"></script>
     <script src="js/main.js"></script>
+    
+    <script>
+        // Mobile orientation handling
+        function checkOrientation() {
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            
+            if (isMobile) {
+                // Try to lock orientation if supported
+                if (screen.orientation && screen.orientation.lock) {
+                    screen.orientation.lock('landscape').catch(err => {
+                        console.log('Orientation lock not supported:', err);
+                    });
+                }
+                
+                // Request fullscreen on first interaction
+                document.addEventListener('touchstart', function() {
+                    if (document.documentElement.requestFullscreen) {
+                        document.documentElement.requestFullscreen().catch(err => {
+                            console.log('Fullscreen not supported:', err);
+                        });
+                    } else if (document.documentElement.webkitRequestFullscreen) {
+                        document.documentElement.webkitRequestFullscreen();
+                    }
+                }, { once: true });
+            }
+        }
+        
+        // Check orientation on load and orientation change
+        window.addEventListener('load', checkOrientation);
+        window.addEventListener('orientationchange', checkOrientation);
+        window.addEventListener('resize', checkOrientation);
+    </script>
 </body>
 </html>

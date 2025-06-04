@@ -1,4 +1,3 @@
-// LevelManager.js - Manages level setup, mirror placement, and spawner creation
 class LevelManager {
     constructor(scene, scalingManager, gameArea) {
       this.scene = scene;
