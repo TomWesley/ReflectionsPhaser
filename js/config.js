@@ -1,8 +1,12 @@
 const config = {
     type: Phaser.AUTO,
     parent: 'game-container',
-    width: window.innerWidth,
-    height: window.innerHeight,
+    scale: {
+      mode: Phaser.Scale.RESIZE,
+      width: '100%',
+      height: '100%',
+      autoCenter: Phaser.Scale.CENTER_BOTH
+    },
     backgroundColor: '#000000',
     physics: {
       default: 'matter',
@@ -10,13 +14,6 @@ const config = {
         gravity: { y: 0 }, // No gravity
         debug: false // Debug mode turned off for production
       }
-    },
-    scale: {
-      mode: Phaser.Scale.RESIZE,
-      autoCenter: Phaser.Scale.CENTER_BOTH,
-      parent: 'game-container',
-      width: '100%',
-      height: '100%'
     },
     scene: [
       MenuScene,

@@ -20,7 +20,8 @@ class GameScene extends Phaser.Scene {
     }
     
     create() {
-      // Center the camera
+      // Set up camera with proper bounds
+      this.cameras.main.setBounds(-2000, -2000, 4000, 4000);
       this.cameras.main.centerOn(0, 0);
       
       // Create components
@@ -31,8 +32,10 @@ class GameScene extends Phaser.Scene {
       // Set up level
       this.levelManager.setupLevel();
       
-      // Set up resize handler
-      this.scale.on('resize', this.handleResize, this);
+      // Set up resize handler - this is crucial
+      this.scale.on('resize', (gameSize, baseSize, displaySize, resolution) => {
+        this.handleResize(gameSize, baseSize, displaySize, resolution);
+      });
       
       // Set up collision handlers
       this.setupCollisions();
@@ -45,6 +48,10 @@ class GameScene extends Phaser.Scene {
       
       // Store bounds for laser boundary checking
       this.updateBoundsReferences();
+      
+      // Force initial resize to ensure proper setup
+      const { width, height } = this.scale.gameSize;
+      this.handleResize({ width, height });
       
       // Add debug helper (press D to debug mirrors)
       this.input.keyboard.on('keydown-D', () => {
@@ -253,6 +260,11 @@ class GameScene extends Phaser.Scene {
     }
     
     handleResize(gameSize, baseSize, displaySize, resolution) {
+      console.log('GameScene resize triggered:', gameSize.width, 'x', gameSize.height);
+      
+      // Update camera dimensions
+      this.cameras.main.setSize(gameSize.width, gameSize.height);
+      
       // Update scaling manager
       this.scalingManager.handleResize();
       
@@ -336,6 +348,6 @@ class GameScene extends Phaser.Scene {
       if (this.gameState) this.gameState.reset();
       
       // Remove resize handler
-      this.scale.off('resize', this.handleResize, this);
+      this.scale.off('resize');
     }
   }

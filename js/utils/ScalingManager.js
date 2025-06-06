@@ -1,3 +1,4 @@
+// ScalingManager.js - Centralized scaling logic for consistent gameplay
 class ScalingManager {
     constructor(scene) {
       this.scene = scene;
@@ -40,9 +41,11 @@ class ScalingManager {
     }
     
     calculateDimensions() {
-      // Get actual screen dimensions
-      this.screenWidth = this.scene.cameras.main.width;
-      this.screenHeight = this.scene.cameras.main.height;
+      // Get actual screen dimensions from the scene's scale manager
+      this.screenWidth = this.scene.scale.width;
+      this.screenHeight = this.scene.scale.height;
+      
+      console.log('ScalingManager calculating dimensions:', this.screenWidth, 'x', this.screenHeight);
       
       // Calculate UI dimensions
       this.headerHeight = this.screenHeight * this.UI_HEADER_RATIO;
@@ -186,4 +189,4 @@ class ScalingManager {
         this.scene.cameras.main.centerOn(0, 0);
       }
     }
-  }
+  }// ScalingManager.js - Centralized scaling logic for consistent gameplay

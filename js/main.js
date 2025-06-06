@@ -5,16 +5,23 @@ document.addEventListener('DOMContentLoaded', function() {
     // Expose game to window for debugging
     window.game = game;
     
-    // Handle window resize
+    // Force Phaser to handle window resize
     window.addEventListener('resize', function() {
-      game.scale.refresh();
+      if (game && game.scale) {
+        // Update the game size
+        game.scale.resize(window.innerWidth, window.innerHeight);
+        console.log('Forcing Phaser resize:', window.innerWidth, 'x', window.innerHeight);
+      }
     });
     
     // Handle visibility change (for pausing/resuming the game)
     document.addEventListener('visibilitychange', function() {
       if (document.hidden) {
         // Pause game when tab/window is not visible
-        game.scene.pause(game.scene.getScenes(true)[0].scene.key);
+        const scenes = game.scene.getScenes(true);
+        if (scenes.length > 0) {
+          game.scene.pause(scenes[0].scene.key);
+        }
       } else {
         // Resume game when tab/window becomes visible
         const currentScene = game.scene.getScenes(true)[0];
@@ -31,16 +38,16 @@ document.addEventListener('DOMContentLoaded', function() {
       if (isMobile) {
         // Force a scale refresh after orientation change
         setTimeout(() => {
-          game.scale.refresh();
+          if (game && game.scale) {
+            game.scale.resize(window.innerWidth, window.innerHeight);
+            console.log('Orientation change - forcing resize');
+          }
         }, 100);
       }
     }
     
     // Listen for orientation changes
     window.addEventListener('orientationchange', handleOrientationChange);
-    
-    // Also listen for resize as some devices don't fire orientationchange
-    window.addEventListener('resize', handleOrientationChange);
     
     // Prevent zoom on mobile
     document.addEventListener('gesturestart', function(e) {

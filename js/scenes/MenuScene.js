@@ -61,6 +61,9 @@ class MenuScene extends Phaser.Scene {
     }
   
     create() {
+      // Store UI elements for resize
+      this.uiElements = {};
+      
       const width = this.cameras.main.width;
       const height = this.cameras.main.height;
       
@@ -68,9 +71,10 @@ class MenuScene extends Phaser.Scene {
       const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
       
       // Background with subtle pattern
-      this.add.rectangle(0, 0, width, height, 0x000033).setOrigin(0);
+      this.uiElements.background = this.add.rectangle(0, 0, width, height, 0x000033).setOrigin(0);
       
       // Add some floating mirrors in the background for visual effect
+      this.backgroundElements = [];
       this.createBackgroundElements();
       
       // Scale factor for mobile
@@ -79,7 +83,7 @@ class MenuScene extends Phaser.Scene {
       
       // Title text
       const titleFontSize = Math.max(32, 64 * scaleFactor) * mobileMultiplier;
-      const titleText = this.add.text(width / 2, height / 4, 'REFLECTION', {
+      this.uiElements.titleText = this.add.text(width / 2, height / 4, 'REFLECTION', {
         fontFamily: 'Arial',
         fontSize: titleFontSize,
         fontStyle: 'bold',
@@ -90,7 +94,7 @@ class MenuScene extends Phaser.Scene {
       
       // Subtitle
       const subtitleFontSize = Math.max(16, 24 * scaleFactor) * mobileMultiplier;
-      const subtitleText = this.add.text(width / 2, height / 4 + 70 * scaleFactor, 'A puzzle of light and mirrors', {
+      this.uiElements.subtitleText = this.add.text(width / 2, height / 4 + 70 * scaleFactor, 'A puzzle of light and mirrors', {
         fontFamily: 'Arial',
         fontSize: subtitleFontSize,
         color: '#aaaaff'
@@ -102,13 +106,13 @@ class MenuScene extends Phaser.Scene {
       const buttonFontSize = Math.max(20, 32 * scaleFactor) * mobileMultiplier;
       
       // Play button
-      const playButton = this.add.rectangle(width / 2, height / 2 + 50 * scaleFactor, buttonWidth, buttonHeight, 0x4444ff, 0.8)
+      this.uiElements.playButton = this.add.rectangle(width / 2, height / 2 + 50 * scaleFactor, buttonWidth, buttonHeight, 0x4444ff, 0.8)
         .setInteractive({ useHandCursor: true })
         .on('pointerdown', () => this.startGame())
-        .on('pointerover', () => playButton.fillColor = 0x6666ff)
-        .on('pointerout', () => playButton.fillColor = 0x4444ff);
+        .on('pointerover', () => this.uiElements.playButton.fillColor = 0x6666ff)
+        .on('pointerout', () => this.uiElements.playButton.fillColor = 0x4444ff);
       
-      const playText = this.add.text(width / 2, height / 2 + 50 * scaleFactor, 'PLAY', {
+      this.uiElements.playText = this.add.text(width / 2, height / 2 + 50 * scaleFactor, 'PLAY', {
         fontFamily: 'Arial',
         fontSize: buttonFontSize,
         fontStyle: 'bold',
@@ -116,14 +120,14 @@ class MenuScene extends Phaser.Scene {
       }).setOrigin(0.5);
       
       // Leaderboard button
-      const leaderboardButton = this.add.rectangle(width / 2, height / 2 + 130 * scaleFactor, buttonWidth * 1.5, buttonHeight, 0x444477, 0.8)
+      this.uiElements.leaderboardButton = this.add.rectangle(width / 2, height / 2 + 130 * scaleFactor, buttonWidth * 1.5, buttonHeight, 0x444477, 0.8)
         .setInteractive({ useHandCursor: true })
         .on('pointerdown', () => this.scene.start('LeaderboardScene'))
-        .on('pointerover', () => leaderboardButton.fillColor = 0x5555aa)
-        .on('pointerout', () => leaderboardButton.fillColor = 0x444477);
+        .on('pointerover', () => this.uiElements.leaderboardButton.fillColor = 0x5555aa)
+        .on('pointerout', () => this.uiElements.leaderboardButton.fillColor = 0x444477);
       
       const leaderboardFontSize = Math.max(18, 28 * scaleFactor) * mobileMultiplier;
-      const leaderboardText = this.add.text(width / 2, height / 2 + 130 * scaleFactor, 'LEADERBOARD', {
+      this.uiElements.leaderboardText = this.add.text(width / 2, height / 2 + 130 * scaleFactor, 'LEADERBOARD', {
         fontFamily: 'Arial',
         fontSize: leaderboardFontSize,
         color: '#ffffff'
@@ -131,7 +135,7 @@ class MenuScene extends Phaser.Scene {
       
       // Credits text
       const creditsFontSize = Math.max(12, 14 * scaleFactor);
-      const creditsText = this.add.text(width / 2, height - 30 * scaleFactor, '© 2025 Your Name - All Rights Reserved', {
+      this.uiElements.creditsText = this.add.text(width / 2, height - 30 * scaleFactor, '© 2025 Your Name - All Rights Reserved', {
         fontFamily: 'Arial',
         fontSize: creditsFontSize,
         color: '#888888'
@@ -139,8 +143,8 @@ class MenuScene extends Phaser.Scene {
       
       // Add animation to title
       this.tweens.add({
-        targets: titleText,
-        y: titleText.y - 10 * scaleFactor,
+        targets: this.uiElements.titleText,
+        y: this.uiElements.titleText.y - 10 * scaleFactor,
         duration: 2000,
         ease: 'Sine.easeInOut',
         yoyo: true,
@@ -149,7 +153,7 @@ class MenuScene extends Phaser.Scene {
       
       // Add animation to the play button
       this.tweens.add({
-        targets: [playButton, playText],
+        targets: [this.uiElements.playButton, this.uiElements.playText],
         scale: 1.05,
         duration: 1000,
         ease: 'Sine.easeInOut',
@@ -158,12 +162,62 @@ class MenuScene extends Phaser.Scene {
       });
       
       // Handle resize
-      this.scale.on('resize', this.handleResize, this);
+      this.scale.on('resize', (gameSize) => this.handleResize(gameSize));
     }
     
-    handleResize(gameSize, baseSize, displaySize, resolution) {
+    handleResize(gameSize) {
+      const width = gameSize.width;
+      const height = gameSize.height;
+      
       // Re-center camera
-      this.cameras.main.centerOn(gameSize.width / 2, gameSize.height / 2);
+      this.cameras.main.setSize(width, height);
+      this.cameras.main.centerToBounds();
+      
+      // Detect if mobile
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      
+      // Update background
+      this.uiElements.background.setSize(width, height);
+      
+      // Recalculate scale factors
+      const scaleFactor = Math.min(width / 800, height / 600);
+      const mobileMultiplier = isMobile ? 1.2 : 1;
+      
+      // Update title
+      const titleFontSize = Math.max(32, 64 * scaleFactor) * mobileMultiplier;
+      this.uiElements.titleText.setPosition(width / 2, height / 4);
+      this.uiElements.titleText.setFontSize(titleFontSize);
+      
+      // Update subtitle
+      const subtitleFontSize = Math.max(16, 24 * scaleFactor) * mobileMultiplier;
+      this.uiElements.subtitleText.setPosition(width / 2, height / 4 + 70 * scaleFactor);
+      this.uiElements.subtitleText.setFontSize(subtitleFontSize);
+      
+      // Update buttons
+      const buttonWidth = Math.max(200, 200 * scaleFactor) * (isMobile ? 1.5 : 1);
+      const buttonHeight = Math.max(60, 60 * scaleFactor) * (isMobile ? 1.3 : 1);
+      const buttonFontSize = Math.max(20, 32 * scaleFactor) * mobileMultiplier;
+      const leaderboardFontSize = Math.max(18, 28 * scaleFactor) * mobileMultiplier;
+      
+      this.uiElements.playButton.setPosition(width / 2, height / 2 + 50 * scaleFactor);
+      this.uiElements.playButton.setSize(buttonWidth, buttonHeight);
+      this.uiElements.playText.setPosition(width / 2, height / 2 + 50 * scaleFactor);
+      this.uiElements.playText.setFontSize(buttonFontSize);
+      
+      this.uiElements.leaderboardButton.setPosition(width / 2, height / 2 + 130 * scaleFactor);
+      this.uiElements.leaderboardButton.setSize(buttonWidth * 1.5, buttonHeight);
+      this.uiElements.leaderboardText.setPosition(width / 2, height / 2 + 130 * scaleFactor);
+      this.uiElements.leaderboardText.setFontSize(leaderboardFontSize);
+      
+      // Update credits
+      const creditsFontSize = Math.max(12, 14 * scaleFactor);
+      this.uiElements.creditsText.setPosition(width / 2, height - 30 * scaleFactor);
+      this.uiElements.creditsText.setFontSize(creditsFontSize);
+      
+      // Recreate background elements
+      this.backgroundElements.forEach(element => element.destroy());
+      this.backgroundElements = [];
+      this.createBackgroundElements();
     }
     
     createBackgroundElements() {
@@ -186,6 +240,8 @@ class MenuScene extends Phaser.Scene {
           duration: Phaser.Math.Between(15000, 30000),
           repeat: -1
         });
+        
+        this.backgroundElements.push(mirror);
       }
       
       // Add some laser beams
@@ -211,6 +267,8 @@ class MenuScene extends Phaser.Scene {
           yoyo: true,
           repeat: -1
         });
+        
+        this.backgroundElements.push(line);
       }
     }
     
