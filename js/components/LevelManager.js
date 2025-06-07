@@ -298,7 +298,7 @@ class LevelManager {
       
       // Create laser from each spawner with enhanced visuals
       this.spawners.forEach((spawner, index) => {
-        const speed = this.scaling.getScaledValue(3); // Slightly faster for better gameplay
+        const speed = this.scaling.getScaledValue(2); // Slightly faster for better gameplay
         
         const laser = new Laser(
           this.scene,
