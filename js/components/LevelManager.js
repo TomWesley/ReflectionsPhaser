@@ -298,7 +298,7 @@ class LevelManager {
       
       // Create laser from each spawner with enhanced visuals
       this.spawners.forEach((spawner, index) => {
-        const speed = this.scaling.getScaledValue(2); // Slightly faster for better gameplay
+        const speed = this.scaling.getScaledValue(6); // Slightly faster for better gameplay
         
         const laser = new Laser(
           this.scene,
@@ -358,34 +358,14 @@ class LevelManager {
       this.handleResize();
     }
     
-    // Enhanced resize handling
+    // Simple resize handling since we restart scenes for major changes
     handleResize() {
-      // Update target scale
+      // Just update what we can safely
       if (this.target && this.target.updateScale) {
         this.target.updateScale();
       }
       
-      // Update mirror scales and ensure they're within bounds
-      this.mirrors.forEach(mirror => {
-        if (mirror.updateScale) {
-          mirror.updateScale(this.scaling.scaleFactor);
-        }
-        
-        // Verify position is still valid
-        if (!this.verifyMirrorPosition(mirror)) {
-          const validPos = this.findValidMirrorPosition(mirror);
-          this.scene.matter.body.setPosition(mirror.body, validPos);
-          mirror.x = validPos.x;
-          mirror.y = validPos.y;
-          mirror.drawFromPhysics();
-        }
-      });
-      
-      // Only recreate spawners if game hasn't started
-      if (!this.scene.gameState || !this.scene.gameState.isPlaying()) {
-        this.createSpawners();
-      } else {
-        // Update existing spawners for new scale
+      if (this.spawners && this.spawners.length > 0) {
         this.updateSpawnerScale();
       }
     }

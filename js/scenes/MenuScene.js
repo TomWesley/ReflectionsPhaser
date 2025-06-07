@@ -103,9 +103,6 @@ class MenuScene extends Phaser.Scene {
       
       // Handle resize
       this.scale.on('resize', this.handleResize, this);
-      
-      // Listen for scale changes
-      this.events.on('scale-changed', this.onScaleChanged, this);
     }
     
     createBackground() {
@@ -323,59 +320,14 @@ class MenuScene extends Phaser.Scene {
     }
     
     handleResize(gameSize, baseSize, displaySize, resolution) {
-      // Update scaling manager
-      this.scalingManager.handleResize();
+      // Major resizes are handled by page reload in main.js
+      // Just update scaling manager for minor adjustments
+      if (this.scalingManager) {
+        this.scalingManager.handleResize();
+      }
       
       // Re-center camera
       this.cameras.main.centerOn(gameSize.width / 2, gameSize.height / 2);
-      
-      // Trigger scale change event
-      this.scalingManager.notifyScaleChange();
-    }
-    
-    onScaleChanged(scaleData) {
-      // Update all elements with new scale
-      this.updateElementSizes();
-    }
-    
-    updateElementSizes() {
-      const width = this.cameras.main.width;
-      const height = this.cameras.main.height;
-      
-      // Update background
-      if (this.backgroundGraphics) {
-        this.backgroundGraphics.clear();
-        this.backgroundGraphics.fillStyle(this.colors.background, 1);
-        this.backgroundGraphics.fillRect(0, 0, width, height);
-      }
-      
-      // Update title section
-      if (this.titleContainer) {
-        this.titleContainer.setPosition(width / 2, height * 0.3);
-        
-        const titleFontSize = this.scalingManager.getFontSize('display');
-        const subtitleFontSize = this.scalingManager.getFontSize('large');
-        
-        this.titleText.setFontSize(titleFontSize);
-        this.subtitleText.setFontSize(subtitleFontSize);
-        this.subtitleText.setPosition(0, titleFontSize * 0.8);
-      }
-      
-      // Update button section
-      if (this.buttonContainer) {
-        this.buttonContainer.setPosition(width / 2, height * 0.6);
-        
-        // Would need to recreate buttons with new sizes
-        // For simplicity, this could trigger a scene restart if needed
-      }
-      
-      // Update footer
-      if (this.footerContainer) {
-        this.footerContainer.setPosition(width / 2, height * 0.9);
-        
-        const creditsFontSize = this.scalingManager.getFontSize('small');
-        this.creditsText.setFontSize(creditsFontSize);
-      }
     }
     
     startGame() {
@@ -389,7 +341,6 @@ class MenuScene extends Phaser.Scene {
     destroy() {
       // Clean up listeners
       this.scale.off('resize', this.handleResize, this);
-      this.events.off('scale-changed', this.onScaleChanged, this);
       
       // Clean up scaling manager
       if (this.scalingManager) {

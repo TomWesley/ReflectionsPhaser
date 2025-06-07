@@ -246,18 +246,11 @@ class GameArea {
       this.handleResize();
     }
     
-    // Handle resize
+    // Simple resize handling since we restart scenes
     handleResize() {
-      // Clear and recreate visual elements
-      if (this.visuals.background) this.visuals.background.clear();
-      if (this.visuals.shadow) this.visuals.shadow.clear();
-      if (this.visuals.placementBoundary) this.visuals.placementBoundary.clear();
-      
+      // Just recreate visual elements - physics will be recreated on scene restart
       this.createVisualBoundary();
       this.createPlacementBoundary();
-      
-      // Update physics boundaries
-      this.updatePhysicsBoundaries();
     }
     
     updatePhysicsBoundaries() {

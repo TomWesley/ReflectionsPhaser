@@ -457,55 +457,14 @@ class LeaderboardScene extends Phaser.Scene {
     }
     
     handleResize(gameSize, baseSize, displaySize, resolution) {
-      // Update scaling manager
-      this.scalingManager.handleResize();
+      // Major resizes are handled by page reload in main.js  
+      // Just update scaling manager for minor adjustments
+      if (this.scalingManager) {
+        this.scalingManager.handleResize();
+      }
       
       // Re-center camera
       this.cameras.main.centerOn(gameSize.width / 2, gameSize.height / 2);
-      
-      // Update layout
-      this.updateLayout();
-    }
-    
-    updateLayout() {
-      const width = this.cameras.main.width;
-      const height = this.cameras.main.height;
-      
-      // Update background
-      if (this.backgroundGraphics) {
-        this.backgroundGraphics.clear();
-        this.backgroundGraphics.fillStyle(this.colors.background, 1);
-        this.backgroundGraphics.fillRect(0, 0, width, height);
-      }
-      
-      // Update header
-      if (this.headerContainer) {
-        this.headerContainer.setPosition(width / 2, height * 0.15);
-        
-        const titleFontSize = this.scalingManager.getFontSize('display');
-        const subtitleFontSize = this.scalingManager.getFontSize('medium');
-        
-        this.titleText.setFontSize(titleFontSize);
-        this.subtitleText.setFontSize(subtitleFontSize);
-        this.subtitleText.setPosition(0, titleFontSize * 0.7);
-      }
-      
-      // Update content
-      if (this.contentContainer) {
-        this.contentContainer.setPosition(width / 2, height * 0.45);
-      }
-      
-      // Update loading
-      if (this.loadingContainer) {
-        this.loadingContainer.setPosition(width / 2, height / 2);
-        this.loadingText.setFontSize(this.scalingManager.getFontSize('large'));
-        this.loadingDots.setFontSize(this.scalingManager.getFontSize('medium'));
-      }
-      
-      // Update button
-      if (this.buttonContainer) {
-        this.buttonContainer.setPosition(width / 2, height * 0.9);
-      }
     }
     
     backToMenu() {

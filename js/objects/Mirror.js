@@ -797,57 +797,15 @@ class Mirror {
       this.drawFromPhysics();
     }
     
-    // Handle scale changes
+    // Handle scale changes - simplified since we restart scenes for major changes
     onScaleChanged(scaleData) {
-      this.updateScale(scaleData.scaleFactor);
+      // Just redraw for minor changes
+      this.drawFromPhysics();
     }
     
-    // Update scale when screen resizes
+    // Simple update that just redraws
     updateScale(newScaleFactor) {
-      const currentRotation = this.body ? this.body.angle : this.initialRotation || 0;
-      const currentX = this.x;
-      const currentY = this.y;
-      
-      const wasInteractive = this.graphics.input ? true : false;
-      const currentLocked = this.isLocked;
-      const currentDragging = this.isDragging;
-      const currentDepth = this.graphics.depth;
-      
-      // Remove old physics body
-      if (this.body && this.scene.matter.world) {
-        this.scene.matter.world.remove(this.body);
-        this.body = null;
-      }
-      
-      // Recreate physics body with new scale
-      this.createPhysicsBody();
-      
-      // Restore state
-      if (this.body) {
-        this.scene.matter.body.setAngle(this.body, currentRotation);
-        this.scene.matter.body.setPosition(this.body, {
-          x: currentX,
-          y: currentY
-        });
-        
-        this.x = currentX;
-        this.y = currentY;
-      }
-      
-      this.isLocked = currentLocked;
-      this.isDragging = currentDragging;
-      
-      // Complete redraw
-      this.graphics.clear();
-      this.graphics.setDepth(currentDepth);
       this.drawFromPhysics();
-      
-      // Restore interactivity
-      if (wasInteractive && !this.isLocked) {
-        this.makeInteractive();
-      }
-      
-      this.graphics.setVisible(true);
     }
     
     // Check for overlaps with other mirrors

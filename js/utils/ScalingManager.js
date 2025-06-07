@@ -278,39 +278,15 @@ class ScalingManager {
       ];
     }
     
-    // Update dimensions when screen resizes
+    // Simple resize handling - major resizes trigger page reload in main.js
     handleResize() {
-      // Clear any pending resize timeout
-      if (this.resizeTimeout) {
-        clearTimeout(this.resizeTimeout);
-      }
+      // Just recalculate dimensions for minor adjustments
+      this.calculateDimensions();
       
-      // Debounce resize to prevent excessive calculations
-      this.resizeTimeout = setTimeout(() => {
-        const oldScaleFactor = this.scaleFactor;
-        const oldGameBounds = { ...this.gameBounds };
-        
-        // Recalculate dimensions
-        this.calculateDimensions();
-        
-        // Ensure camera stays centered after resize
-        if (this.scene.cameras && this.scene.cameras.main) {
-          this.scene.cameras.main.centerOn(0, 0);
-        }
-        
-        // Notify components of scale change if significant
-        const scaleChange = Math.abs(this.scaleFactor - oldScaleFactor) / oldScaleFactor;
-        const boundsChanged = (
-          Math.abs(this.gameBounds.width - oldGameBounds.width) > 10 ||
-          Math.abs(this.gameBounds.height - oldGameBounds.height) > 10
-        );
-        
-        if (scaleChange > 0.05 || boundsChanged) {
-          this.notifyScaleChange();
-        }
-        
-        this.resizeTimeout = null;
-      }, 16); // ~60fps debounce
+      // Ensure camera stays centered
+      if (this.scene.cameras && this.scene.cameras.main) {
+        this.scene.cameras.main.centerOn(0, 0);
+      }
     }
     
     // Notify all game components of scale changes

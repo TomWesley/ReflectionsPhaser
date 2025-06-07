@@ -287,132 +287,15 @@ class GameScene extends Phaser.Scene {
     }
     
     handleResize(gameSize, baseSize, displaySize, resolution) {
-      // Clear any pending resize timeout
-      if (this.resizeTimeout) {
-        clearTimeout(this.resizeTimeout);
+      // Major resizes are handled by page reload in main.js
+      // Just handle minor adjustments here
+      if (this.scalingManager) {
+        this.scalingManager.handleResize();
+        this.updateBoundsReferences();
       }
-      
-      // Debounce resize to prevent excessive updates
-      this.resizeTimeout = setTimeout(() => {
-        this.performResize(gameSize);
-        this.resizeTimeout = null;
-      }, 16); // ~60fps debounce
-    }
-    
-    performResize(gameSize) {
-      // Update scaling manager first
-      this.scalingManager.handleResize();
-      
-      // Re-center the camera after resize
-      this.cameras.main.centerOn(0, 0);
-      
-      // Update bounds references
-      this.updateBoundsReferences();
-      
-      // Update all components
-      this.gameArea.handleResize();
-      this.gameUI.handleResize();
-      
-      // Handle level updates based on game state
-      if (!this.gameState.isPlaying()) {
-        // Game not started - can safely update everything
-        this.updateLevelForResize();
-      } else {
-        // Game in progress - minimal updates to maintain gameplay
-        this.updateGameplayElementsForResize();
-      }
-    }
-    
-    updateLevelForResize() {
-      // Store mirror data before resize
-      const mirrorData = this.mirrors.map(mirror => ({
-        x: mirror.x,
-        y: mirror.y,
-        rotation: mirror.body ? mirror.body.angle : (mirror.initialRotation || 0),
-        shapeType: mirror.shapeType,
-        isLocked: mirror.isLocked,
-        isDragging: mirror.isDragging
-      }));
-      
-      // Clear and recreate mirrors with preserved state
-      this.mirrors.forEach(mirror => mirror.destroy());
-      this.mirrors = [];
-      
-      // Recreate mirrors with stored data
-      mirrorData.forEach(data => {
-        try {
-          const mirror = new Mirror(this, data.x, data.y, data.shapeType);
-          if (mirror.body && data.rotation) {
-            this.matter.body.setAngle(mirror.body, data.rotation);
-          }
-          mirror.isLocked = data.isLocked;
-          mirror.isDragging = data.isDragging;
-          
-          if (data.isLocked) {
-            mirror.lock();
-          }
-          
-          this.mirrors.push(mirror);
-        } catch (e) {
-          console.error('Error recreating mirror during resize:', e);
-        }
-      });
-      
-      // Update level manager references
-      this.levelManager.mirrors = this.mirrors;
-      
-      // Recreate spawners (they're positioned based on screen size)
-      this.levelManager.createSpawners();
-      this.spawners = this.levelManager.spawners;
-      
-      // Update target
-      if (this.target) {
-        this.target.destroy();
-        this.target = new Target(this, 0, 0);
-        this.levelManager.target = this.target;
-      }
-    }
-    
-    updateGameplayElementsForResize() {
-      // During gameplay, only update essential elements
-      this.mirrors.forEach(mirror => {
-        if (mirror.updateScale) {
-          mirror.updateScale(this.scalingManager.scaleFactor);
-        }
-        
-        // Ensure mirrors stay within bounds
-        if (!this.levelManager.verifyMirrorPosition(mirror)) {
-          const validPos = this.levelManager.findValidMirrorPosition(mirror);
-          this.matter.body.setPosition(mirror.body, validPos);
-          mirror.x = validPos.x;
-          mirror.y = validPos.y;
-          mirror.drawFromPhysics();
-        }
-      });
-      
-      // Update target
-      if (this.target && this.target.updateScale) {
-        this.target.updateScale();
-      }
-      
-      // Update active lasers
-      this.lasers.forEach(laser => {
-        if (laser.onScaleChanged) {
-          laser.onScaleChanged({
-            scaleFactor: this.scalingManager.scaleFactor,
-            responsiveScale: this.scalingManager.responsiveScale
-          });
-        }
-      });
     }
     
     cleanup() {
-      // Clear resize timeout
-      if (this.resizeTimeout) {
-        clearTimeout(this.resizeTimeout);
-        this.resizeTimeout = null;
-      }
-      
       // Clean up all components
       if (this.levelManager) this.levelManager.cleanup();
       if (this.gameArea) this.gameArea.destroy();

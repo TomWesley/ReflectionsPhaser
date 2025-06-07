@@ -342,13 +342,75 @@ document.addEventListener('DOMContentLoaded', function() {
         };
       }
       
-      // Handle window resize with debouncing
+      // Simple and bulletproof resize handling with page reload
       let resizeTimeout;
+      let isResizing = false;
+      let resizeIndicator = null;
+      let originalSize = { width: window.innerWidth, height: window.innerHeight };
+      
+      const showResizeIndicator = () => {
+        if (!resizeIndicator) {
+          resizeIndicator = document.createElement('div');
+          resizeIndicator.innerHTML = `
+            <div style="
+              position: fixed;
+              top: 0;
+              left: 0;
+              width: 100vw;
+              height: 100vh;
+              background: rgba(250, 250, 250, 0.98);
+              display: flex;
+              flex-direction: column;
+              justify-content: center;
+              align-items: center;
+              font-family: 'Inter', sans-serif;
+              color: #1a1a1a;
+              z-index: 10000;
+            ">
+              <div style="font-size: 20px; font-weight: 600; margin-bottom: 8px;">
+                Screen size changed
+              </div>
+              <div style="font-size: 16px; color: #6c757d; margin-bottom: 24px;">
+                Refreshing for optimal display...
+              </div>
+              <div style="
+                width: 32px;
+                height: 32px;
+                border: 3px solid #e5e7eb;
+                border-top: 3px solid #1a1a1a;
+                border-radius: 50%;
+                animation: spin 1s linear infinite;
+              "></div>
+            </div>
+          `;
+          document.body.appendChild(resizeIndicator);
+        }
+      };
+      
       const handleResize = () => {
-        clearTimeout(resizeTimeout);
-        resizeTimeout = setTimeout(() => {
-          game.scale.refresh();
-        }, 100);
+        const newWidth = window.innerWidth;
+        const newHeight = window.innerHeight;
+        
+        // Check if this is a significant resize
+        const widthChange = Math.abs(newWidth - originalSize.width) / originalSize.width;
+        const heightChange = Math.abs(newHeight - originalSize.height) / originalSize.height;
+        
+        // Only trigger refresh for significant changes (> 15%)
+        if (widthChange > 0.05 || heightChange > 0.05) {
+          if (!isResizing) {
+            isResizing = true;
+            showResizeIndicator();
+          }
+          
+          // Clear existing timeout
+          clearTimeout(resizeTimeout);
+          
+          // Wait for resize to stop, then reload page
+          resizeTimeout = setTimeout(() => {
+            console.log('Significant resize detected, refreshing page for optimal display');
+            window.location.reload();
+          }, 800); // Wait 800ms after resize stops
+        }
       };
       
       window.addEventListener('resize', handleResize);
@@ -376,8 +438,28 @@ document.addEventListener('DOMContentLoaded', function() {
         showErrorMessage('A game error occurred. Please refresh the page.');
       });
       
+      // Enhanced error recovery
+      window.addEventListener('error', (event) => {
+        console.error('Global error:', event.error);
+        
+        // Attempt recovery for resize-related errors
+        if (event.error.message && event.error.message.includes('resize')) {
+          console.log('Attempting resize error recovery...');
+          setTimeout(() => {
+            try {
+              game.scale.refresh();
+            } catch (e) {
+              console.error('Recovery failed:', e);
+            }
+          }, 100);
+        }
+      });
+      
       // Memory cleanup on page unload
       window.addEventListener('beforeunload', () => {
+        if (resizeTimeout) {
+          clearTimeout(resizeTimeout);
+        }
         if (game) {
           game.destroy(true, false);
         }

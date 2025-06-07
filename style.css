@@ -266,7 +266,12 @@ body {
     fill: var(--success-color);
 }
 
-/* Smooth transitions */
+/* Smooth transitions during resize */
+canvas {
+    transition: none !important; /* Prevent CSS transitions during resize */
+}
+
+/* Smooth transitions for UI elements */
 button,
 .button,
 .interactive {
@@ -281,4 +286,27 @@ button:hover,
     position: relative !important;
     top: 0 !important;
     left: 0 !important;
+}
+
+/* Resize indicator */
+.resize-indicator {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(26, 26, 26, 0.9);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    z-index: 10001;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+}
+
+.resize-indicator.visible {
+    opacity: 1;
 }
