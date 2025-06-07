@@ -9,6 +9,15 @@ class LevelManager {
       this.spawners = [];
       this.lasers = [];
       this.target = null;
+      
+      // NYT-style color palette
+      this.colors = {
+        spawner: 0x1a1a1a,
+        spawnerActive: 0x4ade80
+      };
+      
+      // Listen for scale changes
+      this.scene.events.on('scale-changed', this.onScaleChanged, this);
     }
     
     setupLevel() {
@@ -23,7 +32,7 @@ class LevelManager {
     }
     
     createTarget() {
-      // Create target at center
+      // Create target at center with proper scaling
       this.target = new Target(this.scene, 0, 0);
     }
     
@@ -32,7 +41,7 @@ class LevelManager {
       this.mirrors.forEach(mirror => mirror.destroy());
       this.mirrors = [];
       
-      const mirrorCount = 9;
+      const mirrorCount = this.scaling.isMobile ? 7 : 9;
       const shapeTypes = [
         'rightTriangle',
         'isoscelesTriangle',
@@ -41,15 +50,15 @@ class LevelManager {
         'semicircle'
       ];
       
-      // Track which shapes we've created
+      // Track shape usage for variety
       const shapesUsed = new Set();
       
-      // Generate mirror positions
+      // Generate mirror positions with improved algorithm
       const positions = this.generateMirrorPositions(mirrorCount);
       
-      // Create mirrors
+      // Create mirrors with enhanced error handling
       positions.forEach((pos, index) => {
-        // Select shape type - try to use different shapes
+        // Select shape type with better distribution
         let shapeType;
         const unusedShapes = shapeTypes.filter(shape => !shapesUsed.has(shape));
         
@@ -57,6 +66,10 @@ class LevelManager {
           shapeType = Phaser.Utils.Array.GetRandom(unusedShapes);
           shapesUsed.add(shapeType);
         } else {
+          // Reset after using all shapes
+          if (shapesUsed.size >= shapeTypes.length) {
+            shapesUsed.clear();
+          }
           shapeType = Phaser.Utils.Array.GetRandom(shapeTypes);
         }
         
@@ -67,18 +80,21 @@ class LevelManager {
           if (this.verifyMirrorPosition(mirror)) {
             this.mirrors.push(mirror);
           } else {
-            // If not within bounds, find a valid position
+            // Find a valid position
             const validPos = this.findValidMirrorPosition(mirror);
+            this.scene.matter.body.setPosition(mirror.body, validPos);
             mirror.x = validPos.x;
             mirror.y = validPos.y;
-            this.scene.matter.body.setPosition(mirror.body, validPos);
             mirror.drawFromPhysics();
             this.mirrors.push(mirror);
           }
         } catch (e) {
-          console.error(`Error creating mirror: ${e}`);
+          console.error(`Error creating mirror ${index}:`, e);
+          // Continue with other mirrors
         }
       });
+      
+      console.log(`Created ${this.mirrors.length} mirrors out of ${mirrorCount} requested`);
     }
     
     generateMirrorPositions(count) {
@@ -86,23 +102,31 @@ class LevelManager {
       const constraints = this.scaling.placementConstraints;
       const bounds = this.scaling.gameBounds;
       
-      // Define a ring area where mirrors should be placed
-      const innerRadius = constraints.targetSafeRadius * 1.3;
-      const outerRadius = Math.min(bounds.width, bounds.height) * 0.4;
+      // Define placement area with better distribution
+      const innerRadius = constraints.targetSafeRadius * 1.4;
+      const outerRadius = Math.min(bounds.width, bounds.height) * 0.42;
       
-      // Generate positions in a circular pattern
+      // Use improved positioning algorithm
       for (let i = 0; i < count; i++) {
         let validPosition = false;
         let attempts = 0;
         let x, y;
         
-        while (!validPosition && attempts < 50) {
-          // Random angle and distance
-          const angle = (i / count) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
-          const distance = innerRadius + Math.random() * (outerRadius - innerRadius);
-          
-          x = Math.cos(angle) * distance;
-          y = Math.sin(angle) * distance;
+        while (!validPosition && attempts < 100) {
+          if (attempts < 50) {
+            // First 50 attempts: use structured placement
+            const angle = (i / count) * Math.PI * 2 + (Math.random() - 0.5) * 0.8;
+            const distance = innerRadius + Math.random() * (outerRadius - innerRadius);
+            
+            x = Math.cos(angle) * distance;
+            y = Math.sin(angle) * distance;
+          } else {
+            // Fallback: random placement
+            x = Phaser.Math.Between(bounds.left + constraints.wallSafeMargin, 
+                                   bounds.right - constraints.wallSafeMargin);
+            y = Phaser.Math.Between(bounds.top + constraints.wallSafeMargin, 
+                                   bounds.bottom - constraints.wallSafeMargin);
+          }
           
           // Check if position is valid
           if (this.gameArea.isValidMirrorPosition(x, y)) {
@@ -120,11 +144,17 @@ class LevelManager {
           attempts++;
         }
         
-        // If no valid position found, use a fallback
+        // Fallback position if no valid position found
         if (!validPosition) {
           const angle = (i / count) * Math.PI * 2;
-          x = Math.cos(angle) * (innerRadius + outerRadius) / 2;
-          y = Math.sin(angle) * (innerRadius + outerRadius) / 2;
+          const distance = (innerRadius + outerRadius) / 2;
+          x = Math.cos(angle) * distance;
+          y = Math.sin(angle) * distance;
+          
+          // Clamp to bounds
+          const margin = constraints.wallSafeMargin + this.scaling.elementSizes.mirrorMax / 2;
+          x = Phaser.Math.Clamp(x, bounds.left + margin, bounds.right - margin);
+          y = Phaser.Math.Clamp(y, bounds.top + margin, bounds.bottom - margin);
         }
         
         positions.push({ x, y });
@@ -173,7 +203,7 @@ class LevelManager {
         y = Math.sin(angle) * constraints.targetSafeRadius * 1.5;
       }
       
-      // Clamp to bounds
+      // Clamp to bounds with proper margin
       const margin = constraints.wallSafeMargin + this.scaling.elementSizes.mirrorMax / 2;
       x = Phaser.Math.Clamp(x, bounds.left + margin, bounds.right - margin);
       y = Phaser.Math.Clamp(y, bounds.top + margin, bounds.bottom - margin);
@@ -183,7 +213,9 @@ class LevelManager {
     
     createSpawners() {
       // Clear existing spawners
-      this.spawners.forEach(spawner => spawner.destroy());
+      this.spawners.forEach(spawner => {
+        if (spawner.destroy) spawner.destroy();
+      });
       this.spawners = [];
       
       // Get all possible spawner positions
@@ -197,34 +229,66 @@ class LevelManager {
         this.selectedSpawnerIndices = indices.slice(0, 4);
       }
       
-      // Create spawners at selected positions
+      // Create spawners at selected positions with enhanced design
       this.selectedSpawnerIndices.forEach(index => {
         const pos = allPositions[index];
         
         // Calculate direction toward center
         const direction = new Phaser.Math.Vector2(-pos.x, -pos.y).normalize();
         
-        // Create spawner visual
-        const size = this.scaling.elementSizes.spawner;
-        const angle = Math.atan2(direction.y, direction.x);
-        
-        const spawner = this.scene.add.triangle(
-          pos.x, pos.y,
-          0, -size,
-          size, size,
-          -size, size,
-          0xff4500
-        );
-        
-        // Rotate to point toward center
-        spawner.rotation = angle + Math.PI / 2;
-        
-        // Store spawner data
-        spawner.direction = direction;
-        spawner.position = new Phaser.Math.Vector2(pos.x, pos.y);
+        // Create spawner visual with NYT-style design
+        const spawner = this.createSpawnerVisual(pos, direction);
         
         this.spawners.push(spawner);
       });
+    }
+    
+    createSpawnerVisual(position, direction) {
+      const size = this.scaling.elementSizes.spawner;
+      const angle = Math.atan2(direction.y, direction.x);
+      
+      // Create spawner container
+      const spawnerContainer = this.scene.add.container(position.x, position.y);
+      
+      // Create spawner graphics
+      const graphics = this.scene.add.graphics();
+      
+      // Modern triangular design
+      graphics.fillStyle(this.colors.spawner, 0.9);
+      graphics.fillTriangle(
+        0, -size,
+        size * 0.8, size * 0.8,
+        -size * 0.8, size * 0.8
+      );
+      
+      // Subtle outline
+      graphics.lineStyle(this.scaling.getScaledValue(1), this.colors.spawner, 1);
+      graphics.strokeTriangle(
+        0, -size,
+        size * 0.8, size * 0.8,
+        -size * 0.8, size * 0.8
+      );
+      
+      // Add to container and rotate
+      spawnerContainer.add(graphics);
+      spawnerContainer.rotation = angle + Math.PI / 2;
+      
+      // Store spawner data
+      spawnerContainer.direction = direction;
+      spawnerContainer.position = new Phaser.Math.Vector2(position.x, position.y);
+      spawnerContainer.graphics = graphics;
+      
+      // Add subtle pulse animation
+      this.scene.tweens.add({
+        targets: graphics,
+        alpha: { from: 0.9, to: 0.6 },
+        duration: 2000,
+        ease: 'Sine.easeInOut',
+        yoyo: true,
+        repeat: -1
+      });
+      
+      return spawnerContainer;
     }
     
     launchLasers() {
@@ -232,9 +296,10 @@ class LevelManager {
       this.lasers.forEach(laser => laser.destroy());
       this.lasers = [];
       
-      // Create laser from each spawner
-      this.spawners.forEach(spawner => {
-        const speed = this.scaling.getScaledValue(5);
+      // Create laser from each spawner with enhanced visuals
+      this.spawners.forEach((spawner, index) => {
+        const speed = this.scaling.getScaledValue(3); // Slightly faster for better gameplay
+        
         const laser = new Laser(
           this.scene,
           spawner.position.x,
@@ -244,24 +309,64 @@ class LevelManager {
         );
         
         this.lasers.push(laser);
+        
+        // Add launch effect to spawner
+        this.addLaunchEffect(spawner);
       });
     }
     
-    lockMirrors() {
-      this.mirrors.forEach(mirror => mirror.lock());
+    addLaunchEffect(spawner) {
+      // Change spawner color briefly
+      if (spawner.graphics) {
+        spawner.graphics.clear();
+        
+        const size = this.scaling.elementSizes.spawner;
+        
+        // Active color
+        spawner.graphics.fillStyle(this.colors.spawnerActive, 1);
+        spawner.graphics.fillTriangle(
+          0, -size,
+          size * 0.8, size * 0.8,
+          -size * 0.8, size * 0.8
+        );
+        
+        // Reset to normal color after a delay
+        this.scene.time.delayedCall(500, () => {
+          if (spawner.graphics) {
+            spawner.graphics.clear();
+            spawner.graphics.fillStyle(this.colors.spawner, 0.9);
+            spawner.graphics.fillTriangle(
+              0, -size,
+              size * 0.8, size * 0.8,
+              -size * 0.8, size * 0.8
+            );
+          }
+        });
+      }
     }
     
-    // Handle window resize
+    lockMirrors() {
+      this.mirrors.forEach(mirror => {
+        if (mirror.lock) {
+          mirror.lock();
+        }
+      });
+    }
+    
+    // Handle scale changes
+    onScaleChanged(scaleData) {
+      this.handleResize();
+    }
+    
+    // Enhanced resize handling
     handleResize() {
       // Update target scale
-      if (this.target) {
-        this.target.destroy();
-        this.target = new Target(this.scene, 0, 0);
+      if (this.target && this.target.updateScale) {
+        this.target.updateScale();
       }
       
       // Update mirror scales and ensure they're within bounds
       this.mirrors.forEach(mirror => {
-        // Update mirror scale
         if (mirror.updateScale) {
           mirror.updateScale(this.scaling.scaleFactor);
         }
@@ -277,10 +382,37 @@ class LevelManager {
       });
       
       // Only recreate spawners if game hasn't started
-      // This prevents them from moving during gameplay
       if (!this.scene.gameState || !this.scene.gameState.isPlaying()) {
         this.createSpawners();
+      } else {
+        // Update existing spawners for new scale
+        this.updateSpawnerScale();
       }
+    }
+    
+    updateSpawnerScale() {
+      const size = this.scaling.elementSizes.spawner;
+      
+      this.spawners.forEach(spawner => {
+        if (spawner.graphics) {
+          spawner.graphics.clear();
+          
+          // Redraw with new size
+          spawner.graphics.fillStyle(this.colors.spawner, 0.9);
+          spawner.graphics.fillTriangle(
+            0, -size,
+            size * 0.8, size * 0.8,
+            -size * 0.8, size * 0.8
+          );
+          
+          spawner.graphics.lineStyle(this.scaling.getScaledValue(1), this.colors.spawner, 1);
+          spawner.graphics.strokeTriangle(
+            0, -size,
+            size * 0.8, size * 0.8,
+            -size * 0.8, size * 0.8
+          );
+        }
+      });
     }
     
     // Get total reflections from all lasers
@@ -297,15 +429,45 @@ class LevelManager {
       });
     }
     
-    // Cleanup
+    // Cleanup with enhanced error handling
     cleanup() {
-      // Destroy all game objects
-      this.lasers.forEach(laser => laser.destroy());
-      this.mirrors.forEach(mirror => mirror.destroy());
-      this.spawners.forEach(spawner => spawner.destroy());
-      
-      if (this.target) {
-        this.target.destroy();
+      try {
+        // Destroy all game objects
+        this.lasers.forEach(laser => {
+          try {
+            laser.destroy();
+          } catch (e) {
+            console.warn('Error destroying laser:', e);
+          }
+        });
+        
+        this.mirrors.forEach(mirror => {
+          try {
+            mirror.destroy();
+          } catch (e) {
+            console.warn('Error destroying mirror:', e);
+          }
+        });
+        
+        this.spawners.forEach(spawner => {
+          try {
+            if (spawner.destroy) {
+              spawner.destroy();
+            }
+          } catch (e) {
+            console.warn('Error destroying spawner:', e);
+          }
+        });
+        
+        if (this.target) {
+          try {
+            this.target.destroy();
+          } catch (e) {
+            console.warn('Error destroying target:', e);
+          }
+        }
+      } catch (e) {
+        console.error('Error during cleanup:', e);
       }
       
       // Clear arrays
@@ -316,5 +478,8 @@ class LevelManager {
       
       // Reset spawner selection for next game
       this.selectedSpawnerIndices = null;
+      
+      // Remove scale change listener
+      this.scene.events.off('scale-changed', this.onScaleChanged, this);
     }
   }

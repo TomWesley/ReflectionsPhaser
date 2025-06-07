@@ -1,4 +1,4 @@
-// GameScene.js - Main game scene using component architecture
+// GameScene.js - Main game scene with enhanced scaling and NYT styling
 class GameScene extends Phaser.Scene {
     constructor() {
       super({ key: 'GameScene' });
@@ -9,10 +9,13 @@ class GameScene extends Phaser.Scene {
       this.gameArea = null;
       this.levelManager = null;
       this.gameState = null;
+      
+      // Resize debounce
+      this.resizeTimeout = null;
     }
     
     init() {
-      // Initialize scaling manager
+      // Initialize scaling manager first
       this.scalingManager = new ScalingManager(this);
       
       // Initialize game state
@@ -20,22 +23,19 @@ class GameScene extends Phaser.Scene {
     }
     
     create() {
-      // Set up camera with proper bounds
-      this.cameras.main.setBounds(-2000, -2000, 4000, 4000);
+      // Center the camera
       this.cameras.main.centerOn(0, 0);
       
-      // Create components
-      this.gameUI = new GameUI(this, this.scalingManager);
+      // Create components in order
       this.gameArea = new GameArea(this, this.scalingManager);
+      this.gameUI = new GameUI(this, this.scalingManager);
       this.levelManager = new LevelManager(this, this.scalingManager, this.gameArea);
       
       // Set up level
       this.levelManager.setupLevel();
       
-      // Set up resize handler - this is crucial
-      this.scale.on('resize', (gameSize, baseSize, displaySize, resolution) => {
-        this.handleResize(gameSize, baseSize, displaySize, resolution);
-      });
+      // Set up resize handler with debouncing
+      this.scale.on('resize', this.handleResize, this);
       
       // Set up collision handlers
       this.setupCollisions();
@@ -49,26 +49,23 @@ class GameScene extends Phaser.Scene {
       // Store bounds for laser boundary checking
       this.updateBoundsReferences();
       
-      // Force initial resize to ensure proper setup
-      const { width, height } = this.scale.gameSize;
-      this.handleResize({ width, height });
-      
-      // Add debug helper (press D to debug mirrors)
+      // Add debug helper (press D to debug)
       this.input.keyboard.on('keydown-D', () => {
-        console.log('=== Mirror Debug Info ===');
-        this.mirrors.forEach((mirror, index) => {
-          console.log(`Mirror ${index}:`, {
-            position: { x: mirror.x, y: mirror.y },
-            shapeType: mirror.shapeType,
-            hasBody: !!mirror.body,
-            hasGraphics: !!mirror.graphics,
-            graphicsVisible: mirror.graphics ? mirror.graphics.visible : 'no graphics',
-            isLocked: mirror.isLocked,
-            fillAlpha: mirror.style.fillAlpha,
-            strokeColor: mirror.style.strokeColor
-          });
-        });
+        console.log('=== Debug Info ===');
+        console.log('Scale Factor:', this.scalingManager.scaleFactor);
+        console.log('Responsive Scale:', this.scalingManager.responsiveScale);
+        console.log('Game Bounds:', this.scalingManager.gameBounds);
+        console.log('Element Sizes:', this.scalingManager.elementSizes);
+        console.log('Mirrors:', this.mirrors.map((mirror, index) => ({
+          index,
+          position: { x: mirror.x, y: mirror.y },
+          shapeType: mirror.shapeType,
+          isLocked: mirror.isLocked
+        })));
       });
+      
+      // Smooth fade in
+      this.cameras.main.fadeIn(600, 250, 250, 250);
     }
     
     update(time, delta) {
@@ -82,8 +79,8 @@ class GameScene extends Phaser.Scene {
     }
     
     setupCollisions() {
-      // Already handled in Laser class, but we need to ensure
-      // the scene methods are available
+      // Collision handling is managed in individual objects
+      // This ensures clean separation of concerns
     }
     
     updateBoundsReferences() {
@@ -101,7 +98,7 @@ class GameScene extends Phaser.Scene {
     startGame() {
       if (!this.gameState.startGame()) return;
       
-      // Hide UI elements
+      // Hide UI elements with smooth animations
       this.gameUI.hideStartButton();
       this.gameUI.hideInstructions();
       this.gameUI.showTimer();
@@ -112,11 +109,11 @@ class GameScene extends Phaser.Scene {
       // Lock mirrors
       this.levelManager.lockMirrors();
       
-      // Launch lasers
-      this.levelManager.launchLasers();
-      
-      // Update laser references
-      this.lasers = this.levelManager.lasers;
+      // Launch lasers with slight delay for better UX
+      this.time.delayedCall(300, () => {
+        this.levelManager.launchLasers();
+        this.lasers = this.levelManager.lasers;
+      });
     }
     
     onLaserHitTarget(laser) {
@@ -124,11 +121,30 @@ class GameScene extends Phaser.Scene {
       
       console.log('Target hit! Time:', this.gameState.getGameTime().toFixed(3));
       
-      // Visual feedback
+      // Enhanced visual feedback
       this.target.onHit();
       
-      // Complete game
-      this.gameComplete();
+      // Add screen flash effect
+      this.addSuccessEffect();
+      
+      // Complete game with delay for effects
+      this.time.delayedCall(500, () => {
+        this.gameComplete();
+      });
+    }
+    
+    addSuccessEffect() {
+      // Subtle screen flash
+      const flash = this.add.rectangle(0, 0, this.scalingManager.screenWidth * 2, this.scalingManager.screenHeight * 2, 0x4ade80, 0.15);
+      flash.setDepth(100);
+      
+      this.tweens.add({
+        targets: flash,
+        alpha: 0,
+        duration: 400,
+        ease: 'Cubic.out',
+        onComplete: () => flash.destroy()
+      });
     }
     
     gameComplete() {
@@ -137,15 +153,17 @@ class GameScene extends Phaser.Scene {
       
       // Reduce target opacity
       if (this.target) {
-        this.target.setAlpha(0.3);
+        this.target.setAlpha(0.4);
       }
       
       // Get stats
       const gameTime = this.gameState.getGameTime();
       const totalReflections = this.levelManager.getTotalReflections();
       
-      // Show completion panel
-      this.gameUI.showCompletionPanel(gameTime, totalReflections);
+      // Show completion panel with delay
+      this.time.delayedCall(200, () => {
+        this.gameUI.showCompletionPanel(gameTime, totalReflections);
+      });
       
       // Create celebration effect
       this.createCelebrationEffect();
@@ -160,7 +178,7 @@ class GameScene extends Phaser.Scene {
       
       // Reduce target opacity
       if (this.target) {
-        this.target.setAlpha(0.3);
+        this.target.setAlpha(0.4);
       }
       
       // Show game over panel
@@ -168,27 +186,34 @@ class GameScene extends Phaser.Scene {
     }
     
     createCelebrationEffect() {
+      // Clean, minimal celebration effect
       const bounds = this.scalingManager.gameBounds;
-      const particles = this.add.particles('laser');
+      const particleCount = this.scalingManager.isMobile ? 20 : 30;
       
-      const confetti = particles.createEmitter({
-        x: { min: bounds.left, max: bounds.right },
-        y: bounds.top - 50,
-        speed: { min: 200, max: 300 },
-        angle: { min: 80, max: 100 },
-        scale: { start: 0.1, end: 0 },
-        lifespan: 4000,
-        blendMode: 'ADD',
-        frequency: 50,
-        tint: [0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0xff00ff]
-      });
-      
-      this.time.delayedCall(3000, () => {
-        confetti.stop();
-        this.time.delayedCall(4000, () => {
-          particles.destroy();
+      for (let i = 0; i < particleCount; i++) {
+        const x = Phaser.Math.Between(bounds.left, bounds.right);
+        const y = bounds.top - this.scalingManager.getSpacing('xl');
+        
+        const particle = this.add.circle(
+          x, y, 
+          this.scalingManager.getScaledValue(Phaser.Math.Between(2, 4)), 
+          Phaser.Math.RND.pick([0x4ade80, 0x1a1a1a, 0x6c757d]), 
+          0.8
+        );
+        particle.setDepth(50);
+        
+        // Animate particle falling
+        this.tweens.add({
+          targets: particle,
+          y: bounds.bottom + this.scalingManager.getSpacing('xl'),
+          rotation: Phaser.Math.Between(0, 360) * Math.PI / 180,
+          alpha: { from: 0.8, to: 0 },
+          duration: Phaser.Math.Between(2000, 4000),
+          ease: 'Cubic.out',
+          delay: Phaser.Math.Between(0, 1000),
+          onComplete: () => particle.destroy()
         });
-      });
+      }
     }
     
     restartGame() {
@@ -202,8 +227,8 @@ class GameScene extends Phaser.Scene {
       this.gameUI.elements.completionPanel.setVisible(false);
       this.gameUI.elements.gameOverPanel.setVisible(false);
       
-      // Recreate game area visuals
-      this.gameArea.handleResize();
+      // Show placement boundaries again
+      this.gameArea.showPlacementBoundary();
       
       // Recreate level
       this.levelManager.setupLevel();
@@ -221,6 +246,7 @@ class GameScene extends Phaser.Scene {
     showStartUI() {
       const ui = this.gameUI.elements;
       
+      // Reset visibility
       ui.startButton.setVisible(true);
       ui.startText.setVisible(true);
       ui.homeButton.setVisible(true);
@@ -233,14 +259,15 @@ class GameScene extends Phaser.Scene {
       ui.startText.y = uiPositions.footerY;
       ui.homeButton.y = uiPositions.footerY;
       ui.homeText.y = uiPositions.footerY;
-      ui.instructionsText.y = uiPositions.headerY - this.scalingManager.getScaledValue(30);
+      ui.instructionsText.y = uiPositions.headerY - this.scalingManager.getSpacing('lg');
       
-      // Fade in
+      // Smooth fade in
       this.tweens.add({
         targets: [ui.startButton, ui.startText, ui.homeButton, ui.homeText, ui.instructionsText],
-        alpha: 1,
-        duration: 600,
-        ease: 'Back.out'
+        alpha: { from: 0, to: 1 },
+        y: `-=${this.scalingManager.getSpacing('sm')}`,
+        duration: 400,
+        ease: 'Cubic.out'
       });
       
       // Reset timer
@@ -252,93 +279,140 @@ class GameScene extends Phaser.Scene {
       // Clean up
       this.cleanup();
       
-      // Transition to menu
-      this.cameras.main.fadeOut(500, 0, 0, 0);
+      // Smooth transition to menu
+      this.cameras.main.fadeOut(400, 250, 250, 250);
       this.cameras.main.once('camerafadeoutcomplete', () => {
         this.scene.start('MenuScene');
       });
     }
     
     handleResize(gameSize, baseSize, displaySize, resolution) {
-      console.log('GameScene resize triggered:', gameSize.width, 'x', gameSize.height);
+      // Clear any pending resize timeout
+      if (this.resizeTimeout) {
+        clearTimeout(this.resizeTimeout);
+      }
       
-      // Update camera dimensions
-      this.cameras.main.setSize(gameSize.width, gameSize.height);
-      
-      // Update scaling manager
+      // Debounce resize to prevent excessive updates
+      this.resizeTimeout = setTimeout(() => {
+        this.performResize(gameSize);
+        this.resizeTimeout = null;
+      }, 16); // ~60fps debounce
+    }
+    
+    performResize(gameSize) {
+      // Update scaling manager first
       this.scalingManager.handleResize();
       
-      // IMPORTANT: Re-center the camera after resize
+      // Re-center the camera after resize
       this.cameras.main.centerOn(0, 0);
       
       // Update bounds references
       this.updateBoundsReferences();
       
       // Update all components
-      this.gameUI.handleResize();
       this.gameArea.handleResize();
+      this.gameUI.handleResize();
       
-      // Only update level manager if game hasn't started
-      // This prevents spawners from moving during gameplay
+      // Handle level updates based on game state
       if (!this.gameState.isPlaying()) {
-        // Store mirror data before resize
-        const mirrorData = this.mirrors.map(mirror => ({
-          x: mirror.x,
-          y: mirror.y,
-          rotation: mirror.body ? mirror.body.angle : (mirror.initialRotation || 0),
-          shapeType: mirror.shapeType,
-          isLocked: mirror.isLocked
-        }));
-        
-        // Clear and recreate mirrors to ensure proper display
-        this.mirrors.forEach(mirror => mirror.destroy());
-        this.mirrors = [];
-        
-        // Recreate mirrors with stored data
-        mirrorData.forEach(data => {
+        // Game not started - can safely update everything
+        this.updateLevelForResize();
+      } else {
+        // Game in progress - minimal updates to maintain gameplay
+        this.updateGameplayElementsForResize();
+      }
+    }
+    
+    updateLevelForResize() {
+      // Store mirror data before resize
+      const mirrorData = this.mirrors.map(mirror => ({
+        x: mirror.x,
+        y: mirror.y,
+        rotation: mirror.body ? mirror.body.angle : (mirror.initialRotation || 0),
+        shapeType: mirror.shapeType,
+        isLocked: mirror.isLocked,
+        isDragging: mirror.isDragging
+      }));
+      
+      // Clear and recreate mirrors with preserved state
+      this.mirrors.forEach(mirror => mirror.destroy());
+      this.mirrors = [];
+      
+      // Recreate mirrors with stored data
+      mirrorData.forEach(data => {
+        try {
           const mirror = new Mirror(this, data.x, data.y, data.shapeType);
           if (mirror.body && data.rotation) {
             this.matter.body.setAngle(mirror.body, data.rotation);
           }
           mirror.isLocked = data.isLocked;
-          if (data.isLocked) {
-            mirror.setColor(mirror.style.lockedStrokeColor);
-          }
-          this.mirrors.push(mirror);
-        });
-        
-        // Update level manager references
-        this.levelManager.mirrors = this.mirrors;
-        
-        // Recreate spawners
-        this.levelManager.createSpawners();
-        this.spawners = this.levelManager.spawners;
-        
-        // Recreate target
-        if (this.target) {
-          this.target.destroy();
-          this.target = new Target(this, 0, 0);
-          this.levelManager.target = this.target;
-        }
-      } else {
-        // If game is playing, just ensure mirrors stay visible and within bounds
-        this.mirrors.forEach(mirror => {
-          // Force redraw
-          mirror.drawFromPhysics();
+          mirror.isDragging = data.isDragging;
           
-          // Verify position is still valid
-          if (!this.levelManager.verifyMirrorPosition(mirror)) {
-            const validPos = this.levelManager.findValidMirrorPosition(mirror);
-            this.matter.body.setPosition(mirror.body, validPos);
-            mirror.x = validPos.x;
-            mirror.y = validPos.y;
-            mirror.drawFromPhysics();
+          if (data.isLocked) {
+            mirror.lock();
           }
-        });
+          
+          this.mirrors.push(mirror);
+        } catch (e) {
+          console.error('Error recreating mirror during resize:', e);
+        }
+      });
+      
+      // Update level manager references
+      this.levelManager.mirrors = this.mirrors;
+      
+      // Recreate spawners (they're positioned based on screen size)
+      this.levelManager.createSpawners();
+      this.spawners = this.levelManager.spawners;
+      
+      // Update target
+      if (this.target) {
+        this.target.destroy();
+        this.target = new Target(this, 0, 0);
+        this.levelManager.target = this.target;
       }
     }
     
+    updateGameplayElementsForResize() {
+      // During gameplay, only update essential elements
+      this.mirrors.forEach(mirror => {
+        if (mirror.updateScale) {
+          mirror.updateScale(this.scalingManager.scaleFactor);
+        }
+        
+        // Ensure mirrors stay within bounds
+        if (!this.levelManager.verifyMirrorPosition(mirror)) {
+          const validPos = this.levelManager.findValidMirrorPosition(mirror);
+          this.matter.body.setPosition(mirror.body, validPos);
+          mirror.x = validPos.x;
+          mirror.y = validPos.y;
+          mirror.drawFromPhysics();
+        }
+      });
+      
+      // Update target
+      if (this.target && this.target.updateScale) {
+        this.target.updateScale();
+      }
+      
+      // Update active lasers
+      this.lasers.forEach(laser => {
+        if (laser.onScaleChanged) {
+          laser.onScaleChanged({
+            scaleFactor: this.scalingManager.scaleFactor,
+            responsiveScale: this.scalingManager.responsiveScale
+          });
+        }
+      });
+    }
+    
     cleanup() {
+      // Clear resize timeout
+      if (this.resizeTimeout) {
+        clearTimeout(this.resizeTimeout);
+        this.resizeTimeout = null;
+      }
+      
       // Clean up all components
       if (this.levelManager) this.levelManager.cleanup();
       if (this.gameArea) this.gameArea.destroy();
@@ -348,6 +422,11 @@ class GameScene extends Phaser.Scene {
       if (this.gameState) this.gameState.reset();
       
       // Remove resize handler
-      this.scale.off('resize');
+      this.scale.off('resize', this.handleResize, this);
+      
+      // Clean up scaling manager
+      if (this.scalingManager) {
+        this.scalingManager.destroy();
+      }
     }
   }

@@ -1,14 +1,29 @@
-
 class GameUI {
     constructor(scene, scalingManager) {
       this.scene = scene;
       this.scaling = scalingManager;
+      
+      // NYT-style color palette
+      this.colors = {
+        primary: 0x1a1a1a,
+        secondary: 0x6c757d,
+        surface: 0xffffff,
+        background: 0xfafafa,
+        border: 0xe5e7eb,
+        success: 0x4ade80,
+        error: 0xef4444,
+        warning: 0xf59e0b,
+        accent: 0x121212
+      };
       
       // UI element references
       this.elements = {};
       
       // Create all UI elements
       this.createUI();
+      
+      // Listen for scale changes
+      this.scene.events.on('scale-changed', this.onScaleChanged, this);
     }
     
     createUI() {
@@ -21,45 +36,36 @@ class GameUI {
     createHeader() {
       const { screenWidth, headerHeight, sideMargin, uiPositions } = this.scaling;
       
-      // Header background
+      // Header card background
       this.elements.headerBg = this.scene.add.graphics();
       this.drawHeaderBackground();
       
-      // Timer text
+      // Timer text - clean monospace style
       this.elements.timerText = this.scene.add.text(
         uiPositions.centerX, 
         uiPositions.headerY, 
         '00:00.000', 
         {
-          fontFamily: 'Courier New, monospace',
-          fontSize: `${this.scaling.getFontSize(32)}px`,
-          fontStyle: 'bold',
-          color: '#ffffff',
-          stroke: '#000000',
-          strokeThickness: this.scaling.getScaledValue(2),
-          shadow: {
-            offsetX: this.scaling.getScaledValue(2),
-            offsetY: this.scaling.getScaledValue(2),
-            color: '#000000',
-            blur: this.scaling.getScaledValue(4),
-            stroke: true,
-            fill: true
-          }
+          fontFamily: 'Inter, system-ui, sans-serif',
+          fontSize: `${this.scaling.getFontSize('xlarge')}px`,
+          fontWeight: '600',
+          color: '#1a1a1a',
+          stroke: 'transparent',
+          strokeThickness: 0
         }
-      ).setOrigin(0.5).setAlpha(0.7);
+      ).setOrigin(0.5).setAlpha(1);
       
-      // Instructions text
+      // Instructions text - clean and minimal
       this.elements.instructionsText = this.scene.add.text(
         uiPositions.centerX,
-        uiPositions.headerY - this.scaling.getScaledValue(30),
-        'Position mirrors to reflect the laser to the target',
+        uiPositions.headerY - this.scaling.getSpacing('lg'),
+        'Position mirrors to guide the beam to the target',
         {
-          fontFamily: 'Arial, sans-serif',
-          fontSize: `${this.scaling.getFontSize(20)}px`,
-          color: '#e0e0e0',
-          align: 'center',
-          stroke: '#000000',
-          strokeThickness: this.scaling.getScaledValue(1)
+          fontFamily: 'Inter, system-ui, sans-serif',
+          fontSize: `${this.scaling.getFontSize('medium')}px`,
+          fontWeight: '400',
+          color: '#6c757d',
+          align: 'center'
         }
       ).setOrigin(0.5);
     }
@@ -71,13 +77,12 @@ class GameUI {
       this.elements.footerBg = this.scene.add.graphics();
       this.drawFooterBackground();
       
-      // Button dimensions - larger on mobile for touch
-      const buttonWidth = this.scaling.getTouchSize(200);
-      const buttonHeight = this.scaling.getTouchSize(50);
-      const homeButtonWidth = this.scaling.getTouchSize(120);
-      const borderRadius = this.scaling.getScaledValue(25);
+      // Button dimensions - optimal touch targets
+      const buttonWidth = this.scaling.getTouchSize(180, 'optimal');
+      const buttonHeight = this.scaling.getTouchSize(48, 'optimal');
+      const homeButtonWidth = this.scaling.getTouchSize(100, 'optimal');
       
-      // Start button background
+      // Start button - NYT style
       this.elements.startButtonBg = this.scene.add.graphics();
       this.drawStartButton();
       
@@ -97,20 +102,18 @@ class GameUI {
       this.elements.startText = this.scene.add.text(
         uiPositions.centerX,
         uiPositions.footerY,
-        'START GAME',
+        'Start Game',
         {
-          fontFamily: 'Arial, sans-serif',
-          fontSize: `${this.scaling.getFontSize(24)}px`,
-          fontStyle: 'bold',
-          color: '#ffffff',
-          stroke: '#000000',
-          strokeThickness: this.scaling.getScaledValue(2)
+          fontFamily: 'Inter, system-ui, sans-serif',
+          fontSize: `${this.scaling.getFontSize('medium')}px`,
+          fontWeight: '500',
+          color: '#ffffff'
         }
       ).setOrigin(0.5);
       
-      // Home button - position adjusted for mobile
+      // Home button - minimal style
       const homeButtonX = this.scaling.isMobile ? 
-        -screenWidth / 2 + sideMargin + homeButtonWidth/2 + 10 : // Extra margin on mobile
+        -screenWidth / 2 + sideMargin + homeButtonWidth/2 + this.scaling.getSpacing('md') : 
         -screenWidth / 2 + sideMargin + homeButtonWidth/2;
       
       this.elements.homeButtonBg = this.scene.add.graphics();
@@ -120,7 +123,7 @@ class GameUI {
         homeButtonX,
         uiPositions.footerY,
         homeButtonWidth,
-        buttonHeight - 10,
+        buttonHeight - this.scaling.getSpacing('xs'),
         0x000000, 0
       )
       .setInteractive({ useHandCursor: true })
@@ -131,14 +134,12 @@ class GameUI {
       this.elements.homeText = this.scene.add.text(
         homeButtonX,
         uiPositions.footerY,
-        'MENU',
+        'Menu',
         {
-          fontFamily: 'Arial, sans-serif',
-          fontSize: `${this.scaling.getFontSize(18)}px`,
-          fontStyle: 'bold',
-          color: '#ecf0f1',
-          stroke: '#000000',
-          strokeThickness: this.scaling.getScaledValue(1)
+          fontFamily: 'Inter, system-ui, sans-serif',
+          fontSize: `${this.scaling.getFontSize('small')}px`,
+          fontWeight: '500',
+          color: '#6c757d'
         }
       ).setOrigin(0.5);
     }
@@ -147,69 +148,74 @@ class GameUI {
       // Create container for completion panel
       this.elements.completionPanel = this.scene.add.container(0, 0).setVisible(false).setDepth(1000);
       
-      const panelWidth = Math.min(this.scaling.getScaledValue(500), this.scaling.screenWidth * 0.9);
-      const panelHeight = Math.min(this.scaling.getScaledValue(400), this.scaling.screenHeight * 0.8);
+      const panelWidth = Math.min(this.scaling.getScaledValue(420), this.scaling.screenWidth * 0.9);
+      const panelHeight = Math.min(this.scaling.getScaledValue(360), this.scaling.screenHeight * 0.8);
       
-      // Full screen background
-      const fullScreenBg = this.scene.add.rectangle(0, 0, this.scaling.screenWidth * 2, this.scaling.screenHeight * 2, 0x000000, 0.8);
+      // Full screen overlay
+      const overlay = this.scene.add.rectangle(0, 0, this.scaling.screenWidth * 2, this.scaling.screenHeight * 2, 0x000000, 0.5);
       
-      // Panel background
+      // Panel card - NYT style
       const panelBg = this.scene.add.graphics();
-      this.drawPanel(panelBg, panelWidth, panelHeight, 0x1a1a2e, 0x4facfe);
+      this.drawPanel(panelBg, panelWidth, panelHeight, this.colors.surface);
       
-      // Panel content
-      const titleText = this.scene.add.text(0, -panelHeight/2 + this.scaling.getScaledValue(60), '🎯 TARGET HIT!', {
-        fontFamily: 'Arial, sans-serif',
-        fontSize: `${this.scaling.getFontSize(48)}px`,
-        fontStyle: 'bold',
-        color: '#4facfe',
-        stroke: '#000000',
-        strokeThickness: this.scaling.getScaledValue(4)
+      // Success icon and title
+      const titleText = this.scene.add.text(0, -panelHeight/2 + this.scaling.getSpacing('xl'), '✓', {
+        fontFamily: 'Inter, system-ui, sans-serif',
+        fontSize: `${this.scaling.getFontSize('display')}px`,
+        fontWeight: '300',
+        color: '#4ade80'
       }).setOrigin(0.5);
       
-      const congratsText = this.scene.add.text(0, -panelHeight/2 + this.scaling.getScaledValue(120), 'LEVEL COMPLETE', {
-        fontFamily: 'Arial, sans-serif',
-        fontSize: `${this.scaling.getFontSize(28)}px`,
-        color: '#ecf0f1'
+      const congratsText = this.scene.add.text(0, -panelHeight/2 + this.scaling.getSpacing('xl') * 2, 'Success!', {
+        fontFamily: 'Inter, system-ui, sans-serif',
+        fontSize: `${this.scaling.getFontSize('title')}px`,
+        fontWeight: '600',
+        color: '#1a1a1a'
+      }).setOrigin(0.5);
+      
+      const subtitleText = this.scene.add.text(0, -panelHeight/2 + this.scaling.getSpacing('xl') * 2.8, 'Target reached', {
+        fontFamily: 'Inter, system-ui, sans-serif',
+        fontSize: `${this.scaling.getFontSize('medium')}px`,
+        fontWeight: '400',
+        color: '#6c757d'
       }).setOrigin(0.5);
       
       // Score displays
-      this.elements.finalScoreText = this.scene.add.text(0, 0, '0.000s', {
-        fontFamily: 'Courier New, monospace',
-        fontSize: `${this.scaling.getFontSize(42)}px`,
-        fontStyle: 'bold',
-        color: '#f39c12',
-        stroke: '#000000',
-        strokeThickness: this.scaling.getScaledValue(2)
+      this.elements.finalScoreText = this.scene.add.text(0, -this.scaling.getSpacing('sm'), '0.000s', {
+        fontFamily: 'Inter, system-ui, sans-serif',
+        fontSize: `${this.scaling.getFontSize('xxlarge')}px`,
+        fontWeight: '700',
+        color: '#1a1a1a'
       }).setOrigin(0.5);
       
-      this.elements.reflectionsText = this.scene.add.text(0, this.scaling.getScaledValue(65), '0 reflections', {
-        fontFamily: 'Arial, sans-serif',
-        fontSize: `${this.scaling.getFontSize(24)}px`,
-        color: '#ecf0f1'
+      this.elements.reflectionsText = this.scene.add.text(0, this.scaling.getSpacing('lg'), '0 reflections', {
+        fontFamily: 'Inter, system-ui, sans-serif',
+        fontSize: `${this.scaling.getFontSize('medium')}px`,
+        fontWeight: '400',
+        color: '#6c757d'
       }).setOrigin(0.5);
       
       // Buttons
-      const buttonWidth = Math.min(this.scaling.getScaledValue(250), panelWidth * 0.8);
-      const buttonHeight = this.scaling.getScaledValue(50);
+      const buttonWidth = Math.min(this.scaling.getScaledValue(180), panelWidth * 0.8);
+      const buttonHeight = this.scaling.getTouchSize(48, 'optimal');
       
       const playAgainButton = this.createPanelButton(
-        0, panelHeight/2 - this.scaling.getScaledValue(125),
+        0, panelHeight/2 - this.scaling.getSpacing('xl') * 1.5,
         buttonWidth, buttonHeight,
-        'PLAY AGAIN', 0x27ae60,
+        'Play Again', this.colors.primary,
         () => this.scene.restartGame()
       );
       
       const menuButton = this.createPanelButton(
-        0, panelHeight/2 - this.scaling.getScaledValue(65),
+        0, panelHeight/2 - this.scaling.getSpacing('lg'),
         buttonWidth, buttonHeight,
-        'MAIN MENU', 0x34495e,
+        'Menu', this.colors.secondary,
         () => this.scene.returnToMenu()
       );
       
       // Add all elements to container
       this.elements.completionPanel.add([
-        fullScreenBg, panelBg, titleText, congratsText,
+        overlay, panelBg, titleText, congratsText, subtitleText,
         this.elements.finalScoreText, this.elements.reflectionsText,
         ...playAgainButton, ...menuButton
       ]);
@@ -219,97 +225,99 @@ class GameUI {
       // Create container for game over panel
       this.elements.gameOverPanel = this.scene.add.container(0, 0).setVisible(false).setDepth(1000);
       
-      const panelWidth = Math.min(this.scaling.getScaledValue(500), this.scaling.screenWidth * 0.9);
-      const panelHeight = Math.min(this.scaling.getScaledValue(400), this.scaling.screenHeight * 0.8);
+      const panelWidth = Math.min(this.scaling.getScaledValue(420), this.scaling.screenWidth * 0.9);
+      const panelHeight = Math.min(this.scaling.getScaledValue(360), this.scaling.screenHeight * 0.8);
       
-      // Full screen background
-      const fullScreenBg = this.scene.add.rectangle(0, 0, this.scaling.screenWidth * 2, this.scaling.screenHeight * 2, 0x000000, 0.8);
+      // Full screen overlay
+      const overlay = this.scene.add.rectangle(0, 0, this.scaling.screenWidth * 2, this.scaling.screenHeight * 2, 0x000000, 0.5);
       
-      // Panel background
+      // Panel card
       const panelBg = this.scene.add.graphics();
-      this.drawPanel(panelBg, panelWidth, panelHeight, 0x2c1810, 0xe74c3c);
+      this.drawPanel(panelBg, panelWidth, panelHeight, this.colors.surface);
       
-      // Panel content
-      const titleText = this.scene.add.text(0, -panelHeight/2 + this.scaling.getScaledValue(60), '⏰ TIME\'S UP!', {
-        fontFamily: 'Arial, sans-serif',
-        fontSize: `${this.scaling.getFontSize(48)}px`,
-        fontStyle: 'bold',
-        color: '#e74c3c',
-        stroke: '#000000',
-        strokeThickness: this.scaling.getScaledValue(4)
+      // Error icon and title
+      const titleText = this.scene.add.text(0, -panelHeight/2 + this.scaling.getSpacing('xl'), '⏱', {
+        fontFamily: 'Inter, system-ui, sans-serif',
+        fontSize: `${this.scaling.getFontSize('display')}px`,
+        fontWeight: '300',
+        color: '#f59e0b'
       }).setOrigin(0.5);
       
-      const messageText = this.scene.add.text(0, -panelHeight/2 + this.scaling.getScaledValue(120), 'The laser didn\'t reach the target in time!', {
-        fontFamily: 'Arial, sans-serif',
-        fontSize: `${this.scaling.getFontSize(22)}px`,
-        color: '#ecf0f1',
-        align: 'center'
+      const messageText = this.scene.add.text(0, -panelHeight/2 + this.scaling.getSpacing('xl') * 2, 'Time\'s Up', {
+        fontFamily: 'Inter, system-ui, sans-serif',
+        fontSize: `${this.scaling.getFontSize('title')}px`,
+        fontWeight: '600',
+        color: '#1a1a1a'
       }).setOrigin(0.5);
       
-      const hintText = this.scene.add.text(0, -this.scaling.getScaledValue(30), 'Try repositioning the mirrors\nfor a clearer path to the target.', {
-        fontFamily: 'Arial, sans-serif',
-        fontSize: `${this.scaling.getFontSize(18)}px`,
-        color: '#bdc3c7',
-        align: 'center'
+      const subtitleText = this.scene.add.text(0, -panelHeight/2 + this.scaling.getSpacing('xl') * 2.8, 'The beam didn\'t reach the target', {
+        fontFamily: 'Inter, system-ui, sans-serif',
+        fontSize: `${this.scaling.getFontSize('medium')}px`,
+        fontWeight: '400',
+        color: '#6c757d'
+      }).setOrigin(0.5);
+      
+      const hintText = this.scene.add.text(0, -this.scaling.getSpacing('sm'), 'Try repositioning the mirrors for\na clearer path to the target.', {
+        fontFamily: 'Inter, system-ui, sans-serif',
+        fontSize: `${this.scaling.getFontSize('small')}px`,
+        fontWeight: '400',
+        color: '#6c757d',
+        align: 'center',
+        lineSpacing: this.scaling.getSpacing('xs')
       }).setOrigin(0.5);
       
       // Buttons
-      const buttonWidth = Math.min(this.scaling.getScaledValue(250), panelWidth * 0.8);
-      const buttonHeight = this.scaling.getScaledValue(50);
+      const buttonWidth = Math.min(this.scaling.getScaledValue(180), panelWidth * 0.8);
+      const buttonHeight = this.scaling.getTouchSize(48, 'optimal');
       
       const tryAgainButton = this.createPanelButton(
-        0, panelHeight/2 - this.scaling.getScaledValue(125),
+        0, panelHeight/2 - this.scaling.getSpacing('xl') * 1.5,
         buttonWidth, buttonHeight,
-        'TRY AGAIN', 0xe67e22,
+        'Try Again', this.colors.primary,
         () => this.scene.restartGame()
       );
       
       const menuButton = this.createPanelButton(
-        0, panelHeight/2 - this.scaling.getScaledValue(65),
+        0, panelHeight/2 - this.scaling.getSpacing('lg'),
         buttonWidth, buttonHeight,
-        'MAIN MENU', 0x34495e,
+        'Menu', this.colors.secondary,
         () => this.scene.returnToMenu()
       );
       
       // Add all elements to container
       this.elements.gameOverPanel.add([
-        fullScreenBg, panelBg, titleText, messageText, hintText,
+        overlay, panelBg, titleText, messageText, subtitleText, hintText,
         ...tryAgainButton, ...menuButton
       ]);
     }
     
     createPanelButton(x, y, width, height, text, color, callback) {
-      // Ensure minimum touch size on mobile
-      const buttonHeight = this.scaling.getTouchSize(height);
-      const buttonWidth = Math.max(width, this.scaling.getTouchSize(200));
+      const buttonHeight = this.scaling.getTouchSize(height, 'optimal');
+      const buttonWidth = Math.max(width, this.scaling.getTouchSize(160, 'optimal'));
       
       const bg = this.scene.add.graphics();
-      bg.fillStyle(color, 0.9);
-      bg.fillRoundedRect(x - buttonWidth/2, y - buttonHeight/2, buttonWidth, buttonHeight, this.scaling.getScaledValue(25));
-      bg.lineStyle(this.scaling.getScaledValue(2), color * 0.7, 1);
-      bg.strokeRoundedRect(x - buttonWidth/2, y - buttonHeight/2, buttonWidth, buttonHeight, this.scaling.getScaledValue(25));
+      bg.fillStyle(color, 1);
+      bg.fillRoundedRect(x - buttonWidth/2, y - buttonHeight/2, buttonWidth, buttonHeight, this.scaling.getBorderRadius('md'));
       
       const button = this.scene.add.rectangle(x, y, buttonWidth, buttonHeight, 0x000000, 0)
         .setInteractive({ useHandCursor: true })
         .on('pointerdown', callback)
         .on('pointerover', () => {
           bg.clear();
-          bg.fillStyle(color, 1);
-          bg.fillRoundedRect(x - buttonWidth/2, y - buttonHeight/2, buttonWidth, buttonHeight, this.scaling.getScaledValue(25));
+          bg.fillStyle(color, 0.9);
+          bg.fillRoundedRect(x - buttonWidth/2, y - buttonHeight/2, buttonWidth, buttonHeight, this.scaling.getBorderRadius('md'));
         })
         .on('pointerout', () => {
           bg.clear();
-          bg.fillStyle(color, 0.9);
-          bg.fillRoundedRect(x - buttonWidth/2, y - buttonHeight/2, buttonWidth, buttonHeight, this.scaling.getScaledValue(25));
+          bg.fillStyle(color, 1);
+          bg.fillRoundedRect(x - buttonWidth/2, y - buttonHeight/2, buttonWidth, buttonHeight, this.scaling.getBorderRadius('md'));
         });
       
       const btnText = this.scene.add.text(x, y, text, {
-        fontFamily: 'Arial, sans-serif',
-        fontSize: `${this.scaling.getFontSize(20)}px`,
-        fontStyle: 'bold',
-        color: '#ffffff',
-        stroke: '#000000',
-        strokeThickness: this.scaling.getScaledValue(1)
+        fontFamily: 'Inter, system-ui, sans-serif',
+        fontSize: `${this.scaling.getFontSize('medium')}px`,
+        fontWeight: '500',
+        color: '#ffffff'
       }).setOrigin(0.5);
       
       return [bg, button, btnText];
@@ -320,21 +328,25 @@ class GameUI {
       const { screenWidth, headerHeight, sideMargin, uiPositions } = this.scaling;
       
       this.elements.headerBg.clear();
-      this.elements.headerBg.fillStyle(0x1a1a2e, 0.95);
+      
+      // Clean card background
+      this.elements.headerBg.fillStyle(this.colors.surface, 0.95);
       this.elements.headerBg.fillRoundedRect(
         -screenWidth / 2 + sideMargin,
         uiPositions.headerY - headerHeight / 2,
         screenWidth - (sideMargin * 2),
         headerHeight,
-        this.scaling.getScaledValue(20)
+        this.scaling.getBorderRadius('md')
       );
-      this.elements.headerBg.lineStyle(this.scaling.getScaledValue(2), 0x16213e, 0.8);
+      
+      // Subtle border
+      this.elements.headerBg.lineStyle(1, this.colors.border, 0.5);
       this.elements.headerBg.strokeRoundedRect(
         -screenWidth / 2 + sideMargin,
         uiPositions.headerY - headerHeight / 2,
         screenWidth - (sideMargin * 2),
         headerHeight,
-        this.scaling.getScaledValue(20)
+        this.scaling.getBorderRadius('md')
       );
     }
     
@@ -342,75 +354,72 @@ class GameUI {
       const { screenWidth, footerHeight, sideMargin, uiPositions } = this.scaling;
       
       this.elements.footerBg.clear();
-      this.elements.footerBg.fillStyle(0x1a1a2e, 0.95);
+      
+      // Clean card background
+      this.elements.footerBg.fillStyle(this.colors.surface, 0.95);
       this.elements.footerBg.fillRoundedRect(
         -screenWidth / 2 + sideMargin,
         uiPositions.footerY - footerHeight / 2,
         screenWidth - (sideMargin * 2),
         footerHeight,
-        this.scaling.getScaledValue(20)
+        this.scaling.getBorderRadius('md')
       );
-      this.elements.footerBg.lineStyle(this.scaling.getScaledValue(2), 0x16213e, 0.8);
+      
+      // Subtle border
+      this.elements.footerBg.lineStyle(1, this.colors.border, 0.5);
       this.elements.footerBg.strokeRoundedRect(
         -screenWidth / 2 + sideMargin,
         uiPositions.footerY - footerHeight / 2,
         screenWidth - (sideMargin * 2),
         footerHeight,
-        this.scaling.getScaledValue(20)
+        this.scaling.getBorderRadius('md')
       );
     }
     
     drawStartButton() {
-      const buttonWidth = this.scaling.getTouchSize(200);
-      const buttonHeight = this.scaling.getTouchSize(50);
-      const borderRadius = this.scaling.getScaledValue(25);
+      const buttonWidth = this.scaling.getTouchSize(180, 'optimal');
+      const buttonHeight = this.scaling.getTouchSize(48, 'optimal');
       const { uiPositions } = this.scaling;
       
       this.elements.startButtonBg.clear();
-      this.elements.startButtonBg.fillGradientStyle(0x4facfe, 0x4facfe, 0x00c9ff, 0x00c9ff, 1);
+      
+      // Primary button style
+      this.elements.startButtonBg.fillStyle(this.colors.primary, 1);
       this.elements.startButtonBg.fillRoundedRect(
         -buttonWidth/2, uiPositions.footerY - buttonHeight/2,
-        buttonWidth, buttonHeight, borderRadius
-      );
-      this.elements.startButtonBg.lineStyle(this.scaling.getScaledValue(3), 0x0099cc, 1);
-      this.elements.startButtonBg.strokeRoundedRect(
-        -buttonWidth/2, uiPositions.footerY - buttonHeight/2,
-        buttonWidth, buttonHeight, borderRadius
+        buttonWidth, buttonHeight, 
+        this.scaling.getBorderRadius('md')
       );
     }
     
     drawHomeButton() {
       const { screenWidth, sideMargin, uiPositions } = this.scaling;
-      const homeButtonWidth = this.scaling.getTouchSize(120);
-      const buttonHeight = this.scaling.getTouchSize(50);
+      const homeButtonWidth = this.scaling.getTouchSize(100, 'optimal');
+      const buttonHeight = this.scaling.getTouchSize(48, 'optimal');
       const homeButtonX = this.scaling.isMobile ? 
-        -screenWidth / 2 + sideMargin + homeButtonWidth/2 + 10 :
+        -screenWidth / 2 + sideMargin + homeButtonWidth/2 + this.scaling.getSpacing('md') :
         -screenWidth / 2 + sideMargin + homeButtonWidth/2;
       
       this.elements.homeButtonBg.clear();
-      this.elements.homeButtonBg.fillStyle(0x2c3e50, 0.9);
-      this.elements.homeButtonBg.fillRoundedRect(
-        homeButtonX - homeButtonWidth/2,
-        uiPositions.footerY - buttonHeight/2 + 5,
-        homeButtonWidth,
-        buttonHeight - 10,
-        this.scaling.getScaledValue(20)
-      );
-      this.elements.homeButtonBg.lineStyle(this.scaling.getScaledValue(2), 0x34495e, 1);
+      
+      // Secondary button style
+      this.elements.homeButtonBg.lineStyle(1, this.colors.border, 1);
       this.elements.homeButtonBg.strokeRoundedRect(
         homeButtonX - homeButtonWidth/2,
-        uiPositions.footerY - buttonHeight/2 + 5,
+        uiPositions.footerY - buttonHeight/2 + this.scaling.getSpacing('xs')/2,
         homeButtonWidth,
-        buttonHeight - 10,
-        this.scaling.getScaledValue(20)
+        buttonHeight - this.scaling.getSpacing('xs'),
+        this.scaling.getBorderRadius('md')
       );
     }
     
-    drawPanel(graphics, width, height, baseColor, borderColor) {
-      graphics.fillGradientStyle(baseColor, baseColor, baseColor * 1.2, baseColor * 1.2, 1);
-      graphics.fillRoundedRect(-width/2, -height/2, width, height, this.scaling.getScaledValue(30));
-      graphics.lineStyle(this.scaling.getScaledValue(4), borderColor, 1);
-      graphics.strokeRoundedRect(-width/2, -height/2, width, height, this.scaling.getScaledValue(30));
+    drawPanel(graphics, width, height, color) {
+      graphics.fillStyle(color, 1);
+      graphics.fillRoundedRect(-width/2, -height/2, width, height, this.scaling.getBorderRadius('lg'));
+      
+      // Subtle shadow effect
+      graphics.lineStyle(1, this.colors.border, 0.3);
+      graphics.strokeRoundedRect(-width/2, -height/2, width, height, this.scaling.getBorderRadius('lg'));
     }
     
     // Event handlers
@@ -420,14 +429,19 @@ class GameUI {
     
     onStartHover() {
       this.elements.startButtonBg.clear();
-      this.elements.startButtonBg.fillGradientStyle(0x5fbdff, 0x5fbdff, 0x22d4ff, 0x22d4ff, 1);
-      this.drawStartButton();
-      this.elements.startButtonBg.alpha = 1.1; // Subtle highlight
+      this.elements.startButtonBg.fillStyle(this.colors.primary, 0.9);
+      const buttonWidth = this.scaling.getTouchSize(180, 'optimal');
+      const buttonHeight = this.scaling.getTouchSize(48, 'optimal');
+      const { uiPositions } = this.scaling;
+      this.elements.startButtonBg.fillRoundedRect(
+        -buttonWidth/2, uiPositions.footerY - buttonHeight/2,
+        buttonWidth, buttonHeight, 
+        this.scaling.getBorderRadius('md')
+      );
     }
     
     onStartOut() {
       this.drawStartButton();
-      this.elements.startButtonBg.alpha = 1;
     }
     
     onHomeClick() {
@@ -435,11 +449,34 @@ class GameUI {
     }
     
     onHomeHover() {
-      this.elements.homeButtonBg.alpha = 1.1; // Subtle highlight
+      const { screenWidth, sideMargin, uiPositions } = this.scaling;
+      const homeButtonWidth = this.scaling.getTouchSize(100, 'optimal');
+      const buttonHeight = this.scaling.getTouchSize(48, 'optimal');
+      const homeButtonX = this.scaling.isMobile ? 
+        -screenWidth / 2 + sideMargin + homeButtonWidth/2 + this.scaling.getSpacing('md') :
+        -screenWidth / 2 + sideMargin + homeButtonWidth/2;
+      
+      this.elements.homeButtonBg.clear();
+      this.elements.homeButtonBg.fillStyle(this.colors.background, 1);
+      this.elements.homeButtonBg.fillRoundedRect(
+        homeButtonX - homeButtonWidth/2,
+        uiPositions.footerY - buttonHeight/2 + this.scaling.getSpacing('xs')/2,
+        homeButtonWidth,
+        buttonHeight - this.scaling.getSpacing('xs'),
+        this.scaling.getBorderRadius('md')
+      );
+      this.elements.homeButtonBg.lineStyle(1, this.colors.border, 1);
+      this.elements.homeButtonBg.strokeRoundedRect(
+        homeButtonX - homeButtonWidth/2,
+        uiPositions.footerY - buttonHeight/2 + this.scaling.getSpacing('xs')/2,
+        homeButtonWidth,
+        buttonHeight - this.scaling.getSpacing('xs'),
+        this.scaling.getBorderRadius('md')
+      );
     }
     
     onHomeOut() {
-      this.elements.homeButtonBg.alpha = 1;
+      this.drawHomeButton();
     }
     
     // UI update methods
@@ -451,15 +488,15 @@ class GameUI {
     
     showCompletionPanel(time, reflections) {
       this.elements.finalScoreText.setText(`${time.toFixed(3)}s`);
-      this.elements.reflectionsText.setText(`${reflections} reflections`);
+      this.elements.reflectionsText.setText(`${reflections} reflection${reflections !== 1 ? 's' : ''}`);
       this.elements.completionPanel.setVisible(true);
       
       this.scene.tweens.add({
         targets: this.elements.completionPanel,
         alpha: { from: 0, to: 1 },
-        scale: { from: 0.8, to: 1 },
-        duration: 600,
-        ease: 'Back.out'
+        scale: { from: 0.95, to: 1 },
+        duration: 300,
+        ease: 'Cubic.out'
       });
     }
     
@@ -470,7 +507,7 @@ class GameUI {
       this.scene.tweens.add({
         targets: this.elements.gameOverPanel,
         alpha: 1,
-        duration: 500,
+        duration: 300,
         ease: 'Cubic.out'
       });
     }
@@ -485,8 +522,8 @@ class GameUI {
         ],
         y: this.scaling.screenHeight + 100,
         alpha: 0,
-        duration: 500,
-        ease: 'Back.in',
+        duration: 300,
+        ease: 'Cubic.in',
         onComplete: () => {
           this.elements.startButton.setVisible(false);
           this.elements.startText.setVisible(false);
@@ -500,9 +537,9 @@ class GameUI {
       this.scene.tweens.add({
         targets: this.elements.instructionsText,
         alpha: 0,
-        y: this.elements.instructionsText.y - 30,
-        duration: 400,
-        ease: 'Power2.out',
+        y: this.elements.instructionsText.y - this.scaling.getSpacing('md'),
+        duration: 200,
+        ease: 'Cubic.out',
         onComplete: () => {
           this.elements.instructionsText.setVisible(false);
         }
@@ -513,10 +550,15 @@ class GameUI {
       this.scene.tweens.add({
         targets: this.elements.timerText,
         alpha: 1,
-        y: this.elements.timerText.y + 10,
-        duration: 600,
-        ease: 'Back.out'
+        y: this.elements.timerText.y + this.scaling.getSpacing('xs'),
+        duration: 300,
+        ease: 'Cubic.out'
       });
+    }
+    
+    // Handle scale changes
+    onScaleChanged(scaleData) {
+      this.handleResize();
     }
     
     // Handle window resize
@@ -527,39 +569,41 @@ class GameUI {
       this.drawStartButton();
       this.drawHomeButton();
       
-      // Update text positions
+      // Update text positions and sizes
       const { uiPositions } = this.scaling;
       
       this.elements.timerText.setPosition(uiPositions.centerX, uiPositions.headerY);
-      this.elements.instructionsText.setPosition(uiPositions.centerX, uiPositions.headerY - this.scaling.getScaledValue(30));
+      this.elements.timerText.setFontSize(this.scaling.getFontSize('xlarge'));
+      
+      this.elements.instructionsText.setPosition(uiPositions.centerX, uiPositions.headerY - this.scaling.getSpacing('lg'));
+      this.elements.instructionsText.setFontSize(this.scaling.getFontSize('medium'));
       
       // Update button sizes and positions
-      const buttonWidth = this.scaling.getTouchSize(200);
-      const buttonHeight = this.scaling.getTouchSize(50);
-      const homeButtonWidth = this.scaling.getTouchSize(120);
+      const buttonWidth = this.scaling.getTouchSize(180, 'optimal');
+      const buttonHeight = this.scaling.getTouchSize(48, 'optimal');
+      const homeButtonWidth = this.scaling.getTouchSize(100, 'optimal');
       
       this.elements.startButton.setPosition(uiPositions.centerX, uiPositions.footerY);
       this.elements.startButton.setSize(buttonWidth, buttonHeight);
       this.elements.startText.setPosition(uiPositions.centerX, uiPositions.footerY);
+      this.elements.startText.setFontSize(this.scaling.getFontSize('medium'));
       
       const { screenWidth, sideMargin } = this.scaling;
       const homeButtonX = this.scaling.isMobile ? 
-        -screenWidth / 2 + sideMargin + homeButtonWidth/2 + 10 :
+        -screenWidth / 2 + sideMargin + homeButtonWidth/2 + this.scaling.getSpacing('md') :
         -screenWidth / 2 + sideMargin + homeButtonWidth/2;
       
       this.elements.homeButton.setPosition(homeButtonX, uiPositions.footerY);
-      this.elements.homeButton.setSize(homeButtonWidth, buttonHeight - 10);
+      this.elements.homeButton.setSize(homeButtonWidth, buttonHeight - this.scaling.getSpacing('xs'));
       this.elements.homeText.setPosition(homeButtonX, uiPositions.footerY);
-      
-      // Update font sizes
-      this.elements.timerText.setFontSize(this.scaling.getFontSize(32));
-      this.elements.instructionsText.setFontSize(this.scaling.getFontSize(20));
-      this.elements.startText.setFontSize(this.scaling.getFontSize(24));
-      this.elements.homeText.setFontSize(this.scaling.getFontSize(18));
+      this.elements.homeText.setFontSize(this.scaling.getFontSize('small'));
     }
     
     // Cleanup
     destroy() {
+      // Remove scale change listener
+      this.scene.events.off('scale-changed', this.onScaleChanged, this);
+      
       // Clean up all UI elements
       Object.values(this.elements).forEach(element => {
         if (element && element.destroy) {

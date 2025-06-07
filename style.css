@@ -1,3 +1,6 @@
+/* NYT-Style Modern Game Design */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
 /* Base styles */
 html, body {
     margin: 0;
@@ -5,528 +8,13 @@ html, body {
     width: 100%;
     height: 100%;
     overflow: hidden;
-    background-color: #000000;
+    background-color: #fafafa;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     touch-action: none;
-}
-
-#game-container {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    display: block;
-    background-color: #000000;
-}
-
-/* Let Phaser handle canvas sizing */
-canvas {
-    display: block;
-    touch-action: none;
-}
-
-/* Prevent any unwanted margins or padding */
-* {
-    box-sizing: border-box;
-}
-
-/* Orientation message for mobile */
-#orientation-message {
-    display: none;
     position: fixed;
     top: 0;
     left: 0;
-    width: 100vw;
-    height: 100vh;
-    background-color: #000000;
-    color: #ffffff;
-    z-index: 9999;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-    font-family: Arial, sans-serif;
-}
-
-#orientation-message h1 {
-    font-size: 24px;
-    margin-bottom: 20px;
-}
-
-#orientation-message p {
-    font-size: 18px;
-    margin-bottom: 30px;
-    padding: 0 20px;
-}
-
-.rotate-icon {
-    width: 100px;
-    height: 100px;
-    animation: rotate-device 2s ease-in-out infinite;
-}
-
-@keyframes rotate-device {
-    0%, 100% { transform: rotate(0deg); }
-    50% { transform: rotate(90deg); }
-}
-
-/* Show orientation message only on mobile in portrait */
-@media only screen and (max-width: 768px) and (orientation: portrait) {
-    #orientation-message {
-        display: flex;
-    }
-    
-    #game-container {
-        display: none;
-    }
-}
-
-/* Mobile-specific enhancements */
-@media (max-width: 768px) {
-    /* Prevent unwanted scrolling */
-    html, body {
-        overflow: hidden;
-        position: fixed;
-        width: 100vw;
-        height: 100vh;
-        touch-action: none;
-        -webkit-overflow-scrolling: none;
-    }
-    
-    /* Force fullscreen on mobile landscape */
-    @media (orientation: landscape) {
-        #game-container {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            width: 100vw;
-            height: 100vh;
-        }
-    }
-}
-
-/* Handle landscape orientation on mobile */
-@media (orientation: landscape) and (max-height: 500px) {
-    html, body, #game-container {
-        height: 100vh;
-        width: 100vw;
-    }
-}
-
-/* Ensure the page stays black during loading */
-html {
-    background-color: black;
-}
-
-/* Hide any browser UI elements that might interfere */
-body {
-    -webkit-touch-callout: none; /* iOS Safari */
-    -webkit-user-select: none;   /* Safari */
-    -khtml-user-select: none;    /* Konqueror HTML */
-    -moz-user-select: none;      /* Firefox */
-    -ms-user-select: none;       /* Internet Explorer/Edge */
-    user-select: none;           /* Non-prefixed version */
-    -webkit-tap-highlight-color: transparent; /* Remove tap highlight on mobile */
-}
-
-/* Prevent pull-to-refresh on mobile */
-body {
-    overscroll-behavior: none;
-    -webkit-overscroll-behavior: none;
-}
-
-/* Handle iOS Safari's viewport issues */
-@supports (-webkit-touch-callout: none) {
-    html, body, #game-container {
-        height: -webkit-fill-available;
-    }
-}
-
-/* Fullscreen API support */
-#game-container:-webkit-full-screen {
-    width: 100vw;
-    height: 100vh;
-}
-
-#game-container:-moz-full-screen {
-    width: 100vw;
-    height: 100vh;
-}
-
-#game-container:-ms-fullscreen {
-    width: 100vw;
-    height: 100vh;
-}
-
-#game-container:fullscreen {
-    width: 100vw;
-    height: 100vh;
-}
-
-:root {
-    /* Mirror style variables - can be changed for custom appearance */
-    --mirror-line-color: #00ff00;       /* Green outline by default */
-    --mirror-line-thickness: 2;         /* Line thickness */
-    --mirror-fill-color: #000000;       /* Black fill */
-    --mirror-fill-alpha: 0.2;           /* Slight transparency for fill */
-    --mirror-hover-color: #44aaff;      /* Blue outline when hovering */
-    --mirror-drag-color: #aaaaff;       /* Light blue when dragging */
-    --mirror-locked-color: #999999;     /* Gray when locked (game started) */
-    
-    /* Target style variables */
-    --target-color: #00ff00;            /* Green by default */
-    --target-alpha: 0.6;                /* Semi-transparent */
-    
-    /* Laser style variables */
-    --laser-color: #ff0000;             /* Red laser */
-    --laser-trail-alpha: 0.5;           /* Semi-transparent trail */
-    --laser-line-width: 2;              /* Thickness of laser beam */
-}
-
-/* Game element styling with CSS classes */
-
-/* Mirror styles */
-.mirror {
-    stroke: #fbff00;        /* Yellow outline */
-    stroke-width: 2;        /* Line thickness */
-    fill: #e4f7ab;          /* Light yellow fill */
-    fill-opacity: 1;        /* Fill transparency */
-}
-
-.mirror-hover {
-    stroke: #44aaff;        /* Blue outline when hovering */
-}
-
-.mirror-drag {
-    stroke: #aaaaff;        /* Light blue when dragging */
-}
-
-.mirror-locked {
-    stroke: #999999;        /* Gray when locked (game started) */
-}
-
-/* Target styles */
-.target {
-    stroke: #ff00b7;        /* Pink outline */
-    stroke-width: 2;        /* Outline thickness */
-    fill: #f60039;          /* Red fill */
-    fill-opacity: 1;        /* Fill transparency */
-}
-
-.target-pulse {
-    fill: #00ff00;          /* Color of pulse animation */
-    fill-opacity: 0.4;      /* Transparency for pulse */
-}
-
-.target-hit {
-    fill: #ffffff;          /* Color of hit particle effect */
-}
-
-/* Laser styles */
-.laser {
-    stroke: #ff0000;        /* Red laser */
-    stroke-width: 2;        /* Thickness of laser beam */
-}
-
-.laser-trail {
-    stroke: #ff0000;        /* Red laser trail */
-    stroke-width: 2;        /* Thickness of trail */
-    stroke-opacity: 0.5;    /* Semi-transparent trail */
-}
-
-.laser-flash {
-    fill: #ffffff;          /* Color of collision flash */
-}
-
-/* Prevent hover effects from moving elements */
-button:hover,
-.button:hover,
-.interactive:hover {
-    transform: none !important;
-    position: relative !important;
-    top: 0 !important;
-    left: 0 !important;
-}
-
-/* Ensure smooth transitions without position changes */
-button,
-.button,
-.interactive {
-    transition: opacity 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
-    transform: none !important;
-}/* Base styles */
-html, body {
-    margin: 0;
-    padding: 0;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-    background-color: #000000;
-    touch-action: none;
-}
-
-#game-container {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    display: block;
-    background-color: #000000;
-}
-
-canvas {
-    display: block;
-    width: 100%;
-    height: 100%;
-    touch-action: none;
-}
-
-/* Prevent any unwanted margins or padding */
-* {
-    box-sizing: border-box;
-}
-
-/* Orientation message for mobile */
-#orientation-message {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background-color: #000000;
-    color: #ffffff;
-    z-index: 9999;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-    font-family: Arial, sans-serif;
-}
-
-#orientation-message h1 {
-    font-size: 24px;
-    margin-bottom: 20px;
-}
-
-#orientation-message p {
-    font-size: 18px;
-    margin-bottom: 30px;
-    padding: 0 20px;
-}
-
-.rotate-icon {
-    width: 100px;
-    height: 100px;
-    animation: rotate-device 2s ease-in-out infinite;
-}
-
-@keyframes rotate-device {
-    0%, 100% { transform: rotate(0deg); }
-    50% { transform: rotate(90deg); }
-}
-
-/* Show orientation message only on mobile in portrait */
-@media only screen and (max-width: 768px) and (orientation: portrait) {
-    #orientation-message {
-        display: flex;
-    }
-    
-    #game-container {
-        display: none;
-    }
-}
-
-/* Mobile-specific enhancements */
-@media (max-width: 768px) {
-    /* Prevent unwanted scrolling */
-    html, body {
-        overflow: hidden;
-        position: fixed;
-        width: 100vw;
-        height: 100vh;
-        touch-action: none;
-        -webkit-overflow-scrolling: none;
-    }
-    
-    /* Force fullscreen on mobile landscape */
-    @media (orientation: landscape) {
-        #game-container {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            width: 100vw;
-            height: 100vh;
-        }
-    }
-}
-
-/* Handle landscape orientation on mobile */
-@media (orientation: landscape) and (max-height: 500px) {
-    html, body, #game-container {
-        height: 100vh;
-        width: 100vw;
-    }
-}
-
-/* Ensure the page stays black during loading */
-html {
-    background-color: black;
-}
-
-/* Hide any browser UI elements that might interfere */
-body {
-    -webkit-touch-callout: none; /* iOS Safari */
-    -webkit-user-select: none;   /* Safari */
-    -khtml-user-select: none;    /* Konqueror HTML */
-    -moz-user-select: none;      /* Firefox */
-    -ms-user-select: none;       /* Internet Explorer/Edge */
-    user-select: none;           /* Non-prefixed version */
-    -webkit-tap-highlight-color: transparent; /* Remove tap highlight on mobile */
-}
-
-/* Prevent pull-to-refresh on mobile */
-body {
-    overscroll-behavior: none;
-    -webkit-overscroll-behavior: none;
-}
-
-/* Handle iOS Safari's viewport issues */
-@supports (-webkit-touch-callout: none) {
-    html, body, #game-container {
-        height: -webkit-fill-available;
-    }
-}
-
-/* Fullscreen API support */
-#game-container:-webkit-full-screen {
-    width: 100vw;
-    height: 100vh;
-}
-
-#game-container:-moz-full-screen {
-    width: 100vw;
-    height: 100vh;
-}
-
-#game-container:-ms-fullscreen {
-    width: 100vw;
-    height: 100vh;
-}
-
-#game-container:fullscreen {
-    width: 100vw;
-    height: 100vh;
-}
-
-:root {
-    /* Mirror style variables - can be changed for custom appearance */
-    --mirror-line-color: #00ff00;       /* Green outline by default */
-    --mirror-line-thickness: 2;         /* Line thickness */
-    --mirror-fill-color: #000000;       /* Black fill */
-    --mirror-fill-alpha: 0.2;           /* Slight transparency for fill */
-    --mirror-hover-color: #44aaff;      /* Blue outline when hovering */
-    --mirror-drag-color: #aaaaff;       /* Light blue when dragging */
-    --mirror-locked-color: #999999;     /* Gray when locked (game started) */
-    
-    /* Target style variables */
-    --target-color: #00ff00;            /* Green by default */
-    --target-alpha: 0.6;                /* Semi-transparent */
-    
-    /* Laser style variables */
-    --laser-color: #ff0000;             /* Red laser */
-    --laser-trail-alpha: 0.5;           /* Semi-transparent trail */
-    --laser-line-width: 2;              /* Thickness of laser beam */
-}
-
-/* Game element styling with CSS classes */
-
-/* Mirror styles */
-.mirror {
-    stroke: #fbff00;        /* Yellow outline */
-    stroke-width: 2;        /* Line thickness */
-    fill: #e4f7ab;          /* Light yellow fill */
-    fill-opacity: 1;        /* Fill transparency */
-}
-
-.mirror-hover {
-    stroke: #44aaff;        /* Blue outline when hovering */
-}
-
-.mirror-drag {
-    stroke: #aaaaff;        /* Light blue when dragging */
-}
-
-.mirror-locked {
-    stroke: #999999;        /* Gray when locked (game started) */
-}
-
-/* Target styles */
-.target {
-    stroke: #ff00b7;        /* Pink outline */
-    stroke-width: 2;        /* Outline thickness */
-    fill: #f60039;          /* Red fill */
-    fill-opacity: 1;        /* Fill transparency */
-}
-
-.target-pulse {
-    fill: #00ff00;          /* Color of pulse animation */
-    fill-opacity: 0.4;      /* Transparency for pulse */
-}
-
-.target-hit {
-    fill: #ffffff;          /* Color of hit particle effect */
-}
-
-/* Laser styles */
-.laser {
-    stroke: #ff0000;        /* Red laser */
-    stroke-width: 2;        /* Thickness of laser beam */
-}
-
-.laser-trail {
-    stroke: #ff0000;        /* Red laser trail */
-    stroke-width: 2;        /* Thickness of trail */
-    stroke-opacity: 0.5;    /* Semi-transparent trail */
-}
-
-.laser-flash {
-    fill: #ffffff;          /* Color of collision flash */
-}
-
-/* Prevent hover effects from moving elements */
-button:hover,
-.button:hover,
-.interactive:hover {
-    transform: none !important;
-    position: relative !important;
-    top: 0 !important;
-    left: 0 !important;
-}
-
-/* Ensure smooth transitions without position changes */
-button,
-.button,
-.interactive {
-    transition: opacity 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
-    transform: none !important;
-}/* Base styles */
-html, body {
-    margin: 0;
-    padding: 0;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-    background-color: #000000;
-    touch-action: none;
-    position: fixed; /* Prevent any scrolling */
-    top: 0;
-    left: 0;
+    color: #1a1a1a;
 }
 
 #game-container {
@@ -538,7 +26,7 @@ html, body {
     display: flex;
     justify-content: center;
     align-items: center;
-    background-color: #000000;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
 }
 
 canvas {
@@ -547,6 +35,8 @@ canvas {
     max-width: 100vw;
     max-height: 100vh;
     touch-action: none;
+    border-radius: 8px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
 }
 
 /* Prevent any unwanted margins or padding */
@@ -562,31 +52,36 @@ canvas {
     left: 0;
     width: 100vw;
     height: 100vh;
-    background-color: #000000;
-    color: #ffffff;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    color: #1a1a1a;
     z-index: 9999;
     flex-direction: column;
     justify-content: center;
     align-items: center;
     text-align: center;
-    font-family: Arial, sans-serif;
+    font-family: 'Inter', sans-serif;
 }
 
 #orientation-message h1 {
-    font-size: 24px;
-    margin-bottom: 20px;
+    font-size: 28px;
+    font-weight: 600;
+    margin-bottom: 24px;
+    color: #1a1a1a;
 }
 
 #orientation-message p {
-    font-size: 18px;
-    margin-bottom: 30px;
-    padding: 0 20px;
+    font-size: 16px;
+    margin-bottom: 32px;
+    padding: 0 24px;
+    color: #6c757d;
+    line-height: 1.5;
 }
 
 .rotate-icon {
-    width: 100px;
-    height: 100px;
+    width: 80px;
+    height: 80px;
     animation: rotate-device 2s ease-in-out infinite;
+    opacity: 0.7;
 }
 
 @keyframes rotate-device {
@@ -612,7 +107,6 @@ canvas {
         height: 100vh;
     }
   
-    /* Prevent unwanted scrolling */
     html, body {
         overflow: hidden;
         position: fixed;
@@ -622,14 +116,12 @@ canvas {
         -webkit-overflow-scrolling: none;
     }
   
-    /* Improve touch targets */
     canvas {
         touch-action: none;
         width: 100vw !important;
         height: 100vh !important;
     }
     
-    /* Force fullscreen on mobile landscape */
     @media (orientation: landscape) {
         #game-container {
             position: fixed;
@@ -651,20 +143,15 @@ canvas {
     }
 }
 
-/* Ensure the page stays black during loading */
-html {
-    background-color: black;
-}
-
 /* Hide any browser UI elements that might interfere */
 body {
-    -webkit-touch-callout: none; /* iOS Safari */
-    -webkit-user-select: none;   /* Safari */
-    -khtml-user-select: none;    /* Konqueror HTML */
-    -moz-user-select: none;      /* Firefox */
-    -ms-user-select: none;       /* Internet Explorer/Edge */
-    user-select: none;           /* Non-prefixed version */
-    -webkit-tap-highlight-color: transparent; /* Remove tap highlight on mobile */
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
 }
 
 /* Prevent pull-to-refresh on mobile */
@@ -681,102 +168,112 @@ body {
 }
 
 /* Fullscreen API support */
-#game-container:-webkit-full-screen {
-    width: 100vw;
-    height: 100vh;
-}
-
-#game-container:-moz-full-screen {
-    width: 100vw;
-    height: 100vh;
-}
-
-#game-container:-ms-fullscreen {
-    width: 100vw;
-    height: 100vh;
-}
-
+#game-container:-webkit-full-screen,
+#game-container:-moz-full-screen,
+#game-container:-ms-fullscreen,
 #game-container:fullscreen {
     width: 100vw;
     height: 100vh;
 }
 
+/* NYT-Style Design Variables */
 :root {
-    /* Mirror style variables - can be changed for custom appearance */
-    --mirror-line-color: #00ff00;       /* Green outline by default */
-    --mirror-line-thickness: 2;         /* Line thickness */
-    --mirror-fill-color: #000000;       /* Black fill */
-    --mirror-fill-alpha: 0.2;           /* Slight transparency for fill */
-    --mirror-hover-color: #44aaff;      /* Blue outline when hovering */
-    --mirror-drag-color: #aaaaff;       /* Light blue when dragging */
-    --mirror-locked-color: #999999;     /* Gray when locked (game started) */
+    /* Color Palette - NYT Style */
+    --primary-text: #1a1a1a;
+    --secondary-text: #6c757d;
+    --accent-color: #121212;
+    --success-color: #4ade80;
+    --error-color: #ef4444;
+    --warning-color: #f59e0b;
+    --background: #fafafa;
+    --surface: #ffffff;
+    --border: #e5e7eb;
+    --border-light: #f3f4f6;
     
-    /* Target style variables */
-    --target-color: #00ff00;            /* Green by default */
-    --target-alpha: 0.6;                /* Semi-transparent */
+    /* Spacing */
+    --spacing-xs: 4px;
+    --spacing-sm: 8px;
+    --spacing-md: 16px;
+    --spacing-lg: 24px;
+    --spacing-xl: 32px;
     
-    /* Laser style variables */
-    --laser-color: #ff0000;             /* Red laser */
-    --laser-trail-alpha: 0.5;           /* Semi-transparent trail */
-    --laser-line-width: 2;              /* Thickness of laser beam */
+    /* Shadows */
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
+    --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+    
+    /* Radius */
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
 }
 
-/* Game element styling with CSS classes */
+/* Game Element Styling - NYT Style */
 
 /* Mirror styles */
 .mirror {
-    stroke: #fbff00;        /* Yellow outline */
-    stroke-width: 2;        /* Line thickness */
-    fill: #e4f7ab;          /* Light yellow fill */
-    fill-opacity: 1;        /* Fill transparency */
+    stroke: var(--primary-text);
+    stroke-width: 2;
+    fill: var(--surface);
+    fill-opacity: 0.9;
 }
 
 .mirror-hover {
-    stroke: #44aaff;        /* Blue outline when hovering */
+    stroke: var(--accent-color);
+    stroke-width: 3;
 }
 
 .mirror-drag {
-    stroke: #aaaaff;        /* Light blue when dragging */
+    stroke: var(--accent-color);
+    stroke-width: 3;
 }
 
 .mirror-locked {
-    stroke: #999999;        /* Gray when locked (game started) */
+    stroke: var(--secondary-text);
+    fill-opacity: 0.6;
 }
 
 /* Target styles */
 .target {
-    stroke: #ff00b7;        /* Pink outline */
-    stroke-width: 2;        /* Outline thickness */
-    fill: #f60039;          /* Red fill */
-    fill-opacity: 1;        /* Fill transparency */
+    stroke: var(--primary-text);
+    stroke-width: 2;
+    fill: var(--accent-color);
+    fill-opacity: 0.8;
 }
 
 .target-pulse {
-    fill: #00ff00;          /* Color of pulse animation */
-    fill-opacity: 0.4;      /* Transparency for pulse */
+    fill: var(--accent-color);
+    fill-opacity: 0.3;
 }
 
 .target-hit {
-    fill: #ffffff;          /* Color of hit particle effect */
+    fill: var(--success-color);
 }
 
 /* Laser styles */
 .laser {
-    stroke: #ff0000;        /* Red laser */
-    stroke-width: 2;        /* Thickness of laser beam */
+    stroke: var(--accent-color);
+    stroke-width: 2;
 }
 
 .laser-trail {
-    stroke: #ff0000;        /* Red laser trail */
-    stroke-width: 2;        /* Thickness of trail */
-    stroke-opacity: 0.5;    /* Semi-transparent trail */
+    stroke: var(--accent-color);
+    stroke-width: 1;
+    stroke-opacity: 0.6;
 }
 
 .laser-flash {
-    fill: #ffffff;          /* Color of collision flash */
+    fill: var(--success-color);
 }
 
-/* Prevent hover effects from moving elements */
+/* Smooth transitions */
+button,
+.button,
+.interactive {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    transform: none !important;
+}
+
 button:hover,
 .button:hover,
 .interactive:hover {
@@ -784,204 +281,4 @@ button:hover,
     position: relative !important;
     top: 0 !important;
     left: 0 !important;
-}
-
-/* Ensure smooth transitions without position changes */
-button,
-.button,
-.interactive {
-    transition: opacity 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
-    transform: none !important;
-}/* Base styles */
-html, body {
-    margin: 0;
-    padding: 0;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-    background-color: #000000;
-    touch-action: none;
-    position: fixed; /* Prevent any scrolling */
-    top: 0;
-    left: 0;
-}
-
-#game-container {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background-color: #000000;
-}
-
-canvas {
-    display: block;
-    margin: 0 auto;
-    max-width: 100vw;
-    max-height: 100vh;
-    touch-action: none;
-}
-
-/* Prevent any unwanted margins or padding */
-* {
-    box-sizing: border-box;
-}
-
-/* Mobile-specific enhancements */
-@media (max-width: 768px) {
-    #game-container {
-        width: 100vw;
-        height: 100vh;
-    }
-  
-    /* Prevent unwanted scrolling */
-    html, body {
-        overflow: hidden;
-        position: fixed;
-        width: 100vw;
-        height: 100vh;
-        touch-action: none;
-        -webkit-overflow-scrolling: none;
-    }
-  
-    /* Improve touch targets */
-    canvas {
-        touch-action: none;
-        width: 100vw !important;
-        height: 100vh !important;
-    }
-}
-
-/* Handle landscape orientation on mobile */
-@media (orientation: landscape) and (max-height: 500px) {
-    html, body, #game-container {
-        height: 100vh;
-        width: 100vw;
-    }
-}
-
-/* Ensure the page stays black during loading */
-html {
-    background-color: black;
-}
-
-/* Hide any browser UI elements that might interfere */
-body {
-    -webkit-touch-callout: none; /* iOS Safari */
-    -webkit-user-select: none;   /* Safari */
-    -khtml-user-select: none;    /* Konqueror HTML */
-    -moz-user-select: none;      /* Firefox */
-    -ms-user-select: none;       /* Internet Explorer/Edge */
-    user-select: none;           /* Non-prefixed version */
-    -webkit-tap-highlight-color: transparent; /* Remove tap highlight on mobile */
-}
-
-/* Prevent pull-to-refresh on mobile */
-body {
-    overscroll-behavior: none;
-    -webkit-overscroll-behavior: none;
-}
-
-/* Handle iOS Safari's viewport issues */
-@supports (-webkit-touch-callout: none) {
-    html, body, #game-container {
-        height: -webkit-fill-available;
-    }
-}
-
-:root {
-    /* Mirror style variables - can be changed for custom appearance */
-    --mirror-line-color: #00ff00;       /* Green outline by default */
-    --mirror-line-thickness: 2;         /* Line thickness */
-    --mirror-fill-color: #000000;       /* Black fill */
-    --mirror-fill-alpha: 0.2;           /* Slight transparency for fill */
-    --mirror-hover-color: #44aaff;      /* Blue outline when hovering */
-    --mirror-drag-color: #aaaaff;       /* Light blue when dragging */
-    --mirror-locked-color: #999999;     /* Gray when locked (game started) */
-    
-    /* Target style variables */
-    --target-color: #00ff00;            /* Green by default */
-    --target-alpha: 0.6;                /* Semi-transparent */
-    
-    /* Laser style variables */
-    --laser-color: #ff0000;             /* Red laser */
-    --laser-trail-alpha: 0.5;           /* Semi-transparent trail */
-    --laser-line-width: 2;              /* Thickness of laser beam */
-}
-
-/* Game element styling with CSS classes */
-
-/* Mirror styles */
-.mirror {
-    stroke: #fbff00;        /* Yellow outline */
-    stroke-width: 2;        /* Line thickness */
-    fill: #e4f7ab;          /* Light yellow fill */
-    fill-opacity: 1;        /* Fill transparency */
-}
-
-.mirror-hover {
-    stroke: #44aaff;        /* Blue outline when hovering */
-}
-
-.mirror-drag {
-    stroke: #aaaaff;        /* Light blue when dragging */
-}
-
-.mirror-locked {
-    stroke: #999999;        /* Gray when locked (game started) */
-}
-
-/* Target styles */
-.target {
-    stroke: #ff00b7;        /* Pink outline */
-    stroke-width: 2;        /* Outline thickness */
-    fill: #f60039;          /* Red fill */
-    fill-opacity: 1;        /* Fill transparency */
-}
-
-.target-pulse {
-    fill: #00ff00;          /* Color of pulse animation */
-    fill-opacity: 0.4;      /* Transparency for pulse */
-}
-
-.target-hit {
-    fill: #ffffff;          /* Color of hit particle effect */
-}
-
-/* Laser styles */
-.laser {
-    stroke: #ff0000;        /* Red laser */
-    stroke-width: 2;        /* Thickness of laser beam */
-}
-
-.laser-trail {
-    stroke: #ff0000;        /* Red laser trail */
-    stroke-width: 2;        /* Thickness of trail */
-    stroke-opacity: 0.5;    /* Semi-transparent trail */
-}
-
-.laser-flash {
-    fill: #ffffff;          /* Color of collision flash */
-}
-
-/* Prevent hover effects from moving elements */
-button:hover,
-.button:hover,
-.interactive:hover {
-    transform: none !important;
-    position: relative !important;
-    top: 0 !important;
-    left: 0 !important;
-}
-
-/* Ensure smooth transitions without position changes */
-button,
-.button,
-.interactive {
-    transition: opacity 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
-    transform: none !important;
 }
