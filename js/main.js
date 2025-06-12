@@ -348,6 +348,100 @@ document.addEventListener('DOMContentLoaded', function() {
       let resizeIndicator = null;
       let originalSize = { width: window.innerWidth, height: window.innerHeight };
       
+      // Scene state management for resize handling
+      const saveSceneState = () => {
+        try {
+          const currentScene = game.scene.getScenes(true)[0];
+          if (currentScene) {
+            const sceneData = {
+              sceneKey: currentScene.scene.key,
+              timestamp: Date.now()
+            };
+            
+            // Store additional state for GameScene
+            if (currentScene.scene.key === 'GameScene' && currentScene.gameState) {
+              sceneData.gameState = {
+                isPlaying: currentScene.gameState.isPlaying(),
+                gameTime: currentScene.gameState.getGameTime()
+              };
+            }
+            
+            localStorage.setItem('reflectionGameScene', JSON.stringify(sceneData));
+          }
+        } catch (e) {
+          console.warn('Could not save scene state:', e);
+        }
+      };
+      
+      const restoreSceneState = () => {
+        try {
+          const savedState = localStorage.getItem('reflectionGameScene');
+          if (savedState) {
+            const sceneData = JSON.parse(savedState);
+            
+            // Only restore if saved recently (within 5 minutes)
+            if (Date.now() - sceneData.timestamp < 300000) {
+              if (sceneData.sceneKey !== 'MenuScene') {
+                console.log('Restoring scene:', sceneData.sceneKey);
+                
+                // Wait for game to be ready, then switch scenes
+                setTimeout(() => {
+                  if (game.scene.getScene(sceneData.sceneKey)) {
+                    game.scene.start(sceneData.sceneKey);
+                    
+                    // Show restoration message
+                    setTimeout(() => {
+                      const currentScene = game.scene.getScenes(true)[0];
+                      if (currentScene && currentScene.add) {
+                        const message = currentScene.add.text(
+                          currentScene.cameras.main.centerX,
+                          currentScene.cameras.main.centerY - 50,
+                          'Restored after screen resize',
+                          {
+                            fontFamily: 'Inter, sans-serif',
+                            fontSize: '16px',
+                            fontWeight: '500',
+                            color: '#1a1a1a',
+                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                            padding: { x: 16, y: 8 }
+                          }
+                        ).setOrigin(0.5).setDepth(1000);
+                        
+                        // Fade out message
+                        currentScene.tweens.add({
+                          targets: message,
+                          alpha: 0,
+                          y: message.y - 20,
+                          duration: 1000,
+                          delay: 1500,
+                          onComplete: () => message.destroy()
+                        });
+                      }
+                    }, 200);
+                    
+                    // Clear the saved state after successful restoration
+                    localStorage.removeItem('reflectionGameScene');
+                  }
+                }, 100);
+              } else {
+                // Was on menu, clear the saved state
+                localStorage.removeItem('reflectionGameScene');
+              }
+            } else {
+              // Expired state, clear it
+              localStorage.removeItem('reflectionGameScene');
+            }
+          }
+        } catch (e) {
+          console.warn('Could not restore scene state:', e);
+          localStorage.removeItem('reflectionGameScene');
+        }
+      };
+      
+      const clearSceneState = () => {
+        localStorage.removeItem('reflectionGameScene');
+      };
+      
       const showResizeIndicator = () => {
         if (!resizeIndicator) {
           resizeIndicator = document.createElement('div');
@@ -396,10 +490,13 @@ document.addEventListener('DOMContentLoaded', function() {
         const heightChange = Math.abs(newHeight - originalSize.height) / originalSize.height;
         
         // Only trigger refresh for significant changes (> 15%)
-        if (widthChange > 0.05 || heightChange > 0.05) {
+        if (widthChange > 0.15 || heightChange > 0.15) {
           if (!isResizing) {
             isResizing = true;
             showResizeIndicator();
+            
+            // Save current scene state before reload
+            saveSceneState();
           }
           
           // Clear existing timeout
@@ -410,6 +507,17 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('Significant resize detected, refreshing page for optimal display');
             window.location.reload();
           }, 800); // Wait 800ms after resize stops
+        }
+      };
+      
+      // Expose scene state functions globally for scene switching
+      window.gameSceneState = {
+        save: saveSceneState,
+        restore: restoreSceneState,
+        clear: clearSceneState,
+        userNavigatedToMenu: false,
+        markUserNavigationToMenu: () => {
+          window.gameSceneState.userNavigatedToMenu = true;
         }
       };
       
@@ -462,6 +570,28 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         if (game) {
           game.destroy(true, false);
+        }
+      });
+      
+      // Restore scene state after game is fully loaded
+      game.events.once('ready', () => {
+        setTimeout(() => {
+          restoreSceneState();
+        }, 100);
+      });
+      
+      // Auto-save scene state on any scene transition
+      game.events.on('step', () => {
+        // Save state periodically and on scene changes
+        const currentScene = game.scene.getScenes(true)[0];
+        if (currentScene && window.gameSceneState) {
+          // Check if scene has changed
+          if (!window.lastSavedScene || window.lastSavedScene !== currentScene.scene.key) {
+            window.lastSavedScene = currentScene.scene.key;
+            if (currentScene.scene.key !== 'MenuScene') {
+              window.gameSceneState.save();
+            }
+          }
         }
       });
     }

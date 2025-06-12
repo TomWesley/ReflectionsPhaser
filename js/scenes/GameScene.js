@@ -276,6 +276,11 @@ class GameScene extends Phaser.Scene {
     }
     
     returnToMenu() {
+      // Mark that user explicitly navigated to menu
+      if (window.gameSceneState) {
+        window.gameSceneState.markUserNavigationToMenu();
+      }
+      
       // Clean up
       this.cleanup();
       
