@@ -469,15 +469,7 @@ class LeaderboardScene extends Phaser.Scene {
     
     backToMenu() {
       // Mark that user explicitly navigated to menu
-      if (window.gameSceneState) {
-        window.gameSceneState.save();
-      }
-      
-      // Clean transition
-      this.cameras.main.fadeOut(400, 250, 250, 250);
-      this.cameras.main.once('camerafadeoutcomplete', () => {
-        window.GameNavigationManager.navigateTo(this.game, 'MenuScene');
-      });
+      window.GameNavigationManager.navigateTo(this.game, 'MenuScene', true);
     }
     
     destroy() {

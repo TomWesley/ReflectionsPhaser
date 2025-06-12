@@ -277,18 +277,11 @@ class GameScene extends Phaser.Scene {
     
     returnToMenu() {
       // Mark that user explicitly navigated to menu
-      if (window.gameSceneState) {
-        window.gameSceneState.save();
-      }
-      
       // Clean up
-      this.cleanup();
-      
-      // Smooth transition to menu
-      this.cameras.main.fadeOut(400, 250, 250, 250);
-      this.cameras.main.once('camerafadeoutcomplete', () => {
-        window.GameNavigationManager.navigateTo(this.game, 'MenuScene');
-      });
+        this.cleanup();
+
+        // Use navigation manager for user-initiated navigation
+        window.GameNavigationManager.navigateTo(this.game, 'MenuScene', true);
     }
     
     handleResize(gameSize, baseSize, displaySize, resolution) {
