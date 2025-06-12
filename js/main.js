@@ -1,5 +1,65 @@
-// Enhanced game initialization with better error handling and mobile support
+// Enhanced game initialization with centralized navigation logic
 document.addEventListener('DOMContentLoaded', function() {
+    // Centralized Navigation Manager - Define this FIRST before anything else
+    window.GameNavigationManager = {
+      // Save current scene to localStorage
+      saveScene: function(sceneKey, additionalData = {}) {
+        try {
+          const sceneData = {
+            sceneKey: sceneKey,
+            timestamp: Date.now(),
+            ...additionalData
+          };
+          localStorage.setItem('reflectionGameScene', JSON.stringify(sceneData));
+          console.log('Scene saved:', sceneKey);
+        } catch (e) {
+          console.warn('Could not save scene state:', e);
+        }
+      },
+      
+      // Get current scene from localStorage
+      getCurrentScene: function() {
+        try {
+          const savedState = localStorage.getItem('reflectionGameScene');
+          if (savedState) {
+            return JSON.parse(savedState);
+          }
+        } catch (e) {
+          console.warn('Could not load scene state:', e);
+        }
+        return null;
+      },
+      
+      // Navigate to a new scene
+      navigateTo: function(game, targetScene, fadeOut = true) {
+        console.log('Navigating to:', targetScene);
+        
+        // Save the target scene immediately
+        this.saveScene(targetScene);
+        
+        // Get current scene
+        const currentScene = game.scene.getScenes(true)[0];
+        
+        if (fadeOut && currentScene && currentScene.cameras) {
+          // Smooth transition
+          currentScene.cameras.main.fadeOut(400, 250, 250, 250);
+          currentScene.cameras.main.once('camerafadeoutcomplete', () => {
+            currentScene.scene.start(targetScene);
+          });
+        } else {
+          // Direct transition
+          if (currentScene) {
+            currentScene.scene.start(targetScene);
+          }
+        }
+      },
+      
+      // Handle scene started event
+      onSceneStarted: function(sceneKey) {
+        this.saveScene(sceneKey);
+      }
+    };
+
     // Initialize game with enhanced error handling
     initializeGame();
     
@@ -9,6 +69,12 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Pre-initialization setup
         setupPreGameEnvironment();
+        
+        // Get the correct initial scene from localStorage
+        const initialScene = getInitialSceneFromStorage();
+        
+        // Update config with the correct initial scene
+        updateConfigForInitialScene(initialScene);
         
         // Create the Phaser game instance
         const game = new Phaser.Game(config);
@@ -21,6 +87,44 @@ document.addEventListener('DOMContentLoaded', function() {
       } catch (error) {
         console.error('Failed to initialize game:', error);
         showErrorMessage('Failed to load game. Please refresh the page.');
+      }
+    }
+    
+    function getInitialSceneFromStorage() {
+      const savedScene = window.GameNavigationManager.getCurrentScene();
+      
+      if (savedScene && savedScene.sceneKey) {
+        console.log('Found saved scene:', savedScene.sceneKey);
+        return savedScene.sceneKey;
+      }
+      
+      console.log('No saved scene found, defaulting to MenuScene');
+      return 'MenuScene';
+    }
+    
+    function updateConfigForInitialScene(initialScene) {
+      // Find the scene in the config and move it to the front
+      const sceneIndex = config.scene.findIndex(scene => {
+        if (typeof scene === 'string') {
+          return scene === initialScene;
+        } else if (scene.key) {
+          return scene.key === initialScene;
+        } else {
+          // For class constructors, check the key property
+          try {
+            const tempInstance = new scene();
+            return tempInstance.scene.key === initialScene;
+          } catch (e) {
+            return false;
+          }
+        }
+      });
+      
+      if (sceneIndex > 0) {
+        // Move the initial scene to the front
+        const targetScene = config.scene.splice(sceneIndex, 1)[0];
+        config.scene.unshift(targetScene);
+        console.log('Updated initial scene to:', initialScene);
       }
     }
     
@@ -348,100 +452,6 @@ document.addEventListener('DOMContentLoaded', function() {
       let resizeIndicator = null;
       let originalSize = { width: window.innerWidth, height: window.innerHeight };
       
-      // Scene state management for resize handling
-      const saveSceneState = () => {
-        try {
-          const currentScene = game.scene.getScenes(true)[0];
-          if (currentScene) {
-            const sceneData = {
-              sceneKey: currentScene.scene.key,
-              timestamp: Date.now()
-            };
-            
-            // Store additional state for GameScene
-            if (currentScene.scene.key === 'GameScene' && currentScene.gameState) {
-              sceneData.gameState = {
-                isPlaying: currentScene.gameState.isPlaying(),
-                gameTime: currentScene.gameState.getGameTime()
-              };
-            }
-            
-            localStorage.setItem('reflectionGameScene', JSON.stringify(sceneData));
-          }
-        } catch (e) {
-          console.warn('Could not save scene state:', e);
-        }
-      };
-      
-      const restoreSceneState = () => {
-        try {
-          const savedState = localStorage.getItem('reflectionGameScene');
-          if (savedState) {
-            const sceneData = JSON.parse(savedState);
-            
-            // Only restore if saved recently (within 5 minutes)
-            if (Date.now() - sceneData.timestamp < 300000) {
-              if (sceneData.sceneKey !== 'MenuScene') {
-                console.log('Restoring scene:', sceneData.sceneKey);
-                
-                // Wait for game to be ready, then switch scenes
-                setTimeout(() => {
-                  if (game.scene.getScene(sceneData.sceneKey)) {
-                    game.scene.start(sceneData.sceneKey);
-                    
-                    // Show restoration message
-                    setTimeout(() => {
-                      const currentScene = game.scene.getScenes(true)[0];
-                      if (currentScene && currentScene.add) {
-                        const message = currentScene.add.text(
-                          currentScene.cameras.main.centerX,
-                          currentScene.cameras.main.centerY - 50,
-                          'Restored after screen resize',
-                          {
-                            fontFamily: 'Inter, sans-serif',
-                            fontSize: '16px',
-                            fontWeight: '500',
-                            color: '#1a1a1a',
-                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                            padding: { x: 16, y: 8 }
-                          }
-                        ).setOrigin(0.5).setDepth(1000);
-                        
-                        // Fade out message
-                        currentScene.tweens.add({
-                          targets: message,
-                          alpha: 0,
-                          y: message.y - 20,
-                          duration: 1000,
-                          delay: 1500,
-                          onComplete: () => message.destroy()
-                        });
-                      }
-                    }, 200);
-                    
-                    // Clear the saved state after successful restoration
-                    localStorage.removeItem('reflectionGameScene');
-                  }
-                }, 100);
-              } else {
-                // Was on menu, clear the saved state
-                localStorage.removeItem('reflectionGameScene');
-              }
-            } else {
-              // Expired state, clear it
-              localStorage.removeItem('reflectionGameScene');
-            }
-          }
-        } catch (e) {
-          console.warn('Could not restore scene state:', e);
-          localStorage.removeItem('reflectionGameScene');
-        }
-      };
-      
-      const clearSceneState = () => {
-        localStorage.removeItem('reflectionGameScene');
-      };
-      
       const showResizeIndicator = () => {
         if (!resizeIndicator) {
           resizeIndicator = document.createElement('div');
@@ -496,7 +506,10 @@ document.addEventListener('DOMContentLoaded', function() {
             showResizeIndicator();
             
             // Save current scene state before reload
-            saveSceneState();
+            const currentScene = game.scene.getScenes(true)[0];
+            if (currentScene) {
+              window.GameNavigationManager.saveScene(currentScene.scene.key);
+            }
           }
           
           // Clear existing timeout
@@ -507,17 +520,6 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('Significant resize detected, refreshing page for optimal display');
             window.location.reload();
           }, 800); // Wait 800ms after resize stops
-        }
-      };
-      
-      // Expose scene state functions globally for scene switching
-      window.gameSceneState = {
-        save: saveSceneState,
-        restore: restoreSceneState,
-        clear: clearSceneState,
-        userNavigatedToMenu: false,
-        markUserNavigationToMenu: () => {
-          window.gameSceneState.userNavigatedToMenu = true;
         }
       };
       
@@ -573,26 +575,26 @@ document.addEventListener('DOMContentLoaded', function() {
         }
       });
       
-      // Restore scene state after game is fully loaded
-      game.events.once('ready', () => {
-        setTimeout(() => {
-          restoreSceneState();
-        }, 100);
-      });
-      
-      // Auto-save scene state on any scene transition
+      // Set up scene tracking - save scene whenever it changes
       game.events.on('step', () => {
-        // Save state periodically and on scene changes
         const currentScene = game.scene.getScenes(true)[0];
-        if (currentScene && window.gameSceneState) {
+        if (currentScene && currentScene.scene.key) {
           // Check if scene has changed
-          if (!window.lastSavedScene || window.lastSavedScene !== currentScene.scene.key) {
-            window.lastSavedScene = currentScene.scene.key;
-            if (currentScene.scene.key !== 'MenuScene') {
-              window.gameSceneState.save();
-            }
+          const lastScene = window.GameNavigationManager.getCurrentScene();
+          if (!lastScene || lastScene.sceneKey !== currentScene.scene.key) {
+            window.GameNavigationManager.onSceneStarted(currentScene.scene.key);
           }
         }
+      });
+      
+      // Override scene transitions in all scenes to use centralized navigation
+      game.scene.scenes.forEach(scene => {
+        const originalStart = scene.scene.start.bind(scene.scene);
+        
+        scene.scene.start = function(key, data) {
+          window.GameNavigationManager.saveScene(key);
+          return originalStart(key, data);
+        };
       });
     }
     

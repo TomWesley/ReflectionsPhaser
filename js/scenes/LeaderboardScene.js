@@ -470,7 +470,7 @@ class LeaderboardScene extends Phaser.Scene {
     backToMenu() {
       // Mark that user explicitly navigated to menu
       if (window.gameSceneState) {
-        window.gameSceneState.markUserNavigationToMenu();
+        window.gameSceneState.save();
       }
       
       // Clean transition
