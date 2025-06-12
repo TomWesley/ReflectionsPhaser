@@ -476,7 +476,7 @@ class LeaderboardScene extends Phaser.Scene {
       // Clean transition
       this.cameras.main.fadeOut(400, 250, 250, 250);
       this.cameras.main.once('camerafadeoutcomplete', () => {
-        this.scene.start('MenuScene');
+        window.GameNavigationManager.navigateTo(this.game, 'MenuScene');
       });
     }
     

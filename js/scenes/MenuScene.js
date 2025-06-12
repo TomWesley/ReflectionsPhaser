@@ -78,10 +78,7 @@ class MenuScene extends Phaser.Scene {
     create() {
       // Don't clear saved scene state on initial load - let main.js handle restoration first
       // Only clear if user explicitly navigated here from another scene
-      if (window.gameSceneState) {
-        window.gameSceneState.save();
-        window.gameSceneState.userNavigatedToMenu = false;
-      }
+      
       
       // Initialize scaling manager for menu
       this.scalingManager = new ScalingManager(this);

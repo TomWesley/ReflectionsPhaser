@@ -73,11 +73,19 @@ document.addEventListener('DOMContentLoaded', function() {
         // Get the correct initial scene from localStorage
         const initialScene = getInitialSceneFromStorage();
         
-        // Update config with the correct initial scene
-        updateConfigForInitialScene(initialScene);
-        
-        // Create the Phaser game instance
+        // Create the Phaser game instance (it will start with MenuScene by default)
         const game = new Phaser.Game(config);
+        
+        // IMMEDIATELY switch to the correct scene after game creation
+        if (initialScene && initialScene !== 'MenuScene') {
+          console.log('Switching to saved scene:', initialScene);
+          // Use a small delay to ensure the game is fully initialized
+          setTimeout(() => {
+            game.scene.start(initialScene);
+          }, 100);
+        } else {
+          console.log('Starting with MenuScene');
+        }
         
         // Post-initialization setup
         setupPostGameEnvironment(game);
@@ -100,32 +108,6 @@ document.addEventListener('DOMContentLoaded', function() {
       
       console.log('No saved scene found, defaulting to MenuScene');
       return 'MenuScene';
-    }
-    
-    function updateConfigForInitialScene(initialScene) {
-      // Find the scene in the config and move it to the front
-      const sceneIndex = config.scene.findIndex(scene => {
-        if (typeof scene === 'string') {
-          return scene === initialScene;
-        } else if (scene.key) {
-          return scene.key === initialScene;
-        } else {
-          // For class constructors, check the key property
-          try {
-            const tempInstance = new scene();
-            return tempInstance.scene.key === initialScene;
-          } catch (e) {
-            return false;
-          }
-        }
-      });
-      
-      if (sceneIndex > 0) {
-        // Move the initial scene to the front
-        const targetScene = config.scene.splice(sceneIndex, 1)[0];
-        config.scene.unshift(targetScene);
-        console.log('Updated initial scene to:', initialScene);
-      }
     }
     
     function setupPreGameEnvironment() {
@@ -576,23 +558,35 @@ document.addEventListener('DOMContentLoaded', function() {
       });
       
       // Set up scene tracking - save scene whenever it changes
+      let gameInitialized = false;
+      
       game.events.on('step', () => {
         const currentScene = game.scene.getScenes(true)[0];
         if (currentScene && currentScene.scene.key) {
           // Check if scene has changed
           const lastScene = window.GameNavigationManager.getCurrentScene();
           if (!lastScene || lastScene.sceneKey !== currentScene.scene.key) {
-            window.GameNavigationManager.onSceneStarted(currentScene.scene.key);
+            // Only save if this isn't the initial forced transition we made
+            if (gameInitialized) {
+              window.GameNavigationManager.onSceneStarted(currentScene.scene.key);
+            }
           }
         }
       });
+      
+      // Mark as initialized after a short delay
+      setTimeout(() => {
+        gameInitialized = true;
+      }, 500);
       
       // Override scene transitions in all scenes to use centralized navigation
       game.scene.scenes.forEach(scene => {
         const originalStart = scene.scene.start.bind(scene.scene);
         
         scene.scene.start = function(key, data) {
-          window.GameNavigationManager.saveScene(key);
+          if (gameInitialized) {
+            window.GameNavigationManager.saveScene(key);
+          }
           return originalStart(key, data);
         };
       });
