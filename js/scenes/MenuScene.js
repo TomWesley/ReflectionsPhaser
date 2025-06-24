@@ -76,9 +76,10 @@ class MenuScene extends Phaser.Scene {
     }
   
     create() {
-      // Don't clear saved scene state on initial load - let main.js handle restoration first
-      // Only clear if user explicitly navigated here from another scene
-      
+      // Save this scene to localStorage
+      if (window.SceneManager) {
+        window.SceneManager.save('MenuScene');
+      }
       
       // Initialize scaling manager for menu
       this.scalingManager = new ScalingManager(this);
@@ -180,13 +181,7 @@ class MenuScene extends Phaser.Scene {
         buttonWidth * 1.2, buttonHeight,
         'Leaderboard',
         this.colors.secondary,
-        () => {
-          // Save state before transition
-          if (window.gameSceneState) {
-            window.gameSceneState.save();
-          }
-          this.scene.start('LeaderboardScene');
-        }
+        () => this.openLeaderboard()
       );
       
       this.buttonContainer.add([...this.playButton, ...this.leaderboardButton]);
@@ -341,8 +336,19 @@ class MenuScene extends Phaser.Scene {
     }
     
     startGame() {
-      // Save state before transition
-      window.GameNavigationManager.navigateTo(this.game, 'GameScene', true);
+      // Fade out and start game
+      this.cameras.main.fadeOut(400, 250, 250, 250);
+      this.cameras.main.once('camerafadeoutcomplete', () => {
+        this.scene.start('GameScene');
+      });
+    }
+    
+    openLeaderboard() {
+      // Fade out and open leaderboard
+      this.cameras.main.fadeOut(400, 250, 250, 250);
+      this.cameras.main.once('camerafadeoutcomplete', () => {
+        this.scene.start('LeaderboardScene');
+      });
     }
     
     destroy() {

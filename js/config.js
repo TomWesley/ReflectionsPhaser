@@ -57,7 +57,7 @@ const config = {
       fullscreenTarget: 'game-container'
     },
     
-    // Scene configuration
+    // Scene configuration - will be modified in main.js based on saved state
     scene: [
       MenuScene,
       GameScene,

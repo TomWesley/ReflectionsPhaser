@@ -22,6 +22,11 @@ class LeaderboardScene extends Phaser.Scene {
     }
     
     create() {
+      // Save this scene to localStorage
+      if (window.SceneManager) {
+        window.SceneManager.save('LeaderboardScene');
+      }
+      
       // Initialize scaling manager
       this.scalingManager = new ScalingManager(this);
       
@@ -468,8 +473,16 @@ class LeaderboardScene extends Phaser.Scene {
     }
     
     backToMenu() {
-      // Mark that user explicitly navigated to menu
-      window.GameNavigationManager.navigateTo(this.game, 'MenuScene', true);
+      // Clear the saved scene when explicitly returning to menu
+      if (window.SceneManager) {
+        window.SceneManager.clear();
+      }
+      
+      // Fade out and return to menu
+      this.cameras.main.fadeOut(400, 250, 250, 250);
+      this.cameras.main.once('camerafadeoutcomplete', () => {
+        this.scene.start('MenuScene');
+      });
     }
     
     destroy() {

@@ -1,63 +1,48 @@
-// Enhanced game initialization with centralized navigation logic
+// Enhanced game initialization with SIMPLE scene persistence
 document.addEventListener('DOMContentLoaded', function() {
-    // Centralized Navigation Manager - Define this FIRST before anything else
-    window.GameNavigationManager = {
-      // Save current scene to localStorage
-      saveScene: function(sceneKey, additionalData = {}) {
-        try {
-          const sceneData = {
-            sceneKey: sceneKey,
-            timestamp: Date.now(),
-            ...additionalData
-          };
-          localStorage.setItem('reflectionGameScene', JSON.stringify(sceneData));
-          console.log('Scene saved:', sceneKey);
-        } catch (e) {
-          console.warn('Could not save scene state:', e);
+    // Simple scene persistence - just save/load the current scene name
+    const SCENE_STORAGE_KEY = 'reflectionGameCurrentScene';
+    
+    // Get the saved scene or default to MenuScene
+    function getSavedScene() {
+      try {
+        const saved = localStorage.getItem(SCENE_STORAGE_KEY);
+        console.log('Saved scene:', saved);
+        // Validate that it's a real scene
+        if (saved === 'MenuScene' || saved === 'GameScene' || saved === 'LeaderboardScene') {
+          return saved;
         }
-      },
-      
-      // Get current scene from localStorage
-      getCurrentScene: function() {
-        try {
-          const savedState = localStorage.getItem('reflectionGameScene');
-          if (savedState) {
-            return JSON.parse(savedState);
-          }
-        } catch (e) {
-          console.warn('Could not load scene state:', e);
-        }
-        return null;
-      },
-      
-      // Navigate to a new scene
-      navigateTo: function(game, targetScene, fadeOut = true) {
-        console.log('Navigating to:', targetScene);
-        
-        // Save the target scene immediately
-        this.saveScene(targetScene);
-        
-        // Get current scene
-        const currentScene = game.scene.getScenes(true)[0];
-        
-        if (fadeOut && currentScene && currentScene.cameras) {
-          // Smooth transition
-          currentScene.cameras.main.fadeOut(400, 250, 250, 250);
-          currentScene.cameras.main.once('camerafadeoutcomplete', () => {
-            currentScene.scene.start(targetScene);
-          });
-        } else {
-          // Direct transition
-          if (currentScene) {
-            currentScene.scene.start(targetScene);
-          }
-        }
-      },
-      
-      // Handle scene started event
-      onSceneStarted: function(sceneKey) {
-        this.saveScene(sceneKey);
+      } catch (e) {
+        console.warn('Could not load saved scene:', e);
       }
+      return 'MenuScene'; // Default
+    }
+    
+    // Save the current scene
+    function saveCurrentScene(sceneName) {
+      try {
+        localStorage.setItem(SCENE_STORAGE_KEY, sceneName);
+        console.log('Scene saved:', sceneName);
+      } catch (e) {
+        console.warn('Could not save scene:', e);
+      }
+    }
+    
+    // Clear saved scene (for explicit navigation)
+    function clearSavedScene() {
+      try {
+        localStorage.removeItem(SCENE_STORAGE_KEY);
+        console.log('Saved scene cleared');
+      } catch (e) {
+        console.warn('Could not clear saved scene:', e);
+      }
+    }
+    
+    // Make scene management functions globally available
+    window.SceneManager = {
+      save: saveCurrentScene,
+      clear: clearSavedScene,
+      getSaved: getSavedScene
     };
 
     // Initialize game with enhanced error handling
@@ -70,22 +55,30 @@ document.addEventListener('DOMContentLoaded', function() {
         // Pre-initialization setup
         setupPreGameEnvironment();
         
-        // Get the correct initial scene from localStorage
-        const initialScene = getInitialSceneFromStorage();
+        // Get the initial scene from localStorage
+        const initialScene = getSavedScene();
+        console.log('Starting with scene:', initialScene);
         
-        // Create the Phaser game instance (it will start with MenuScene by default)
+        // Create scene array with the saved scene first, then the others
+        const sceneMap = {
+          'MenuScene': MenuScene,
+          'GameScene': GameScene,
+          'LeaderboardScene': LeaderboardScene
+        };
+        
+        // Start with the saved scene
+        const scenes = [sceneMap[initialScene]];
+        
+        // Add the other scenes (excluding the initial one to avoid duplicates)
+        if (initialScene !== 'MenuScene') scenes.push(MenuScene);
+        if (initialScene !== 'GameScene') scenes.push(GameScene);
+        if (initialScene !== 'LeaderboardScene') scenes.push(LeaderboardScene);
+        
+        // Update config with our scene array
+        config.scene = scenes;
+        
+        // Create the Phaser game instance
         const game = new Phaser.Game(config);
-        
-        // IMMEDIATELY switch to the correct scene after game creation
-        if (initialScene && initialScene !== 'MenuScene') {
-          console.log('Switching to saved scene:', initialScene);
-          // Use a small delay to ensure the game is fully initialized
-          setTimeout(() => {
-            game.scene.start(initialScene);
-          }, 100);
-        } else {
-          console.log('Starting with MenuScene');
-        }
         
         // Post-initialization setup
         setupPostGameEnvironment(game);
@@ -96,18 +89,6 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error('Failed to initialize game:', error);
         showErrorMessage('Failed to load game. Please refresh the page.');
       }
-    }
-    
-    function getInitialSceneFromStorage() {
-      const savedScene = window.GameNavigationManager.getCurrentScene();
-      
-      if (savedScene && savedScene.sceneKey) {
-        console.log('Found saved scene:', savedScene.sceneKey);
-        return savedScene.sceneKey;
-      }
-      
-      console.log('No saved scene found, defaulting to MenuScene');
-      return 'MenuScene';
     }
     
     function setupPreGameEnvironment() {
@@ -490,7 +471,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Save current scene state before reload
             const currentScene = game.scene.getScenes(true)[0];
             if (currentScene) {
-              window.GameNavigationManager.saveScene(currentScene.scene.key);
+              window.SceneManager.save(currentScene.scene.key);
             }
           }
           
@@ -555,40 +536,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (game) {
           game.destroy(true, false);
         }
-      });
-      
-      // Set up scene tracking - save scene whenever it changes
-      let gameInitialized = false;
-      
-      game.events.on('step', () => {
-        const currentScene = game.scene.getScenes(true)[0];
-        if (currentScene && currentScene.scene.key) {
-          // Check if scene has changed
-          const lastScene = window.GameNavigationManager.getCurrentScene();
-          if (!lastScene || lastScene.sceneKey !== currentScene.scene.key) {
-            // Only save if this isn't the initial forced transition we made
-            if (gameInitialized) {
-              window.GameNavigationManager.onSceneStarted(currentScene.scene.key);
-            }
-          }
-        }
-      });
-      
-      // Mark as initialized after a short delay
-      setTimeout(() => {
-        gameInitialized = true;
-      }, 500);
-      
-      // Override scene transitions in all scenes to use centralized navigation
-      game.scene.scenes.forEach(scene => {
-        const originalStart = scene.scene.start.bind(scene.scene);
-        
-        scene.scene.start = function(key, data) {
-          if (gameInitialized) {
-            window.GameNavigationManager.saveScene(key);
-          }
-          return originalStart(key, data);
-        };
       });
     }
     

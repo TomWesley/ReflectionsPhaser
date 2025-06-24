@@ -23,6 +23,11 @@ class GameScene extends Phaser.Scene {
     }
     
     create() {
+      // Save this scene to localStorage
+      if (window.SceneManager) {
+        window.SceneManager.save('GameScene');
+      }
+      
       // Center the camera
       this.cameras.main.centerOn(0, 0);
       
@@ -276,12 +281,19 @@ class GameScene extends Phaser.Scene {
     }
     
     returnToMenu() {
-      // Mark that user explicitly navigated to menu
+      // Clear the saved scene when explicitly returning to menu
+      if (window.SceneManager) {
+        window.SceneManager.clear();
+      }
+      
       // Clean up
-        this.cleanup();
-
-        // Use navigation manager for user-initiated navigation
-        window.GameNavigationManager.navigateTo(this.game, 'MenuScene', true);
+      this.cleanup();
+      
+      // Fade out and return to menu
+      this.cameras.main.fadeOut(400, 250, 250, 250);
+      this.cameras.main.once('camerafadeoutcomplete', () => {
+        this.scene.start('MenuScene');
+      });
     }
     
     handleResize(gameSize, baseSize, displaySize, resolution) {
