@@ -278,15 +278,18 @@ class ScalingManager {
       ];
     }
     
-    // Simple resize handling - major resizes trigger page reload in main.js
+    // Handle resize
     handleResize() {
-      // Just recalculate dimensions for minor adjustments
+      // Recalculate dimensions
       this.calculateDimensions();
       
       // Ensure camera stays centered
       if (this.scene.cameras && this.scene.cameras.main) {
         this.scene.cameras.main.centerOn(0, 0);
       }
+      
+      // Notify all components about the resize
+      this.notifyScaleChange();
     }
     
     // Notify all game components of scale changes
@@ -297,7 +300,11 @@ class ScalingManager {
           responsiveScale: this.responsiveScale,
           gameBounds: this.gameBounds,
           elementSizes: this.elementSizes,
-          fontSizes: this.fontSizes
+          fontSizes: this.fontSizes,
+          screenWidth: this.screenWidth,
+          screenHeight: this.screenHeight,
+          gameWidth: this.gameWidth,
+          gameHeight: this.gameHeight
         });
       }
     }

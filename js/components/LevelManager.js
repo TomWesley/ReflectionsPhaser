@@ -14,9 +14,30 @@ class LevelManager {
       this.colors = {
         spawner: 0x1a1a1a,
         spawnerActive: 0x4ade80
+      }
+    
+    // Complete destruction (when scene is being destroyed)
+    
+      
+      // Store level configuration
+      this.levelConfig = {
+        mirrorData: [],          // Store mirror positions and types
+        spawnerIndices: null,    // Store selected spawner positions
+        mirrorCount: null,       // Store mirror count
+        isGenerated: false       // Whether level has been generated
       };
       
-      // Listen for scale changes
+      // Set up scale change listener
+      this.setupScaleListener();
+    }
+    destroy() {
+        this.isDestroying = true;
+        this.cleanup();
+      };
+    setupScaleListener() {
+      // Remove any existing listener
+      this.scene.events.off('scale-changed', this.onScaleChanged, this);
+      // Add fresh listener
       this.scene.events.on('scale-changed', this.onScaleChanged, this);
     }
     
@@ -24,10 +45,14 @@ class LevelManager {
       // Create target first
       this.createTarget();
       
-      // Create mirrors
-      this.createMirrors();
+      // Create or restore mirrors
+      if (this.levelConfig.isGenerated && this.levelConfig.mirrorData.length > 0) {
+        this.restoreMirrors();
+      } else {
+        this.createMirrors();
+      }
       
-      // Create spawners
+      // Create or restore spawners
       this.createSpawners();
     }
     
@@ -42,6 +67,8 @@ class LevelManager {
       this.mirrors = [];
       
       const mirrorCount = this.scaling.isMobile ? 7 : 9;
+      this.levelConfig.mirrorCount = mirrorCount;
+      
       const shapeTypes = [
         'rightTriangle',
         'isoscelesTriangle',
@@ -55,6 +82,9 @@ class LevelManager {
       
       // Generate mirror positions with improved algorithm
       const positions = this.generateMirrorPositions(mirrorCount);
+      
+      // Clear stored data
+      this.levelConfig.mirrorData = [];
       
       // Create mirrors with enhanced error handling
       positions.forEach((pos, index) => {
@@ -76,6 +106,10 @@ class LevelManager {
         try {
           const mirror = new Mirror(this.scene, pos.x, pos.y, shapeType);
           
+          // Store original position
+          mirror.originalX = pos.x;
+          mirror.originalY = pos.y;
+          
           // Verify the mirror is within bounds
           if (this.verifyMirrorPosition(mirror)) {
             this.mirrors.push(mirror);
@@ -85,16 +119,92 @@ class LevelManager {
             this.scene.matter.body.setPosition(mirror.body, validPos);
             mirror.x = validPos.x;
             mirror.y = validPos.y;
+            mirror.originalX = validPos.x;
+            mirror.originalY = validPos.y;
             mirror.drawFromPhysics();
             this.mirrors.push(mirror);
           }
+          
+          // Store mirror data for restoration after resize
+          this.levelConfig.mirrorData.push({
+            x: mirror.x,
+            y: mirror.y,
+            originalX: mirror.originalX,
+            originalY: mirror.originalY,
+            shapeType: shapeType,
+            rotation: mirror.initialRotation || 0,
+            baseSizeRatio: mirror.baseSizeRatio,
+            rectangleAspectRatio: mirror.rectangleAspectRatio,
+            trapezoidRatios: mirror.trapezoidRatios
+          });
         } catch (e) {
           console.error(`Error creating mirror ${index}:`, e);
           // Continue with other mirrors
         }
       });
       
+      this.levelConfig.isGenerated = true;
       console.log(`Created ${this.mirrors.length} mirrors out of ${mirrorCount} requested`);
+    }
+    
+    restoreMirrors() {
+      // Clear existing mirrors
+      this.mirrors.forEach(mirror => mirror.destroy());
+      this.mirrors = [];
+      
+      // Recreate mirrors from stored data
+      this.levelConfig.mirrorData.forEach((mirrorData, index) => {
+        try {
+          const mirror = new Mirror(
+            this.scene, 
+            mirrorData.finalX || mirrorData.x, 
+            mirrorData.finalY || mirrorData.y, 
+            mirrorData.shapeType
+          );
+          
+          // Restore original position
+          mirror.originalX = mirrorData.originalX || mirrorData.x;
+          mirror.originalY = mirrorData.originalY || mirrorData.y;
+          
+          // Restore shape-specific properties
+          if (mirrorData.baseSizeRatio !== undefined) {
+            mirror.baseSizeRatio = mirrorData.baseSizeRatio;
+          }
+          if (mirrorData.rectangleAspectRatio !== undefined) {
+            mirror.rectangleAspectRatio = mirrorData.rectangleAspectRatio;
+          }
+          if (mirrorData.trapezoidRatios !== undefined) {
+            mirror.trapezoidRatios = mirrorData.trapezoidRatios;
+          }
+          
+          // Recreate physics body with same properties
+          mirror.createPhysicsBody();
+          
+          // Restore rotation
+          if (mirror.body && mirrorData.rotation) {
+            this.scene.matter.body.setAngle(mirror.body, mirrorData.rotation);
+            mirror.initialRotation = mirrorData.rotation;
+          }
+          
+          // Redraw
+          mirror.drawFromPhysics();
+          
+          // If the game had started, lock the mirror
+          if ((mirrorData.finalX !== undefined || mirrorData.finalY !== undefined) || 
+              (this.scene.isGameStarted)) {
+            mirror.lock();
+          } else {
+            // Make sure it's interactive if game hasn't started
+            mirror.makeInteractive();
+          }
+          
+          this.mirrors.push(mirror);
+        } catch (e) {
+          console.error(`Error restoring mirror ${index}:`, e);
+        }
+      });
+      
+      console.log(`Restored ${this.mirrors.length} mirrors`);
     }
     
     generateMirrorPositions(count) {
@@ -222,15 +332,15 @@ class LevelManager {
       const allPositions = this.scaling.getSpawnerPositions();
       
       // Use stored positions if game has started, otherwise select new ones
-      if (!this.selectedSpawnerIndices) {
+      if (!this.levelConfig.spawnerIndices) {
         // First time - randomly select 4 positions
         const indices = Array.from({ length: allPositions.length }, (_, i) => i);
         Phaser.Utils.Array.Shuffle(indices);
-        this.selectedSpawnerIndices = indices.slice(0, 4);
+        this.levelConfig.spawnerIndices = indices.slice(0, 4);
       }
       
       // Create spawners at selected positions with enhanced design
-      this.selectedSpawnerIndices.forEach(index => {
+      this.levelConfig.spawnerIndices.forEach(index => {
         const pos = allPositions[index];
         
         // Calculate direction toward center
@@ -238,6 +348,12 @@ class LevelManager {
         
         // Create spawner visual with NYT-style design
         const spawner = this.createSpawnerVisual(pos, direction);
+        
+        // Store original position
+        spawner.originalPosition = {
+          x: pos.x,
+          y: pos.y
+        };
         
         this.spawners.push(spawner);
       });
@@ -346,9 +462,16 @@ class LevelManager {
     }
     
     lockMirrors() {
-      this.mirrors.forEach(mirror => {
+      this.mirrors.forEach((mirror, index) => {
         if (mirror.lock) {
           mirror.lock();
+          
+          // Store the final rotation
+          if (mirror.body && this.levelConfig.mirrorData[index]) {
+            this.levelConfig.mirrorData[index].rotation = mirror.body.angle;
+            this.levelConfig.mirrorData[index].finalX = mirror.x;
+            this.levelConfig.mirrorData[index].finalY = mirror.y;
+          }
         }
       });
     }
@@ -358,41 +481,17 @@ class LevelManager {
       this.handleResize();
     }
     
-    // Simple resize handling since we restart scenes for major changes
+    // Handle resize by updating visual elements
     handleResize() {
-      // Just update what we can safely
+      // Update target scale
       if (this.target && this.target.updateScale) {
         this.target.updateScale();
       }
       
+      // Recreate spawners at new positions
       if (this.spawners && this.spawners.length > 0) {
-        this.updateSpawnerScale();
+        this.createSpawners();
       }
-    }
-    
-    updateSpawnerScale() {
-      const size = this.scaling.elementSizes.spawner;
-      
-      this.spawners.forEach(spawner => {
-        if (spawner.graphics) {
-          spawner.graphics.clear();
-          
-          // Redraw with new size
-          spawner.graphics.fillStyle(this.colors.spawner, 0.9);
-          spawner.graphics.fillTriangle(
-            0, -size,
-            size * 0.8, size * 0.8,
-            -size * 0.8, size * 0.8
-          );
-          
-          spawner.graphics.lineStyle(this.scaling.getScaledValue(1), this.colors.spawner, 1);
-          spawner.graphics.strokeTriangle(
-            0, -size,
-            size * 0.8, size * 0.8,
-            -size * 0.8, size * 0.8
-          );
-        }
-      });
     }
     
     // Get total reflections from all lasers
@@ -456,10 +555,20 @@ class LevelManager {
       this.spawners = [];
       this.target = null;
       
-      // Reset spawner selection for next game
-      this.selectedSpawnerIndices = null;
+      // Reset level configuration for a fresh start
+      this.levelConfig = {
+        mirrorData: [],
+        spawnerIndices: null,
+        mirrorCount: null,
+        isGenerated: false
+      };
       
       // Remove scale change listener
       this.scene.events.off('scale-changed', this.onScaleChanged, this);
+      
+      // Re-add listener if not being destroyed completely
+      if (!this.isDestroying) {
+        this.setupScaleListener();
+      }
     }
   }

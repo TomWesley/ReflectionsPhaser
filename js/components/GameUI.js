@@ -142,6 +142,14 @@ class GameUI {
           color: '#6c757d'
         }
       ).setOrigin(0.5);
+      
+      // Store button positions for resize
+      this.buttonPositions = {
+        startX: uiPositions.centerX,
+        startY: uiPositions.footerY,
+        homeX: homeButtonX,
+        homeY: uiPositions.footerY
+      };
     }
     
     createCompletionPanel() {
@@ -513,6 +521,8 @@ class GameUI {
     }
     
     hideStartButton() {
+      const newY = this.scaling.screenHeight + 100;
+      
       this.scene.tweens.add({
         targets: [
           this.elements.startButton,
@@ -520,7 +530,7 @@ class GameUI {
           this.elements.homeButton,
           this.elements.homeText
         ],
-        y: this.scaling.screenHeight + 100,
+        y: newY,
         alpha: 0,
         duration: 300,
         ease: 'Cubic.in',
@@ -530,6 +540,14 @@ class GameUI {
           this.elements.homeButton.setVisible(false);
           this.elements.homeText.setVisible(false);
         }
+      });
+      
+      // Also hide button backgrounds
+      this.scene.tweens.add({
+        targets: [this.elements.startButtonBg, this.elements.homeButtonBg],
+        alpha: 0,
+        duration: 300,
+        ease: 'Cubic.in'
       });
     }
     
@@ -597,6 +615,54 @@ class GameUI {
       this.elements.homeButton.setSize(homeButtonWidth, buttonHeight - this.scaling.getSpacing('xs'));
       this.elements.homeText.setPosition(homeButtonX, uiPositions.footerY);
       this.elements.homeText.setFontSize(this.scaling.getFontSize('small'));
+      
+      // Redraw button backgrounds at new positions
+      if (this.elements.startButton.visible) {
+        this.drawStartButton();
+      }
+      if (this.elements.homeButton.visible) {
+        this.drawHomeButton();
+      }
+      
+      // Update panel sizes if they're visible
+      if (this.elements.completionPanel.visible) {
+        this.recreateCompletionPanel();
+      }
+      if (this.elements.gameOverPanel.visible) {
+        this.recreateGameOverPanel();
+      }
+    }
+    
+    recreateCompletionPanel() {
+      // Store current values
+      const currentTime = this.elements.finalScoreText.text;
+      const currentReflections = this.elements.reflectionsText.text;
+      const wasVisible = this.elements.completionPanel.visible;
+      
+      // Destroy old panel
+      this.elements.completionPanel.destroy();
+      
+      // Recreate with new dimensions
+      this.createCompletionPanel();
+      
+      // Restore values
+      this.elements.finalScoreText.setText(currentTime);
+      this.elements.reflectionsText.setText(currentReflections);
+      this.elements.completionPanel.setVisible(wasVisible);
+    }
+    
+    recreateGameOverPanel() {
+      // Store visibility
+      const wasVisible = this.elements.gameOverPanel.visible;
+      
+      // Destroy old panel
+      this.elements.gameOverPanel.destroy();
+      
+      // Recreate with new dimensions
+      this.createGameOverPanel();
+      
+      // Restore visibility
+      this.elements.gameOverPanel.setVisible(wasVisible);
     }
     
     // Cleanup

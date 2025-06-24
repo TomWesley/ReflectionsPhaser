@@ -39,8 +39,20 @@ class GameArea {
       const bounds = this.scaling.gameBounds;
       const borderSize = this.scaling.getSpacing('sm');
       
+      // Clear existing visuals
+      if (this.visuals.background) {
+        this.visuals.background.clear();
+      } else {
+        this.visuals.background = this.scene.add.graphics();
+      }
+      
+      if (this.visuals.shadow) {
+        this.visuals.shadow.clear();
+      } else {
+        this.visuals.shadow = this.scene.add.graphics();
+      }
+      
       // Game area background - clean white card
-      this.visuals.background = this.scene.add.graphics();
       this.visuals.background.fillStyle(this.colors.surface, 1);
       this.visuals.background.fillRoundedRect(
         bounds.left - borderSize,
@@ -61,7 +73,6 @@ class GameArea {
       );
       
       // Subtle shadow effect
-      this.visuals.shadow = this.scene.add.graphics();
       this.visuals.shadow.fillStyle(this.colors.shadow, 0.03);
       this.visuals.shadow.fillRoundedRect(
         bounds.left - borderSize + this.scaling.getSpacing('xs'),
@@ -79,6 +90,13 @@ class GameArea {
     createPhysicsBoundaries() {
       const bounds = this.scaling.gameBounds;
       const wallThickness = this.scaling.getScaledValue(8);
+      
+      // Clear existing walls
+      if (this.scene.matter.world) {
+        Object.values(this.walls).forEach(wall => {
+          if (wall) this.scene.matter.world.remove(wall);
+        });
+      }
       
       // Create physics walls with proper collision categories
       this.walls.top = this.scene.matter.add.rectangle(
@@ -163,10 +181,20 @@ class GameArea {
       const bounds = this.scaling.gameBounds;
       const constraints = this.scaling.placementConstraints;
       
-      // Visual indicators for restricted areas - subtle NYT style
-      this.visuals.placementBoundary = this.scene.add.graphics();
+      // Clear existing placement boundary
+      if (this.visuals.placementBoundary) {
+        this.visuals.placementBoundary.clear();
+      } else {
+        this.visuals.placementBoundary = this.scene.add.graphics();
+      }
       
-      // Subtle restriction areas
+      // Only draw if visible
+      if (!this.visuals.placementBoundary.visible) {
+        this.visuals.placementBoundary.setDepth(1);
+        return;
+      }
+      
+      // Visual indicators for restricted areas - subtle NYT style
       this.visuals.placementBoundary.fillStyle(this.colors.dangerLight, 0.3);
       this.visuals.placementBoundary.lineStyle(1, this.colors.danger, 0.4);
       
@@ -238,6 +266,7 @@ class GameArea {
       if (this.visuals.placementBoundary) {
         this.visuals.placementBoundary.setVisible(true);
         this.visuals.placementBoundary.setAlpha(1);
+        this.createPlacementBoundary(); // Redraw with current bounds
       }
     }
     
@@ -246,25 +275,13 @@ class GameArea {
       this.handleResize();
     }
     
-    // Simple resize handling since we restart scenes
+    // Handle resize by recreating visual elements and physics
     handleResize() {
-      // Just recreate visual elements - physics will be recreated on scene restart
+      // Recreate visual elements with new dimensions
       this.createVisualBoundary();
       this.createPlacementBoundary();
-    }
-    
-    updatePhysicsBoundaries() {
-      const bounds = this.scaling.gameBounds;
-      const wallThickness = this.scaling.getScaledValue(8);
       
-      // Remove old walls
-      if (this.scene.matter.world) {
-        Object.values(this.walls).forEach(wall => {
-          if (wall) this.scene.matter.world.remove(wall);
-        });
-      }
-      
-      // Recreate with new dimensions
+      // Recreate physics boundaries
       this.createPhysicsBoundaries();
     }
     
@@ -330,7 +347,12 @@ class GameArea {
       const bounds = this.scaling.gameBounds;
       const gridSize = this.scaling.getScaledValue(40);
       
-      this.visuals.grid = this.scene.add.graphics();
+      if (this.visuals.grid) {
+        this.visuals.grid.clear();
+      } else {
+        this.visuals.grid = this.scene.add.graphics();
+      }
+      
       this.visuals.grid.lineStyle(1, this.colors.borderLight, 0.3);
       
       // Vertical lines
