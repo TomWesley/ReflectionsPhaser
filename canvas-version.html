@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reflection Game - Pure Canvas</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #f0f0f0;
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        #gameContainer {
+            position: relative;
+            background: white;
+            border: 2px solid #333;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        #gameCanvas {
+            display: block;
+            cursor: crosshair;
+        }
+        
+        #ui {
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        button {
+            padding: 10px 20px;
+            margin: 0 10px;
+            background: #333;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        
+        button:hover {
+            background: #555;
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        #status {
+            margin: 10px 0;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        #instructions {
+            max-width: 600px;
+            margin: 20px 0;
+            padding: 15px;
+            background: #e8f4fd;
+            border-radius: 5px;
+            border-left: 4px solid #2196F3;
+        }
+    </style>
+</head>
+<body>
+    <h1>Reflection Game - Ultra Precise Edition</h1>
+    
+    <div id="instructions">
+        <strong>How to Play:</strong><br>
+        1. Drag the square mirrors to position them on the grid<br>
+        2. Mirrors snap perfectly to grid intersections<br>
+        3. Place mirrors to redirect lasers AWAY from the center target<br>
+        4. Click "Launch Lasers" to start<br>
+        5. Protect the center - if any laser hits it, you lose!
+    </div>
+    
+    <div id="ui">
+        <div id="status">Position your mirrors to protect the center!</div>
+        <button id="launchBtn">Launch Lasers</button>
+        <button id="resetBtn">Reset Game</button>
+    </div>
+    
+    <div id="gameContainer">
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+    </div>
+
+    <script>
+        // Game Configuration
+        const CONFIG = {
+            CANVAS_WIDTH: 800,
+            CANVAS_HEIGHT: 600,
+            GRID_SIZE: 20,
+            MIRROR_SIZE: 40, // 2x2 grid cells
+            LASER_SPEED: 2,
+            LASER_RADIUS: 2,
+            TARGET_RADIUS: 15,
+            EDGE_MARGIN: 40,
+            ANGLE_INCREMENT: 15, // degrees
+            MIRROR_COUNT: 8
+        };
+
+        // Game State
+        class Game {
+            constructor() {
+                this.canvas = document.getElementById('gameCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.isPlaying = false;
+                this.gameOver = false;
+                
+                // Game objects
+                this.mirrors = [];
+                this.lasers = [];
+                this.spawners = [];
+                
+                // Interaction state
+                this.draggedMirror = null;
+                this.dragOffset = { x: 0, y: 0 };
+                
+                this.init();
+            }
+            
+            init() {
+                this.setupEventListeners();
+                this.generateMirrors();
+                this.generateSpawners();
+                this.gameLoop();
+            }
+            
+            setupEventListeners() {
+                // Mouse events
+                this.canvas.addEventListener('mousedown', (e) => this.onMouseDown(e));
+                this.canvas.addEventListener('mousemove', (e) => this.onMouseMove(e));
+                this.canvas.addEventListener('mouseup', (e) => this.onMouseUp(e));
+                
+                // UI buttons
+                document.getElementById('launchBtn').addEventListener('click', () => this.launchLasers());
+                document.getElementById('resetBtn').addEventListener('click', () => this.resetGame());
+            }
+            
+            generateMirrors() {
+                this.mirrors = [];
+                const center = { x: CONFIG.CANVAS_WIDTH / 2, y: CONFIG.CANVAS_HEIGHT / 2 };
+                
+                for (let i = 0; i < CONFIG.MIRROR_COUNT; i++) {
+                    let x, y, attempts = 0;
+                    
+                    do {
+                        // Generate position in ring around center
+                        const angle = Math.random() * Math.PI * 2;
+                        const distance = 120 + Math.random() * 150;
+                        x = center.x + Math.cos(angle) * distance;
+                        y = center.y + Math.sin(angle) * distance;
+                        
+                        // Snap to grid
+                        x = this.snapToGrid(x);
+                        y = this.snapToGrid(y);
+                        
+                        attempts++;
+                    } while (!this.isValidMirrorPosition(x, y) && attempts < 100);
+                    
+                    this.mirrors.push(new Mirror(x, y));
+                }
+            }
+            
+            generateSpawners() {
+                this.spawners = [];
+                const positions = [
+                    { x: CONFIG.EDGE_MARGIN, y: CONFIG.CANVAS_HEIGHT / 2 }, // Left
+                    { x: CONFIG.CANVAS_WIDTH - CONFIG.EDGE_MARGIN, y: CONFIG.CANVAS_HEIGHT / 2 }, // Right
+                    { x: CONFIG.CANVAS_WIDTH / 2, y: CONFIG.EDGE_MARGIN }, // Top
+                    { x: CONFIG.CANVAS_WIDTH / 2, y: CONFIG.CANVAS_HEIGHT - CONFIG.EDGE_MARGIN } // Bottom
+                ];
+                
+                // Pick 3 random spawners
+                const selectedPositions = this.shuffleArray([...positions]).slice(0, 3);
+                
+                selectedPositions.forEach(pos => {
+                    const angle = this.getAngleToCenter(pos.x, pos.y);
+                    this.spawners.push(new Spawner(pos.x, pos.y, angle));
+                });
+            }
+            
+            snapToGrid(value) {
+                return Math.round(value / CONFIG.GRID_SIZE) * CONFIG.GRID_SIZE;
+            }
+            
+            isValidMirrorPosition(x, y) {
+                // Check bounds
+                if (x < CONFIG.EDGE_MARGIN || x > CONFIG.CANVAS_WIDTH - CONFIG.EDGE_MARGIN ||
+                    y < CONFIG.EDGE_MARGIN || y > CONFIG.CANVAS_HEIGHT - CONFIG.EDGE_MARGIN) {
+                    return false;
+                }
+                
+                // Check distance from center
+                const centerX = CONFIG.CANVAS_WIDTH / 2;
+                const centerY = CONFIG.CANVAS_HEIGHT / 2;
+                const distFromCenter = Math.sqrt((x - centerX) ** 2 + (y - centerY) ** 2);
+                if (distFromCenter < 80) {
+                    return false;
+                }
+                
+                // Check overlap with other mirrors
+                for (let mirror of this.mirrors) {
+                    if (Math.abs(mirror.x - x) < CONFIG.MIRROR_SIZE && 
+                        Math.abs(mirror.y - y) < CONFIG.MIRROR_SIZE) {
+                        return false;
+                    }
+                }
+                
+                return true;
+            }
+            
+            getAngleToCenter(x, y) {
+                const centerX = CONFIG.CANVAS_WIDTH / 2;
+                const centerY = CONFIG.CANVAS_HEIGHT / 2;
+                const angle = Math.atan2(centerY - y, centerX - x);
+                // Snap to 10-degree increments
+                const degrees = angle * 180 / Math.PI;
+                const snappedDegrees = Math.round(degrees / CONFIG.ANGLE_INCREMENT) * CONFIG.ANGLE_INCREMENT;
+                return snappedDegrees * Math.PI / 180;
+            }
+            
+            shuffleArray(array) {
+                for (let i = array.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [array[i], array[j]] = [array[j], array[i]];
+                }
+                return array;
+            }
+            
+            launchLasers() {
+                if (this.isPlaying) return;
+                
+                this.isPlaying = true;
+                this.gameOver = false;
+                this.lasers = [];
+                
+                // Create lasers from spawners
+                this.spawners.forEach(spawner => {
+                    this.lasers.push(new Laser(spawner.x, spawner.y, spawner.angle));
+                });
+                
+                document.getElementById('launchBtn').disabled = true;
+                document.getElementById('status').textContent = 'Lasers launched! Protect the center!';
+            }
+            
+            resetGame() {
+                this.isPlaying = false;
+                this.gameOver = false;
+                this.lasers = [];
+                this.generateMirrors();
+                this.generateSpawners();
+                
+                document.getElementById('launchBtn').disabled = false;
+                document.getElementById('status').textContent = 'Position your mirrors to protect the center!';
+            }
+            
+            onMouseDown(e) {
+                if (this.isPlaying) return;
+                
+                const rect = this.canvas.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left;
+                const mouseY = e.clientY - rect.top;
+                
+                // Check if clicking on a mirror
+                for (let mirror of this.mirrors) {
+                    if (mouseX >= mirror.x - CONFIG.MIRROR_SIZE/2 && 
+                        mouseX <= mirror.x + CONFIG.MIRROR_SIZE/2 &&
+                        mouseY >= mirror.y - CONFIG.MIRROR_SIZE/2 && 
+                        mouseY <= mirror.y + CONFIG.MIRROR_SIZE/2) {
+                        
+                        this.draggedMirror = mirror;
+                        this.dragOffset.x = mouseX - mirror.x;
+                        this.dragOffset.y = mouseY - mirror.y;
+                        break;
+                    }
+                }
+            }
+            
+            onMouseMove(e) {
+                if (!this.draggedMirror || this.isPlaying) return;
+                
+                const rect = this.canvas.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left;
+                const mouseY = e.clientY - rect.top;
+                
+                // Calculate new position
+                const newX = this.snapToGrid(mouseX - this.dragOffset.x);
+                const newY = this.snapToGrid(mouseY - this.dragOffset.y);
+                
+                // Temporarily move mirror to check validity
+                const oldX = this.draggedMirror.x;
+                const oldY = this.draggedMirror.y;
+                this.draggedMirror.x = newX;
+                this.draggedMirror.y = newY;
+                
+                if (!this.isValidMirrorPosition(newX, newY)) {
+                    // Revert if invalid
+                    this.draggedMirror.x = oldX;
+                    this.draggedMirror.y = oldY;
+                }
+            }
+            
+            onMouseUp(e) {
+                this.draggedMirror = null;
+            }
+            
+            update() {
+                if (!this.isPlaying || this.gameOver) return;
+                
+                // Update lasers
+                for (let i = this.lasers.length - 1; i >= 0; i--) {
+                    const laser = this.lasers[i];
+                    laser.update();
+                    
+                    // Check collision with mirrors
+                    for (let mirror of this.mirrors) {
+                        if (this.checkLaserMirrorCollision(laser, mirror)) {
+                            laser.reflect(mirror);
+                            break;
+                        }
+                    }
+                    
+                    // Check collision with center target
+                    if (this.checkLaserTargetCollision(laser)) {
+                        this.gameOver = true;
+                        document.getElementById('status').textContent = 'GAME OVER! Laser hit the center!';
+                        document.getElementById('status').style.color = 'red';
+                        setTimeout(() => {
+                            document.getElementById('status').style.color = 'black';
+                        }, 3000);
+                        return;
+                    }
+                    
+                    // Remove laser if out of bounds
+                    if (laser.x < 0 || laser.x > CONFIG.CANVAS_WIDTH || 
+                        laser.y < 0 || laser.y > CONFIG.CANVAS_HEIGHT) {
+                        this.lasers.splice(i, 1);
+                    }
+                }
+            }
+            
+            checkLaserMirrorCollision(laser, mirror) {
+                // Check if laser is inside mirror rectangle
+                const halfSize = CONFIG.MIRROR_SIZE / 2;
+                return laser.x >= mirror.x - halfSize && 
+                       laser.x <= mirror.x + halfSize &&
+                       laser.y >= mirror.y - halfSize && 
+                       laser.y <= mirror.y + halfSize;
+            }
+            
+            checkLaserTargetCollision(laser) {
+                const centerX = CONFIG.CANVAS_WIDTH / 2;
+                const centerY = CONFIG.CANVAS_HEIGHT / 2;
+                const distance = Math.sqrt((laser.x - centerX) ** 2 + (laser.y - centerY) ** 2);
+                return distance <= CONFIG.TARGET_RADIUS;
+            }
+            
+            render() {
+                // Clear canvas
+                this.ctx.clearRect(0, 0, CONFIG.CANVAS_WIDTH, CONFIG.CANVAS_HEIGHT);
+                
+                // Draw grid
+                this.drawGrid();
+                
+                // Draw center target
+                this.drawTarget();
+                
+                // Draw spawners
+                this.spawners.forEach(spawner => spawner.draw(this.ctx));
+                
+                // Draw mirrors
+                this.mirrors.forEach(mirror => mirror.draw(this.ctx));
+                
+                // Draw lasers
+                this.lasers.forEach(laser => laser.draw(this.ctx));
+                
+                // Draw forbidden zones
+                if (!this.isPlaying) {
+                    this.drawForbiddenZones();
+                }
+            }
+            
+            drawGrid() {
+                this.ctx.strokeStyle = '#ddd';
+                this.ctx.lineWidth = 1;
+                
+                // Vertical lines
+                for (let x = 0; x <= CONFIG.CANVAS_WIDTH; x += CONFIG.GRID_SIZE) {
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(x, 0);
+                    this.ctx.lineTo(x, CONFIG.CANVAS_HEIGHT);
+                    this.ctx.stroke();
+                }
+                
+                // Horizontal lines
+                for (let y = 0; y <= CONFIG.CANVAS_HEIGHT; y += CONFIG.GRID_SIZE) {
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(0, y);
+                    this.ctx.lineTo(CONFIG.CANVAS_WIDTH, y);
+                    this.ctx.stroke();
+                }
+            }
+            
+            drawTarget() {
+                const centerX = CONFIG.CANVAS_WIDTH / 2;
+                const centerY = CONFIG.CANVAS_HEIGHT / 2;
+                
+                // Target circle
+                this.ctx.fillStyle = this.gameOver ? '#ff4444' : '#4CAF50';
+                this.ctx.beginPath();
+                this.ctx.arc(centerX, centerY, CONFIG.TARGET_RADIUS, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                // Target crosshair
+                this.ctx.strokeStyle = 'white';
+                this.ctx.lineWidth = 2;
+                this.ctx.beginPath();
+                this.ctx.moveTo(centerX - 8, centerY);
+                this.ctx.lineTo(centerX + 8, centerY);
+                this.ctx.moveTo(centerX, centerY - 8);
+                this.ctx.lineTo(centerX, centerY + 8);
+                this.ctx.stroke();
+            }
+            
+            drawForbiddenZones() {
+                this.ctx.fillStyle = 'rgba(255, 0, 0, 0.1)';
+                
+                // Center forbidden zone
+                const centerX = CONFIG.CANVAS_WIDTH / 2;
+                const centerY = CONFIG.CANVAS_HEIGHT / 2;
+                this.ctx.beginPath();
+                this.ctx.arc(centerX, centerY, 80, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                // Edge forbidden zones
+                this.ctx.fillRect(0, 0, CONFIG.CANVAS_WIDTH, CONFIG.EDGE_MARGIN);
+                this.ctx.fillRect(0, CONFIG.CANVAS_HEIGHT - CONFIG.EDGE_MARGIN, CONFIG.CANVAS_WIDTH, CONFIG.EDGE_MARGIN);
+                this.ctx.fillRect(0, 0, CONFIG.EDGE_MARGIN, CONFIG.CANVAS_HEIGHT);
+                this.ctx.fillRect(CONFIG.CANVAS_WIDTH - CONFIG.EDGE_MARGIN, 0, CONFIG.EDGE_MARGIN, CONFIG.CANVAS_HEIGHT);
+            }
+            
+            gameLoop() {
+                this.update();
+                this.render();
+                requestAnimationFrame(() => this.gameLoop());
+            }
+        }
+
+        // Mirror Class
+        class Mirror {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+            }
+            
+            draw(ctx) {
+                const halfSize = CONFIG.MIRROR_SIZE / 2;
+                
+                // Mirror surface (silver)
+                ctx.fillStyle = '#c0c0c0';
+                ctx.fillRect(this.x - halfSize, this.y - halfSize, CONFIG.MIRROR_SIZE, CONFIG.MIRROR_SIZE);
+                
+                // Highlight (top-left)
+                ctx.fillStyle = '#f0f0f0';
+                ctx.fillRect(this.x - halfSize, this.y - halfSize, CONFIG.MIRROR_SIZE, 4);
+                ctx.fillRect(this.x - halfSize, this.y - halfSize, 4, CONFIG.MIRROR_SIZE);
+                
+                // Frame
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(this.x - halfSize, this.y - halfSize, CONFIG.MIRROR_SIZE, CONFIG.MIRROR_SIZE);
+            }
+            
+            reflect(laser) {
+                // For square mirrors, determine which edge was hit
+                const halfSize = CONFIG.MIRROR_SIZE / 2;
+                const relX = laser.x - this.x;
+                const relY = laser.y - this.y;
+                
+                // Determine which edge is closest
+                const distances = {
+                    left: Math.abs(relX + halfSize),
+                    right: Math.abs(relX - halfSize),
+                    top: Math.abs(relY + halfSize),
+                    bottom: Math.abs(relY - halfSize)
+                };
+                
+                const closestEdge = Object.keys(distances).reduce((a, b) => 
+                    distances[a] < distances[b] ? a : b
+                );
+                
+                // Reflect based on edge
+                if (closestEdge === 'left' || closestEdge === 'right') {
+                    laser.vx = -laser.vx; // Horizontal reflection
+                } else {
+                    laser.vy = -laser.vy; // Vertical reflection
+                }
+                
+                // Snap angle to 10-degree increments
+                const currentAngle = Math.atan2(laser.vy, laser.vx);
+                const degrees = currentAngle * 180 / Math.PI;
+                const snappedDegrees = Math.round(degrees / CONFIG.ANGLE_INCREMENT) * CONFIG.ANGLE_INCREMENT;
+                const snappedAngle = snappedDegrees * Math.PI / 180;
+                
+                laser.vx = Math.cos(snappedAngle) * CONFIG.LASER_SPEED;
+                laser.vy = Math.sin(snappedAngle) * CONFIG.LASER_SPEED;
+            }
+        }
+
+        // Laser Class
+        class Laser {
+            constructor(x, y, angle) {
+                this.x = x;
+                this.y = y;
+                this.vx = Math.cos(angle) * CONFIG.LASER_SPEED;
+                this.vy = Math.sin(angle) * CONFIG.LASER_SPEED;
+                this.trail = [];
+            }
+            
+            update() {
+                // Add current position to trail
+                this.trail.push({ x: this.x, y: this.y });
+                if (this.trail.length > 50) {
+                    this.trail.shift();
+                }
+                
+                // Move laser
+                this.x += this.vx;
+                this.y += this.vy;
+                
+                // Bounce off walls
+                if (this.x <= 0 || this.x >= CONFIG.CANVAS_WIDTH) {
+                    this.vx = -this.vx;
+                    this.x = Math.max(0, Math.min(CONFIG.CANVAS_WIDTH, this.x));
+                }
+                if (this.y <= 0 || this.y >= CONFIG.CANVAS_HEIGHT) {
+                    this.vy = -this.vy;
+                    this.y = Math.max(0, Math.min(CONFIG.CANVAS_HEIGHT, this.y));
+                }
+            }
+            
+            draw(ctx) {
+                // Draw trail
+                ctx.strokeStyle = 'rgba(255, 0, 0, 0.3)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                for (let i = 1; i < this.trail.length; i++) {
+                    ctx.moveTo(this.trail[i-1].x, this.trail[i-1].y);
+                    ctx.lineTo(this.trail[i].x, this.trail[i].y);
+                }
+                ctx.stroke();
+                
+                // Draw laser point
+                ctx.fillStyle = '#ff0000';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, CONFIG.LASER_RADIUS, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            reflect(mirror) {
+                mirror.reflect(this);
+            }
+        }
+
+        // Spawner Class
+        class Spawner {
+            constructor(x, y, angle) {
+                this.x = x;
+                this.y = y;
+                this.angle = angle;
+            }
+            
+            draw(ctx) {
+                ctx.fillStyle = '#333';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, 8, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Direction indicator
+                const endX = this.x + Math.cos(this.angle) * 20;
+                const endY = this.y + Math.sin(this.angle) * 20;
+                
+                ctx.strokeStyle = '#666';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y);
+                ctx.lineTo(endX, endY);
+                ctx.stroke();
+                
+                // Arrowhead
+                const arrowSize = 6;
+                const arrowAngle1 = this.angle + Math.PI * 0.8;
+                const arrowAngle2 = this.angle - Math.PI * 0.8;
+                
+                ctx.beginPath();
+                ctx.moveTo(endX, endY);
+                ctx.lineTo(endX + Math.cos(arrowAngle1) * arrowSize, endY + Math.sin(arrowAngle1) * arrowSize);
+                ctx.moveTo(endX, endY);
+                ctx.lineTo(endX + Math.cos(arrowAngle2) * arrowSize, endY + Math.sin(arrowAngle2) * arrowSize);
+                ctx.stroke();
+            }
+        }
+
+        // Start the game
+        const game = new Game();
+    </script>
+</body>
+</html>
