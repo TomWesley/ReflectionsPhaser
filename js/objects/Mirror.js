@@ -1,23 +1,32 @@
-// Custom Mirror class with NYT-style design
+// Custom Mirror class with realistic mirror design and grid snapping
 class Mirror {
     constructor(scene, x, y, shapeType = null) {
         this.scene = scene;
-        this.x = x;
-        this.y = y;
+        
+        // Initialize grid manager if not available
+        if (!this.scene.gridManager) {
+            this.scene.gridManager = new GridManager(this.scene.scalingManager);
+        }
+        
+        // Snap initial position to grid
+        const gridPos = this.scene.gridManager.snapToGrid(x, y);
+        this.x = gridPos.x;
+        this.y = gridPos.y;
         
         // Store the requested shape type if provided
         this.requestedShapeType = shapeType;
         
-        // NYT-style color palette
+        // Realistic mirror color palette
         this.colors = {
-          primary: 0x1a1a1a,
-          secondary: 0x6c757d,
-          surface: 0xffffff,
-          border: 0xe5e7eb,
-          hover: 0x121212,
-          active: 0x000000,
-          locked: 0x9ca3af,
-          background: 0xfafafa
+          mirror: 0xc0c0c0,       // Silver mirror surface
+          mirrorHighlight: 0xf0f0f0, // Bright reflection
+          mirrorShadow: 0x808080,    // Shadow areas
+          frame: 0x2a2a2a,          // Dark frame
+          frameHighlight: 0x4a4a4a,  // Frame highlight
+          hover: 0xe0e0e0,          // Hover state
+          active: 0xffffff,         // Active/dragging state
+          locked: 0x9ca3af,         // Locked state
+          reflection: 0xffffff       // Reflection effect
         };
         
         // Load appearance settings from CSS classes
@@ -26,9 +35,9 @@ class Mirror {
         // Create the physics body for the requested shape
         this.createPhysicsBody();
         
-        // Apply a random rotation to make the mirror more interesting
+        // No rotation for testing - keep mirrors square and aligned
         if (this.body) {
-          this.initialRotation = Math.random() * Math.PI * 2;
+          this.initialRotation = 0;
           this.scene.matter.body.setAngle(this.body, this.initialRotation);
         }
         
@@ -52,17 +61,19 @@ class Mirror {
     
     // Load style settings from CSS classes
     loadStyleFromCSS() {
-      // Default NYT-style settings
+      // Realistic mirror style settings
       this.style = {
-        strokeColor: this.colors.primary,
-        strokeWidth: 2,
-        fillColor: this.colors.surface,
-        fillAlpha: 1,
-        hoverStrokeColor: this.colors.hover,
-        dragStrokeColor: this.colors.active,
-        lockedStrokeColor: this.colors.locked,
-        shadowColor: this.colors.primary,
-        shadowAlpha: 0.1
+        mirrorColor: this.colors.mirror,
+        frameColor: this.colors.frame,
+        frameWidth: 3,
+        reflectionColor: this.colors.reflection,
+        highlightColor: this.colors.mirrorHighlight,
+        shadowColor: this.colors.mirrorShadow,
+        hoverColor: this.colors.hover,
+        dragColor: this.colors.active,
+        lockedColor: this.colors.locked,
+        reflectionAlpha: 0.3,
+        shadowAlpha: 0.6
       };
       
       try {
@@ -170,25 +181,17 @@ class Mirror {
           maxSize = 60;
         }
         
-        // Generate or maintain size
+        // Generate grid-aligned size
         if (!this.baseSizeRatio) {
           this.baseSizeRatio = Math.random();
         }
         
-        const size = minSize + (maxSize - minSize) * this.baseSizeRatio;
+        // Get grid-constrained size bounds
+        const gridBounds = this.scene.gridManager.getShapeGridBounds(this.shapeType || 'rectangle');
+        const size = this.getGridAlignedSize(gridBounds);
         
-        // Choose shape type
-        if (!this.shapeType) {
-          const shapeTypes = [
-            'rightTriangle',
-            'isoscelesTriangle', 
-            'rectangle',
-            'trapezoid',
-            'semicircle'
-          ];
-          
-          this.shapeType = this.requestedShapeType || Phaser.Utils.Array.GetRandom(shapeTypes);
-        }
+        // Force all shapes to be rectangles for testing
+        this.shapeType = 'rectangle';
         
         // Generate vertices based on shape type
         let verts = [];
@@ -216,7 +219,7 @@ class Mirror {
         }
         
         try {
-          // Create the physics body
+          // Create the physics body with exact size matching visual
           this.body = this.scene.matter.add.fromVertices(
             this.x, this.y,
             verts,
@@ -232,6 +235,8 @@ class Mirror {
               }
             }
           );
+          
+          console.log('Created mirror body at', this.x, this.y, 'with vertices:', verts);
           
           if (!this.body) {
             console.error(`Failed to create body for ${this.shapeType}, using fallback`);
@@ -292,19 +297,19 @@ class Mirror {
       }
       
       createRectangle(size) {
-        if (!this.rectangleAspectRatio) {
-          const isSquare = Math.random() < 0.3;
-          this.rectangleAspectRatio = isSquare ? 1 : Phaser.Math.FloatBetween(0.6, 1.4);
-        }
+        const gridSize = this.scene.gridManager.gridSize;
         
-        const width = size;
-        const height = size * this.rectangleAspectRatio;
+        // Force perfect squares for testing
+        this.rectangleAspectRatio = 1;
+        
+        // Make squares exactly 2 grid cells in size for easy testing
+        const squareSize = gridSize * 2;
         
         return [
-          { x: -width/2, y: -height/2 },
-          { x: width/2, y: -height/2 },
-          { x: width/2, y: height/2 },
-          { x: -width/2, y: height/2 }
+          { x: -squareSize/2, y: -squareSize/2 },
+          { x: squareSize/2, y: -squareSize/2 },
+          { x: squareSize/2, y: squareSize/2 },
+          { x: -squareSize/2, y: squareSize/2 }
         ];
       }
       
@@ -344,7 +349,25 @@ class Mirror {
         return points;
       }
     
-    // Draw the mirror with NYT-style design
+    // Get grid-aligned size based on shape bounds
+    getGridAlignedSize(gridBounds) {
+      const gridSize = this.scene.gridManager.gridSize;
+      
+      if (gridBounds.minWidth && gridBounds.maxWidth) {
+        // For rectangles
+        const targetWidth = gridBounds.minWidth + (gridBounds.maxWidth - gridBounds.minWidth) * this.baseSizeRatio;
+        return Math.round(targetWidth / gridSize) * gridSize;
+      } else if (gridBounds.baseSize) {
+        // For triangles and other shapes
+        const targetSize = gridBounds.baseSize + (gridBounds.maxSize - gridBounds.baseSize) * this.baseSizeRatio;
+        return Math.round(targetSize / gridSize) * gridSize;
+      } else {
+        // Default grid-aligned size
+        return gridSize * (1 + Math.floor(this.baseSizeRatio * 3));
+      }
+    }
+    
+    // Draw the mirror with realistic mirror appearance
     drawFromPhysics() {
         this.graphics.clear();
         
@@ -360,7 +383,7 @@ class Mirror {
           return;
         }
         
-        // Draw subtle shadow first
+        // Draw shadow first (for depth)
         if (!this.isLocked) {
           const shadowOffset = this.scene.scalingManager ? 
                               this.scene.scalingManager.getSpacing('xs') : 2;
@@ -377,8 +400,17 @@ class Mirror {
           this.graphics.fillPath();
         }
         
-        // Draw main fill
-        this.graphics.fillStyle(this.style.fillColor, this.style.fillAlpha);
+        // Draw mirror surface with metallic appearance
+        let mirrorColor = this.style.mirrorColor;
+        if (this.isLocked) {
+          mirrorColor = this.style.lockedColor;
+        } else if (this.isDragging) {
+          mirrorColor = this.style.dragColor;
+        } else if (this.isHovered) {
+          mirrorColor = this.style.hoverColor;
+        }
+        
+        this.graphics.fillStyle(mirrorColor, 1);
         this.graphics.beginPath();
         this.graphics.moveTo(vertices[0].x, vertices[0].y);
         
@@ -389,27 +421,15 @@ class Mirror {
         this.graphics.closePath();
         this.graphics.fillPath();
         
-        // Determine stroke color based on state
-        let strokeColor = this.style.strokeColor;
-        let strokeWidth = this.style.strokeWidth;
+        // Add highlight gradient effect to simulate reflection
+        this.drawReflectionEffect(vertices);
         
-        if (this.isLocked) {
-          strokeColor = this.style.lockedStrokeColor;
-        } else if (this.isDragging) {
-          strokeColor = this.style.dragStrokeColor;
-          strokeWidth = this.style.strokeWidth + 1;
-        } else if (this.isHovered) {
-          strokeColor = this.style.hoverStrokeColor;
-          strokeWidth = this.style.strokeWidth + 1;
-        }
+        // Draw frame border
+        const frameWidth = this.scene.scalingManager ? 
+                          this.scene.scalingManager.getScaledValue(this.style.frameWidth) : 
+                          this.style.frameWidth;
         
-        // Scale stroke width
-        const scaledStrokeWidth = this.scene.scalingManager ? 
-                                 this.scene.scalingManager.getScaledValue(strokeWidth) : 
-                                 strokeWidth;
-        
-        // Draw outline
-        this.graphics.lineStyle(scaledStrokeWidth, strokeColor, 1);
+        this.graphics.lineStyle(frameWidth, this.style.frameColor, 1);
         this.graphics.beginPath();
         this.graphics.moveTo(vertices[0].x, vertices[0].y);
         
@@ -421,8 +441,60 @@ class Mirror {
         this.graphics.strokePath();
       }
     
+    // Draw reflection effect to make it look more mirror-like
+    drawReflectionEffect(vertices) {
+      // Create a subtle highlight along one edge to simulate light reflection
+      const center = this.getPolygonCenter(vertices);
+      
+      // Find the "top" edge for highlight (assuming light comes from top-left)
+      let topEdge = null;
+      let maxY = -Infinity;
+      
+      for (let i = 0; i < vertices.length; i++) {
+        const v1 = vertices[i];
+        const v2 = vertices[(i + 1) % vertices.length];
+        const midY = (v1.y + v2.y) / 2;
+        
+        if (midY > maxY) {
+          maxY = midY;
+          topEdge = { v1, v2 };
+        }
+      }
+      
+      if (topEdge) {
+        // Draw highlight line along top edge
+        const highlightWidth = this.scene.scalingManager ? 
+                              this.scene.scalingManager.getScaledValue(2) : 2;
+        
+        this.graphics.lineStyle(highlightWidth, this.style.highlightColor, this.style.reflectionAlpha);
+        this.graphics.beginPath();
+        this.graphics.moveTo(topEdge.v1.x, topEdge.v1.y);
+        this.graphics.lineTo(topEdge.v2.x, topEdge.v2.y);
+        this.graphics.strokePath();
+      }
+      
+      // Add a small bright spot to simulate specular reflection
+      const spotSize = this.scene.scalingManager ? 
+                      this.scene.scalingManager.getScaledValue(3) : 3;
+      
+      // Position spot slightly off-center toward top-left
+      const spotX = center.x - spotSize;
+      const spotY = center.y - spotSize;
+      
+      this.graphics.fillStyle(this.style.reflectionColor, this.style.reflectionAlpha);
+      this.graphics.fillCircle(spotX, spotY, spotSize);
+    }
+    
     // Set up interactivity with better touch handling
     makeInteractive() {
+      this.updateHitArea();
+      this.setupEventHandlers();
+    }
+    
+    // Update hit area to match current physics body
+    updateHitArea() {
+      if (!this.graphics || !this.body) return;
+      
       let vertices = [];
       
       if (this.body.parts && this.body.parts.length > 1) {
@@ -439,13 +511,23 @@ class Mirror {
       
       const hitArea = new Phaser.Geom.Polygon(polygonPoints);
       
-      // Enhanced interactive setup for better mobile support
-      this.graphics.setInteractive({
-        hitArea: hitArea,
-        hitAreaCallback: Phaser.Geom.Polygon.Contains,
-        useHandCursor: true,
-        draggable: true
-      });
+      // If already interactive, just update the hit area
+      if (this.graphics.input) {
+        this.graphics.input.hitArea = hitArea;
+      } else {
+        // Enhanced interactive setup for better mobile support
+        this.graphics.setInteractive({
+          hitArea: hitArea,
+          hitAreaCallback: Phaser.Geom.Polygon.Contains,
+          useHandCursor: true,
+          draggable: true
+        });
+      }
+    }
+    
+    // Set up event handlers (separated for clarity)
+    setupEventHandlers() {
+      if (!this.graphics) return;
       
       // Improved touch/mouse handlers
       this.graphics.on('pointerover', () => {
@@ -567,25 +649,26 @@ class Mirror {
       this.isDragging = false;
       
       // Snap to grid for clean positioning
-      const gridSize = this.scene.scalingManager ? 
-                      this.scene.scalingManager.getScaledValue(8) : 8;
-      const newX = Math.round(this.x / gridSize) * gridSize;
-      const newY = Math.round(this.y / gridSize) * gridSize;
+      const snapped = this.scene.gridManager.snapToGrid(this.x, this.y);
+      const newX = snapped.x;
+      const newY = snapped.y;
       
-      let finalX = newX;
-      let finalY = newY;
+      let finalPos = { x: newX, y: newY };
       
       if (!this.isPositionValid(newX, newY)) {
-        const validPos = this.findNearestValidPosition(newX, newY);
-        finalX = validPos.x;
-        finalY = validPos.y;
+        // Use grid manager to find nearest valid position
+        const bounds = this.scene.scalingManager.gameBounds;
+        const constraints = this.scene.scalingManager.placementConstraints;
+        finalPos = this.scene.gridManager.findNearestValidGridPosition(
+          newX, newY, bounds, constraints
+        );
       }
       
       // Smooth movement to final position
       this.scene.tweens.add({
         targets: this.body.position,
-        x: finalX,
-        y: finalY,
+        x: finalPos.x,
+        y: finalPos.y,
         duration: 200,
         ease: 'Cubic.out',
         onUpdate: () => {
@@ -608,13 +691,13 @@ class Mirror {
           
           // Show valid position feedback
           if (this.scene.gameArea && this.scene.gameArea.showPositionFeedback) {
-            this.scene.gameArea.showPositionFeedback(finalX, finalY, true);
+            this.scene.gameArea.showPositionFeedback(finalPos.x, finalPos.y, true);
           }
         }
       });
       
-      this.x = finalX;
-      this.y = finalY;
+      this.x = finalPos.x;
+      this.y = finalPos.y;
     }
     
     // Get the maximum radius of the mirror from its center
@@ -682,26 +765,6 @@ class Mirror {
       return { x, y };
     }
     
-    // Update hit area after position changes
-    updateHitArea() {
-      if (!this.graphics || !this.graphics.input || !this.body) return;
-      
-      let vertices = [];
-      if (this.body.parts && this.body.parts.length > 1) {
-        vertices = this.body.parts[1].vertices;
-      } else {
-        vertices = this.body.vertices;
-      }
-      
-      const polygonPoints = [];
-      for (const vertex of vertices) {
-        polygonPoints.push(vertex.x);
-        polygonPoints.push(vertex.y);
-      }
-      
-      const hitArea = new Phaser.Geom.Polygon(polygonPoints);
-      this.graphics.input.hitArea = hitArea;
-    }
     
     // Get normal vector for laser reflection
     getNormal(collisionPoint) {
@@ -851,7 +914,7 @@ class Mirror {
       return false;
     }
     
-    // Simple overlap detection
+    // Simple overlap detection - no buffer for testing precise placement
     doPolygonsOverlap(poly1, poly2) {
       const center1 = this.getPolygonCenter(poly1);
       const center2 = this.getPolygonCenter(poly2);
@@ -863,8 +926,8 @@ class Mirror {
       const radius1 = this.getPolygonRadius(poly1, center1);
       const radius2 = this.getPolygonRadius(poly2, center2);
       
-      const buffer = this.scene.scalingManager ? 
-                     this.scene.scalingManager.getSpacing('sm') : 12;
+      // Remove buffer to allow mirrors to touch
+      const buffer = 0;
       
       return distance < (radius1 + radius2 + buffer);
     }

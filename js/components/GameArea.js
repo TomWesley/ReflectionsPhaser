@@ -4,6 +4,11 @@ class GameArea {
       this.scene = scene;
       this.scaling = scalingManager;
       
+      // Initialize grid manager
+      if (!this.scene.gridManager) {
+        this.scene.gridManager = new GridManager(scalingManager);
+      }
+      
       // NYT-style color palette
       this.colors = {
         background: 0xfafafa,
@@ -33,6 +38,7 @@ class GameArea {
       this.createVisualBoundary();
       this.createPhysicsBoundaries();
       this.createPlacementBoundary();
+      this.createGridOverlay();
     }
     
     createVisualBoundary() {
@@ -259,6 +265,9 @@ class GameArea {
           }
         });
       }
+      
+      // Also hide grid
+      this.hideGrid();
     }
     
     // Show placement boundaries
@@ -268,6 +277,9 @@ class GameArea {
         this.visuals.placementBoundary.setAlpha(1);
         this.createPlacementBoundary(); // Redraw with current bounds
       }
+      
+      // Also show grid
+      this.showGrid();
     }
     
     // Handle scale changes
@@ -277,9 +289,13 @@ class GameArea {
     
     // Handle resize by recreating visual elements and physics
     handleResize() {
+      // Update grid manager with new scaling
+      this.scene.gridManager.updateGridSize();
+      
       // Recreate visual elements with new dimensions
       this.createVisualBoundary();
       this.createPlacementBoundary();
+      this.createGridOverlay();
       
       // Recreate physics boundaries
       this.createPhysicsBoundaries();
@@ -342,42 +358,20 @@ class GameArea {
       });
     }
     
-    // Add visual polish - subtle grid pattern
-    createGridPattern() {
+    // Create precise grid overlay for mirror placement
+    createGridOverlay() {
       const bounds = this.scaling.gameBounds;
-      const gridSize = this.scaling.getScaledValue(40);
-      
-      if (this.visuals.grid) {
-        this.visuals.grid.clear();
-      } else {
-        this.visuals.grid = this.scene.add.graphics();
-      }
-      
-      this.visuals.grid.lineStyle(1, this.colors.borderLight, 0.3);
-      
-      // Vertical lines
-      for (let x = bounds.left; x <= bounds.right; x += gridSize) {
-        this.visuals.grid.moveTo(x, bounds.top);
-        this.visuals.grid.lineTo(x, bounds.bottom);
-      }
-      
-      // Horizontal lines
-      for (let y = bounds.top; y <= bounds.bottom; y += gridSize) {
-        this.visuals.grid.moveTo(bounds.left, y);
-        this.visuals.grid.lineTo(bounds.right, y);
-      }
-      
-      this.visuals.grid.strokePath();
-      this.visuals.grid.setDepth(-0.5);
-      this.visuals.grid.setAlpha(0);
-      
-      // Subtle fade in
-      this.scene.tweens.add({
-        targets: this.visuals.grid,
-        alpha: 1,
-        duration: 1000,
-        ease: 'Cubic.out'
-      });
+      this.visuals.grid = this.scene.gridManager.createGridVisual(this.scene, bounds);
+    }
+    
+    // Hide grid when game starts
+    hideGrid() {
+      this.scene.gridManager.hideGrid(this.visuals.grid, this.scene);
+    }
+    
+    // Show grid during placement phase
+    showGrid() {
+      this.scene.gridManager.showGrid(this.visuals.grid, this.scene);
     }
     
     // Cleanup

@@ -4,6 +4,11 @@ class LevelManager {
       this.scaling = scalingManager;
       this.gameArea = gameArea;
       
+      // Initialize grid manager
+      if (!this.scene.gridManager) {
+        this.scene.gridManager = new GridManager(scalingManager);
+      }
+      
       // Collections
       this.mirrors = [];
       this.spawners = [];
@@ -80,8 +85,8 @@ class LevelManager {
       // Track shape usage for variety
       const shapesUsed = new Set();
       
-      // Generate mirror positions with improved algorithm
-      const positions = this.generateMirrorPositions(mirrorCount);
+      // Generate grid-aligned mirror positions
+      const positions = this.generateGridAlignedMirrorPositions(mirrorCount);
       
       // Clear stored data
       this.levelConfig.mirrorData = [];
@@ -273,6 +278,14 @@ class LevelManager {
       return positions;
     }
     
+    generateGridAlignedMirrorPositions(count) {
+      const bounds = this.scaling.gameBounds;
+      const constraints = this.scaling.placementConstraints;
+      
+      // Use grid manager to generate positions
+      return this.scene.gridManager.generateGridAlignedPositions(count, bounds, constraints);
+    }
+    
     verifyMirrorPosition(mirror) {
       if (!mirror.body) return false;
       
@@ -343,8 +356,13 @@ class LevelManager {
       this.levelConfig.spawnerIndices.forEach(index => {
         const pos = allPositions[index];
         
-        // Calculate direction toward center
-        const direction = new Phaser.Math.Vector2(-pos.x, -pos.y).normalize();
+        // Calculate direction toward center with angle snapping
+        const rawDirection = new Phaser.Math.Vector2(-pos.x, -pos.y).normalize();
+        const snappedAngle = this.scene.gridManager.getSpawnerAngle(pos);
+        const direction = new Phaser.Math.Vector2(
+          Math.cos(snappedAngle),
+          Math.sin(snappedAngle)
+        ).normalize();
         
         // Create spawner visual with NYT-style design
         const spawner = this.createSpawnerVisual(pos, direction);

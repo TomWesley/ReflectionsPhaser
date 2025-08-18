@@ -124,23 +124,23 @@ class GameScene extends Phaser.Scene {
     onLaserHitTarget(laser) {
       if (!this.gameState.onLaserHitTarget()) return;
       
-      console.log('Target hit! Time:', this.gameState.getGameTime().toFixed(3));
+      console.log('Target hit - Game Over! Time:', this.gameState.getGameTime().toFixed(3));
       
-      // Enhanced visual feedback
+      // Enhanced visual feedback for failure
       this.target.onHit();
       
-      // Add screen flash effect
-      this.addSuccessEffect();
+      // Add failure effect instead of success
+      this.addFailureEffect();
       
-      // Complete game with delay for effects
+      // Game over with delay for effects
       this.time.delayedCall(500, () => {
-        this.gameComplete();
+        this.gameOver();
       });
     }
     
-    addSuccessEffect() {
-      // Subtle screen flash
-      const flash = this.add.rectangle(0, 0, this.scalingManager.screenWidth * 2, this.scalingManager.screenHeight * 2, 0x4ade80, 0.15);
+    addFailureEffect() {
+      // Red screen flash for failure
+      const flash = this.add.rectangle(0, 0, this.scalingManager.screenWidth * 2, this.scalingManager.screenHeight * 2, 0xef4444, 0.2);
       flash.setDepth(100);
       
       this.tweens.add({

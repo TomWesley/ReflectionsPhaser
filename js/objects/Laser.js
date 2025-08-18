@@ -2,6 +2,11 @@ class Laser {
     constructor(scene, x, y, direction, speed = .001) {
       this.scene = scene;
       
+      // Initialize grid manager if not available
+      if (!this.scene.gridManager) {
+        this.scene.gridManager = new GridManager(this.scene.scalingManager);
+      }
+      
       // Set starting position
       this.x = x;
       this.y = y;
@@ -25,7 +30,7 @@ class Laser {
                    speed;
       
       // Physics settings for Matter.js - ultra-precise collisions
-      this.body = scene.matter.add.circle(x, y, 1, {
+      this.body = scene.matter.add.circle(x, y, 0.5, { // Smaller radius for precise collision
         frictionAir: 0,
         friction: 0,
         restitution: 1,
@@ -39,8 +44,13 @@ class Laser {
       // Remove default Matter.js rendering
       this.body.render.visible = false;
       
-      // Direction vector
-      this.direction = new Phaser.Math.Vector2(direction.x, direction.y).normalize();
+      // Direction vector - snap to 10-degree increments
+      const directionAngle = Math.atan2(direction.y, direction.x);
+      const snappedAngle = this.scene.gridManager.snapAngleToIncrement(directionAngle);
+      this.direction = new Phaser.Math.Vector2(
+        Math.cos(snappedAngle),
+        Math.sin(snappedAngle)
+      ).normalize();
       
       // Set velocity
       scene.matter.body.setVelocity(this.body, {
@@ -380,13 +390,13 @@ class Laser {
       const reflectedVx = velocity.x - 2 * dotProduct * normalizedNormal.x;
       const reflectedVy = velocity.y - 2 * dotProduct * normalizedNormal.y;
       
-      // Maintain constant speed
-      const reflectedSpeed = Math.sqrt(reflectedVx * reflectedVx + reflectedVy * reflectedVy);
+      // Snap reflected angle to 10-degree increments
+      const reflectedAngle = Math.atan2(reflectedVy, reflectedVx);
+      const snappedReflectedAngle = this.scene.gridManager.snapAngleToIncrement(reflectedAngle);
       
-      if (reflectedSpeed === 0) return;
-      
-      const normalizedVx = reflectedVx / reflectedSpeed * this.speed;
-      const normalizedVy = reflectedVy / reflectedSpeed * this.speed;
+      // Apply snapped direction with original speed
+      const normalizedVx = Math.cos(snappedReflectedAngle) * this.speed;
+      const normalizedVy = Math.sin(snappedReflectedAngle) * this.speed;
       
       // Apply new velocity
       this.scene.matter.body.setVelocity(this.body, {
