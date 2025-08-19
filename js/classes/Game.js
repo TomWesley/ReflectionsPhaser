@@ -25,20 +25,70 @@ class Game {
     
     init() {
         this.setupEventListeners();
+        this.handleMobileLayout();
         this.generateMirrors();
         this.generateSpawners();
         this.updateStatus('Position your mirrors to protect the center!');
         this.gameLoop();
     }
     
+    handleMobileLayout() {
+        // Check if we're on mobile and handle canvas sizing
+        const isMobile = window.innerWidth <= 768;
+        const isLandscape = window.innerWidth > window.innerHeight;
+        
+        if (isMobile && isLandscape) {
+            // Set canvas to full viewport in mobile landscape
+            this.canvas.style.width = '100vw';
+            this.canvas.style.height = '100vh';
+        }
+        
+        // Listen for orientation changes
+        window.addEventListener('orientationchange', () => {
+            setTimeout(() => {
+                this.handleMobileLayout();
+            }, 100);
+        });
+        
+        window.addEventListener('resize', () => {
+            this.handleMobileLayout();
+        });
+    }
+    
     setupEventListeners() {
         // Mouse events for mirror dragging
-        this.canvas.addEventListener('mousedown', (e) => this.onMouseDown(e));
-        this.canvas.addEventListener('mousemove', (e) => this.onMouseMove(e));
-        this.canvas.addEventListener('mouseup', (e) => this.onMouseUp(e));
+        this.canvas.addEventListener('mousedown', (e) => this.onPointerDown(e));
+        this.canvas.addEventListener('mousemove', (e) => this.onPointerMove(e));
+        this.canvas.addEventListener('mouseup', (e) => this.onPointerUp(e));
         
-        // Prevent context menu on canvas
+        // Touch events for mobile support
+        this.canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (e.touches.length === 1) {
+                const touch = e.touches[0];
+                this.onPointerDown(touch);
+            }
+        });
+        
+        this.canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            if (e.touches.length === 1) {
+                const touch = e.touches[0];
+                this.onPointerMove(touch);
+            }
+        });
+        
+        this.canvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            this.onPointerUp(e);
+        });
+        
+        // Prevent context menu and scrolling
         this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+        this.canvas.addEventListener('touchcancel', (e) => {
+            e.preventDefault();
+            this.onPointerUp(e);
+        });
         
         // UI button events
         this.launchButton.addEventListener('click', () => this.launchLasers());
@@ -190,12 +240,11 @@ class Game {
         
         const bounds = mirrorToCheck.getBounds();
         
-        // Check bounds - no part of mirror can touch or enter forbidden edge zones
-        // Add 1 pixel buffer to ensure mirrors stay completely out of forbidden zones
-        const minX = GameConfig.EDGE_MARGIN + 1;
-        const maxX = GameConfig.CANVAS_WIDTH - GameConfig.EDGE_MARGIN - 1;
-        const minY = GameConfig.EDGE_MARGIN + 1;
-        const maxY = GameConfig.CANVAS_HEIGHT - GameConfig.EDGE_MARGIN - 1;
+        // Check bounds - mirrors can touch forbidden zone edges but not enter them
+        const minX = GameConfig.EDGE_MARGIN;
+        const maxX = GameConfig.CANVAS_WIDTH - GameConfig.EDGE_MARGIN;
+        const minY = GameConfig.EDGE_MARGIN;
+        const maxY = GameConfig.CANVAS_HEIGHT - GameConfig.EDGE_MARGIN;
         
         if (bounds.left < minX || bounds.right > maxX || bounds.top < minY || bounds.bottom > maxY) {
             return false;
@@ -238,20 +287,23 @@ class Game {
         return array;
     }
     
-    // Mouse event handlers
-    onMouseDown(e) {
+    // Pointer event handlers (mouse and touch)
+    onPointerDown(e) {
         if (this.isPlaying) return;
         
         const rect = this.canvas.getBoundingClientRect();
-        const mouseX = e.clientX - rect.left;
-        const mouseY = e.clientY - rect.top;
+        const scaleX = this.canvas.width / rect.width;
+        const scaleY = this.canvas.height / rect.height;
+        
+        const pointerX = (e.clientX - rect.left) * scaleX;
+        const pointerY = (e.clientY - rect.top) * scaleY;
         
         // Check if clicking on a mirror
         for (let mirror of this.mirrors) {
-            if (mirror.containsPoint(mouseX, mouseY)) {
+            if (mirror.containsPoint(pointerX, pointerY)) {
                 this.draggedMirror = mirror;
-                this.dragOffset.x = mouseX - mirror.x;
-                this.dragOffset.y = mouseY - mirror.y;
+                this.dragOffset.x = pointerX - mirror.x;
+                this.dragOffset.y = pointerY - mirror.y;
                 this.canvas.style.cursor = 'grabbing';
                 mirror.isDragging = true;
                 break;
@@ -259,19 +311,22 @@ class Game {
         }
     }
     
-    onMouseMove(e) {
+    onPointerMove(e) {
         if (!this.draggedMirror || this.isPlaying) return;
         
         const rect = this.canvas.getBoundingClientRect();
-        const mouseX = e.clientX - rect.left;
-        const mouseY = e.clientY - rect.top;
+        const scaleX = this.canvas.width / rect.width;
+        const scaleY = this.canvas.height / rect.height;
+        
+        const pointerX = (e.clientX - rect.left) * scaleX;
+        const pointerY = (e.clientY - rect.top) * scaleY;
         
         // Move smoothly without snapping during drag
-        this.draggedMirror.x = mouseX - this.dragOffset.x;
-        this.draggedMirror.y = mouseY - this.dragOffset.y;
+        this.draggedMirror.x = pointerX - this.dragOffset.x;
+        this.draggedMirror.y = pointerY - this.dragOffset.y;
     }
     
-    onMouseUp(e) {
+    onPointerUp(e) {
         if (this.draggedMirror) {
             // Snap mirror position so extremities align with grid lines
             const snappedPos = this.snapMirrorToGrid(this.draggedMirror, this.draggedMirror.x, this.draggedMirror.y);
@@ -456,20 +511,17 @@ class Game {
         this.ctx.arc(centerX, centerY, GameConfig.TARGET_SAFE_RADIUS, 0, Math.PI * 2);
         this.ctx.fill();
         
-        // Edge forbidden zones - show exact forbidden areas (not valid placement areas)
-        const minValidX = GameConfig.EDGE_MARGIN + 1;
-        const maxValidX = GameConfig.CANVAS_WIDTH - GameConfig.EDGE_MARGIN - 1;
-        const minValidY = GameConfig.EDGE_MARGIN + 1;
-        const maxValidY = GameConfig.CANVAS_HEIGHT - GameConfig.EDGE_MARGIN - 1;
+        // Edge forbidden zones - show exact forbidden areas 
+        const edgeMargin = GameConfig.EDGE_MARGIN;
         
         // Top zone
-        this.ctx.fillRect(0, 0, GameConfig.CANVAS_WIDTH, minValidY);
+        this.ctx.fillRect(0, 0, GameConfig.CANVAS_WIDTH, edgeMargin);
         // Bottom zone  
-        this.ctx.fillRect(0, maxValidY, GameConfig.CANVAS_WIDTH, GameConfig.CANVAS_HEIGHT - maxValidY);
+        this.ctx.fillRect(0, GameConfig.CANVAS_HEIGHT - edgeMargin, GameConfig.CANVAS_WIDTH, edgeMargin);
         // Left zone
-        this.ctx.fillRect(0, 0, minValidX, GameConfig.CANVAS_HEIGHT);
+        this.ctx.fillRect(0, 0, edgeMargin, GameConfig.CANVAS_HEIGHT);
         // Right zone
-        this.ctx.fillRect(maxValidX, 0, GameConfig.CANVAS_WIDTH - maxValidX, GameConfig.CANVAS_HEIGHT);
+        this.ctx.fillRect(GameConfig.CANVAS_WIDTH - edgeMargin, 0, edgeMargin, GameConfig.CANVAS_HEIGHT);
         
         // Draw border lines to make zones more obvious
         this.ctx.strokeStyle = 'rgba(255, 0, 0, 0.5)';
@@ -483,9 +535,9 @@ class Game {
         
         // Edge zone borders
         this.ctx.beginPath();
-        this.ctx.rect(minValidX, minValidY, 
-                     maxValidX - minValidX, 
-                     maxValidY - minValidY);
+        this.ctx.rect(edgeMargin, edgeMargin, 
+                     GameConfig.CANVAS_WIDTH - edgeMargin * 2, 
+                     GameConfig.CANVAS_HEIGHT - edgeMargin * 2);
         this.ctx.stroke();
         
         this.ctx.setLineDash([]); // Reset line dash

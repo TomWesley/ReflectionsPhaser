@@ -2,20 +2,24 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Reflection Game - Ultra Precise Edition</title>
-    <link rel="stylesheet" href="styles/game.css">
+    <link rel="stylesheet" href="styles/game.css?v=8">
 </head>
 <body>
     <h1>Reflection Game - Ultra Precise Edition</h1>
     
     <div id="instructions">
         <strong>How to Play:</strong><br>
-        1. Drag the square mirrors to position them on the grid<br>
-        2. Mirrors snap perfectly to grid intersections<br>
+        1. Drag the mirrors to position them on the grid (touch and drag on mobile)<br>
+        2. Mirrors snap perfectly to grid lines when released<br>
         3. Place mirrors to redirect lasers AWAY from the center target<br>
         4. Click "Launch Lasers" to start<br>
-        5. Protect the center - if any laser hits it, you lose!
+        5. Protect the center - if any laser hits it, you lose!<br>
+        <em>Mobile users: Rotate to landscape for better experience</em>
     </div>
     
     <div id="ui">
@@ -32,11 +36,11 @@
     <script src="js/config/GameConfig.js"></script>
     
     <!-- Game Classes -->
-    <script src="js/classes/SATCollision.js?v=6"></script>
-    <script src="js/classes/Mirror.js?v=6"></script>
-    <script src="js/classes/Laser.js?v=6"></script>
-    <script src="js/classes/Spawner.js?v=6"></script>
-    <script src="js/classes/Game.js?v=6"></script>
+    <script src="js/classes/SATCollision.js?v=8"></script>
+    <script src="js/classes/Mirror.js?v=8"></script>
+    <script src="js/classes/Laser.js?v=8"></script>
+    <script src="js/classes/Spawner.js?v=8"></script>
+    <script src="js/classes/Game.js?v=8"></script>
     
     <!-- Initialize Game -->
     <script src="js/main.js"></script>

@@ -115,8 +115,113 @@ button:disabled:hover {
     font-weight: bold;
 }
 
-/* Responsive Design */
-@media (max-width: 850px) {
+/* Mobile portrait - show rotation prompt */
+@media screen and (max-width: 768px) and (orientation: portrait) {
+    body::before {
+        content: "Please rotate your device to landscape for better experience";
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(0,0,0,0.9);
+        color: white;
+        padding: 20px;
+        border-radius: 10px;
+        z-index: 1000;
+        text-align: center;
+        font-size: 16px;
+        max-width: 300px;
+    }
+    
+    body > * {
+        opacity: 0.3;
+    }
+}
+
+/* Mobile landscape optimizations */
+@media screen and (max-width: 768px) and (orientation: landscape) {
+    body {
+        padding: 2px;
+        justify-content: center;
+        min-height: 100vh;
+        margin: 0;
+        overflow: hidden;
+    }
+    
+    h1 {
+        font-size: 1rem;
+        margin: 2px 0;
+        position: fixed;
+        top: 2px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 100;
+        background: rgba(255,255,255,0.9);
+        padding: 2px 10px;
+        border-radius: 3px;
+    }
+    
+    #instructions {
+        display: none; /* Hide instructions on mobile to save space */
+    }
+    
+    #gameContainer {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        border: none;
+        border-radius: 0;
+        margin: 0;
+    }
+    
+    #gameCanvas {
+        width: 100vw;
+        height: 100vh;
+        touch-action: none; /* Prevent scrolling while dragging */
+        display: block;
+    }
+    
+    #ui {
+        position: fixed;
+        bottom: 5px;
+        left: 50%;
+        transform: translateX(-50%);
+        margin: 0;
+        z-index: 100;
+        background: rgba(255,255,255,0.1);
+        border-radius: 20px;
+        padding: 5px;
+    }
+    
+    #status {
+        font-size: 12px;
+        margin: 2px 0;
+        background: rgba(255,255,255,0.9);
+        padding: 2px 8px;
+        border-radius: 10px;
+        max-width: 300px;
+        text-align: center;
+    }
+    
+    button {
+        padding: 8px 15px;
+        font-size: 12px;
+        margin: 0 3px;
+        border-radius: 20px;
+        min-width: 70px;
+        min-height: 36px; /* Larger touch targets for fingers */
+        background: rgba(51, 51, 51, 0.9);
+        backdrop-filter: blur(10px);
+    }
+    
+    button:hover {
+        background: rgba(85, 85, 85, 0.9);
+    }
+}
+
+@media (max-width: 850px) and (orientation: landscape) {
     #gameCanvas {
         width: 100%;
         height: auto;
@@ -132,41 +237,23 @@ button:disabled:hover {
         font-size: 2rem;
     }
     
-    #instructions {
-        margin: 10px;
-        font-size: 14px;
-    }
-    
     button {
-        padding: 8px 16px;
-        font-size: 14px;
-        margin: 0 5px;
+        padding: 10px 18px;
+        font-size: 15px;
+        margin: 0 8px;
     }
 }
 
-@media (max-width: 600px) {
-    body {
-        padding: 10px;
-    }
-    
-    h1 {
-        font-size: 1.5rem;
-        margin-bottom: 10px;
-    }
-    
+@media (min-width: 769px) {
+    /* Desktop styles - keep existing */
     #instructions {
-        padding: 10px;
-        font-size: 13px;
+        max-width: 600px;
+        margin: 20px 0;
     }
     
     button {
-        display: block;
-        width: 200px;
-        margin: 5px auto;
-    }
-    
-    #ui {
-        margin: 10px 0;
+        padding: 10px 20px;
+        margin: 0 10px;
     }
 }
 
