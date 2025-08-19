@@ -172,18 +172,18 @@
             generateSpawners() {
                 this.spawners = [];
                 const positions = [
-                    { x: CONFIG.EDGE_MARGIN, y: CONFIG.CANVAS_HEIGHT / 2 }, // Left
-                    { x: CONFIG.CANVAS_WIDTH - CONFIG.EDGE_MARGIN, y: CONFIG.CANVAS_HEIGHT / 2 }, // Right
-                    { x: CONFIG.CANVAS_WIDTH / 2, y: CONFIG.EDGE_MARGIN }, // Top
-                    { x: CONFIG.CANVAS_WIDTH / 2, y: CONFIG.CANVAS_HEIGHT - CONFIG.EDGE_MARGIN } // Bottom
+                    { x: 0, y: CONFIG.CANVAS_HEIGHT / 2 }, // Left edge
+                    { x: CONFIG.CANVAS_WIDTH, y: CONFIG.CANVAS_HEIGHT / 2 }, // Right edge
+                    { x: CONFIG.CANVAS_WIDTH / 2, y: 0 }, // Top edge
+                    { x: CONFIG.CANVAS_WIDTH / 2, y: CONFIG.CANVAS_HEIGHT } // Bottom edge
                 ];
                 
                 // Pick 3 random spawners
                 const selectedPositions = this.shuffleArray([...positions]).slice(0, 3);
                 
                 selectedPositions.forEach(pos => {
-                    const angle = this.getAngleToCenter(pos.x, pos.y);
-                    this.spawners.push(new Spawner(pos.x, pos.y, angle));
+                    const randomAngle = this.getRandomAngleTowardsCenter(pos.x, pos.y);
+                    this.spawners.push(new Spawner(pos.x, pos.y, randomAngle));
                 });
             }
             
@@ -206,24 +206,30 @@
                     return false;
                 }
                 
-                // Check overlap with other mirrors
+                // Check overlap with other mirrors (exact overlap only, allow touching)
                 for (let mirror of this.mirrors) {
-                    if (Math.abs(mirror.x - x) < CONFIG.MIRROR_SIZE && 
-                        Math.abs(mirror.y - y) < CONFIG.MIRROR_SIZE) {
-                        return false;
+                    if (mirror.x === x && mirror.y === y) {
+                        return false; // Exact same position
                     }
                 }
                 
                 return true;
             }
             
-            getAngleToCenter(x, y) {
+            getRandomAngleTowardsCenter(x, y) {
                 const centerX = CONFIG.CANVAS_WIDTH / 2;
                 const centerY = CONFIG.CANVAS_HEIGHT / 2;
-                const angle = Math.atan2(centerY - y, centerX - x);
-                // Snap to 10-degree increments
-                const degrees = angle * 180 / Math.PI;
-                const snappedDegrees = Math.round(degrees / CONFIG.ANGLE_INCREMENT) * CONFIG.ANGLE_INCREMENT;
+                
+                // Get the direct angle to center
+                const directAngle = Math.atan2(centerY - y, centerX - x);
+                const directDegrees = directAngle * 180 / Math.PI;
+                
+                // Add random variation (±60 degrees for good gameplay)
+                const variation = (Math.random() - 0.5) * 120; // ±60 degrees
+                const randomDegrees = directDegrees + variation;
+                
+                // Snap to 15-degree increments
+                const snappedDegrees = Math.round(randomDegrees / CONFIG.ANGLE_INCREMENT) * CONFIG.ANGLE_INCREMENT;
                 return snappedDegrees * Math.PI / 180;
             }
             
@@ -279,6 +285,9 @@
                         this.draggedMirror = mirror;
                         this.dragOffset.x = mouseX - mirror.x;
                         this.dragOffset.y = mouseY - mirror.y;
+                        this.canvas.style.cursor = 'grabbing';
+                        mirror.isDragging = true;
+                        console.log('Started dragging mirror at', mirror.x, mirror.y);
                         break;
                     }
                 }
@@ -291,25 +300,62 @@
                 const mouseX = e.clientX - rect.left;
                 const mouseY = e.clientY - rect.top;
                 
-                // Calculate new position
-                const newX = this.snapToGrid(mouseX - this.dragOffset.x);
-                const newY = this.snapToGrid(mouseY - this.dragOffset.y);
+                // Move smoothly without snapping during drag
+                const newX = mouseX - this.dragOffset.x;
+                const newY = mouseY - this.dragOffset.y;
                 
-                // Temporarily move mirror to check validity
-                const oldX = this.draggedMirror.x;
-                const oldY = this.draggedMirror.y;
+                // Update mirror position directly (no validation during drag)
                 this.draggedMirror.x = newX;
                 this.draggedMirror.y = newY;
-                
-                if (!this.isValidMirrorPosition(newX, newY)) {
-                    // Revert if invalid
-                    this.draggedMirror.x = oldX;
-                    this.draggedMirror.y = oldY;
-                }
+                this.draggedMirror.isDragging = true;
             }
             
             onMouseUp(e) {
+                if (this.draggedMirror) {
+                    // Snap to grid on release
+                    const snappedX = this.snapToGrid(this.draggedMirror.x);
+                    const snappedY = this.snapToGrid(this.draggedMirror.y);
+                    
+                    // Check if the snapped position is valid
+                    const tempX = this.draggedMirror.x;
+                    const tempY = this.draggedMirror.y;
+                    this.draggedMirror.x = snappedX;
+                    this.draggedMirror.y = snappedY;
+                    
+                    if (!this.isValidMirrorPosition(snappedX, snappedY)) {
+                        // If invalid, find nearest valid position
+                        const nearestValid = this.findNearestValidPosition(tempX, tempY);
+                        this.draggedMirror.x = nearestValid.x;
+                        this.draggedMirror.y = nearestValid.y;
+                    }
+                    
+                    this.draggedMirror.isDragging = false;
+                    console.log('Snapped mirror to', this.draggedMirror.x, this.draggedMirror.y);
+                }
                 this.draggedMirror = null;
+                this.canvas.style.cursor = 'crosshair';
+            }
+            
+            findNearestValidPosition(x, y) {
+                // Try positions in expanding spiral from current position
+                const startX = this.snapToGrid(x);
+                const startY = this.snapToGrid(y);
+                
+                for (let radius = 0; radius <= 100; radius += CONFIG.GRID_SIZE) {
+                    for (let angle = 0; angle < 360; angle += 45) {
+                        const testX = startX + Math.cos(angle * Math.PI / 180) * radius;
+                        const testY = startY + Math.sin(angle * Math.PI / 180) * radius;
+                        const snappedTestX = this.snapToGrid(testX);
+                        const snappedTestY = this.snapToGrid(testY);
+                        
+                        if (this.isValidMirrorPosition(snappedTestX, snappedTestY)) {
+                            return { x: snappedTestX, y: snappedTestY };
+                        }
+                    }
+                }
+                
+                // Fallback to original position if no valid position found
+                return { x: startX, y: startY };
             }
             
             update() {
@@ -459,23 +505,33 @@
             constructor(x, y) {
                 this.x = x;
                 this.y = y;
+                this.isDragging = false;
             }
             
             draw(ctx) {
                 const halfSize = CONFIG.MIRROR_SIZE / 2;
                 
+                // Draw glow effect if being dragged
+                if (this.isDragging) {
+                    ctx.shadowColor = '#ffff00';
+                    ctx.shadowBlur = 15;
+                    ctx.fillStyle = 'rgba(255, 255, 0, 0.3)';
+                    ctx.fillRect(this.x - halfSize - 5, this.y - halfSize - 5, CONFIG.MIRROR_SIZE + 10, CONFIG.MIRROR_SIZE + 10);
+                    ctx.shadowBlur = 0;
+                }
+                
                 // Mirror surface (silver)
-                ctx.fillStyle = '#c0c0c0';
+                ctx.fillStyle = this.isDragging ? '#d0d0d0' : '#c0c0c0';
                 ctx.fillRect(this.x - halfSize, this.y - halfSize, CONFIG.MIRROR_SIZE, CONFIG.MIRROR_SIZE);
                 
                 // Highlight (top-left)
-                ctx.fillStyle = '#f0f0f0';
+                ctx.fillStyle = this.isDragging ? '#ffffff' : '#f0f0f0';
                 ctx.fillRect(this.x - halfSize, this.y - halfSize, CONFIG.MIRROR_SIZE, 4);
                 ctx.fillRect(this.x - halfSize, this.y - halfSize, 4, CONFIG.MIRROR_SIZE);
                 
                 // Frame
-                ctx.strokeStyle = '#333';
-                ctx.lineWidth = 2;
+                ctx.strokeStyle = this.isDragging ? '#000' : '#333';
+                ctx.lineWidth = this.isDragging ? 3 : 2;
                 ctx.strokeRect(this.x - halfSize, this.y - halfSize, CONFIG.MIRROR_SIZE, CONFIG.MIRROR_SIZE);
             }
             
@@ -504,7 +560,7 @@
                     laser.vy = -laser.vy; // Vertical reflection
                 }
                 
-                // Snap angle to 10-degree increments
+                // Snap angle to 15-degree increments
                 const currentAngle = Math.atan2(laser.vy, laser.vx);
                 const degrees = currentAngle * 180 / Math.PI;
                 const snappedDegrees = Math.round(degrees / CONFIG.ANGLE_INCREMENT) * CONFIG.ANGLE_INCREMENT;

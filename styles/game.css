@@ -1,0 +1,196 @@
+/* Reflection Game - Main Styles */
+
+/* Reset and Base Styles */
+body {
+    margin: 0;
+    padding: 20px;
+    background: #f0f0f0;
+    font-family: 'Arial', sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* Typography */
+h1 {
+    color: #333;
+    margin-bottom: 20px;
+    font-size: 2.5rem;
+    text-align: center;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Game Container */
+#gameContainer {
+    position: relative;
+    background: white;
+    border: 2px solid #333;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+#gameCanvas {
+    display: block;
+    cursor: crosshair;
+}
+
+/* UI Controls */
+#ui {
+    margin: 20px 0;
+    text-align: center;
+}
+
+#status {
+    margin: 10px 0;
+    font-size: 18px;
+    font-weight: bold;
+    color: #333;
+    min-height: 25px;
+}
+
+/* Buttons */
+button {
+    padding: 10px 20px;
+    margin: 0 10px;
+    background: #333;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+button:hover {
+    background: #555;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+button:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+
+button:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+button:disabled:hover {
+    background: #ccc;
+    transform: none;
+}
+
+/* Instructions Panel */
+#instructions {
+    max-width: 600px;
+    margin: 20px 0;
+    padding: 15px;
+    background: #e8f4fd;
+    border-radius: 5px;
+    border-left: 4px solid #2196F3;
+    line-height: 1.6;
+}
+
+#instructions strong {
+    color: #1976D2;
+}
+
+/* Game State Colors */
+.status-playing {
+    color: #2196F3;
+}
+
+.status-game-over {
+    color: #f44336;
+    font-weight: bold;
+}
+
+.status-success {
+    color: #4CAF50;
+    font-weight: bold;
+}
+
+/* Responsive Design */
+@media (max-width: 850px) {
+    #gameCanvas {
+        width: 100%;
+        height: auto;
+        max-width: 800px;
+    }
+    
+    #gameContainer {
+        width: 100%;
+        max-width: 800px;
+    }
+    
+    h1 {
+        font-size: 2rem;
+    }
+    
+    #instructions {
+        margin: 10px;
+        font-size: 14px;
+    }
+    
+    button {
+        padding: 8px 16px;
+        font-size: 14px;
+        margin: 0 5px;
+    }
+}
+
+@media (max-width: 600px) {
+    body {
+        padding: 10px;
+    }
+    
+    h1 {
+        font-size: 1.5rem;
+        margin-bottom: 10px;
+    }
+    
+    #instructions {
+        padding: 10px;
+        font-size: 13px;
+    }
+    
+    button {
+        display: block;
+        width: 200px;
+        margin: 5px auto;
+    }
+    
+    #ui {
+        margin: 10px 0;
+    }
+}
+
+/* Loading States */
+.loading {
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+.fade-in {
+    animation: fadeIn 0.3s ease-out;
+}
+
+.pulse {
+    animation: pulse 0.5s ease-in-out;
+}
