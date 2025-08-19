@@ -115,6 +115,22 @@ button:disabled:hover {
     font-weight: bold;
 }
 
+/* Mobile styles - hide instructions, title and show info bubble */
+@media screen and (max-width: 768px) {
+    h1 {
+        display: none !important; /* Hide game title on all mobile views */
+    }
+    
+    #instructions {
+        display: none !important; /* Hide main instructions on all mobile views */
+    }
+    
+    /* Show info bubble on mobile */
+    .info-bubble {
+        display: block;
+    }
+}
+
 /* Mobile portrait - show rotation prompt */
 @media screen and (max-width: 768px) and (orientation: portrait) {
     body::before {
@@ -141,83 +157,171 @@ button:disabled:hover {
 /* Mobile landscape optimizations */
 @media screen and (max-width: 768px) and (orientation: landscape) {
     body {
-        padding: 2px;
+        padding: 0;
         justify-content: center;
+        align-items: center;
         min-height: 100vh;
         margin: 0;
         overflow: hidden;
+        background: #2c3e50;
     }
     
-    h1 {
-        font-size: 1rem;
-        margin: 2px 0;
-        position: fixed;
-        top: 2px;
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 100;
-        background: rgba(255,255,255,0.9);
-        padding: 2px 10px;
-        border-radius: 3px;
-    }
     
     #instructions {
-        display: none; /* Hide instructions on mobile to save space */
+        display: none !important; /* Force hide instructions on mobile landscape */
     }
+    
     
     #gameContainer {
         position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        border: none;
-        border-radius: 0;
-        margin: 0;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        
+        /* Game board dimensions with margin */
+        width: calc(100vh * 0.85); /* Use height as base, leave 15% for margins */
+        height: calc(100vh * 0.85 * 0.75); /* Maintain 4:3 aspect ratio (800:600) */
+        max-width: calc(100vw - 40px); /* Don't exceed viewport width minus margin */
+        max-height: calc(100vh - 80px); /* Don't exceed viewport height minus margin */
+        
+        border: 2px solid #34495e;
+        border-radius: 8px;
+        background: white;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.3);
     }
     
     #gameCanvas {
-        width: 100vw;
-        height: 100vh;
-        touch-action: none; /* Prevent scrolling while dragging */
+        width: 100%;
+        height: 100%;
+        touch-action: none;
         display: block;
+        border-radius: 6px;
     }
     
     #ui {
         position: fixed;
-        bottom: 5px;
+        bottom: 15px;
         left: 50%;
         transform: translateX(-50%);
         margin: 0;
         z-index: 100;
-        background: rgba(255,255,255,0.1);
-        border-radius: 20px;
-        padding: 5px;
-    }
-    
-    #status {
-        font-size: 12px;
-        margin: 2px 0;
-        background: rgba(255,255,255,0.9);
-        padding: 2px 8px;
-        border-radius: 10px;
-        max-width: 300px;
-        text-align: center;
-    }
-    
-    button {
-        padding: 8px 15px;
-        font-size: 12px;
-        margin: 0 3px;
-        border-radius: 20px;
-        min-width: 70px;
-        min-height: 36px; /* Larger touch targets for fingers */
-        background: rgba(51, 51, 51, 0.9);
+        background: rgba(0,0,0,0.2);
+        border-radius: 25px;
+        padding: 8px;
         backdrop-filter: blur(10px);
     }
     
-    button:hover {
-        background: rgba(85, 85, 85, 0.9);
+    #status {
+        font-size: 11px;
+        margin: 3px 0;
+        background: rgba(255,255,255,0.95);
+        padding: 4px 12px;
+        border-radius: 12px;
+        max-width: 280px;
+        text-align: center;
+        color: #333;
+        font-weight: 600;
+    }
+    
+    #ui button {
+        padding: 8px 16px;
+        font-size: 12px;
+        margin: 0 4px;
+        border-radius: 18px;
+        min-width: 75px;
+        min-height: 36px;
+        background: rgba(52, 73, 94, 0.9);
+        color: white;
+        border: none;
+        backdrop-filter: blur(5px);
+        font-weight: 600;
+    }
+    
+    #ui button:hover {
+        background: rgba(44, 62, 80, 0.9);
+    }
+    
+    #ui button:disabled {
+        background: rgba(149, 165, 166, 0.7);
+        color: rgba(255,255,255,0.6);
+    }
+    
+    /* Info bubble styles for mobile */
+    .info-bubble {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 200;
+    }
+    
+    .info-button {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: rgba(52, 73, 94, 0.9);
+        color: white;
+        border: 2px solid rgba(255,255,255,0.3);
+        font-size: 18px;
+        font-weight: bold;
+        cursor: pointer;
+        backdrop-filter: blur(5px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        transition: all 0.2s ease;
+    }
+    
+    .info-button:hover {
+        background: rgba(44, 62, 80, 0.95);
+        transform: scale(1.1);
+    }
+    
+    .info-popup {
+        position: absolute;
+        bottom: 50px;
+        right: 0;
+        width: 280px;
+        background: rgba(255,255,255,0.98);
+        border-radius: 12px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+        backdrop-filter: blur(10px);
+        transition: all 0.3s ease;
+        transform-origin: bottom right;
+    }
+    
+    .info-popup.hidden {
+        opacity: 0;
+        transform: scale(0.8);
+        pointer-events: none;
+    }
+    
+    .info-content {
+        padding: 16px;
+        font-size: 14px;
+        line-height: 1.5;
+        color: #333;
+        position: relative;
+    }
+    
+    .close-button {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: rgba(52, 73, 94, 0.1);
+        color: #666;
+        border: none;
+        font-size: 16px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+    }
+    
+    .close-button:hover {
+        background: rgba(52, 73, 94, 0.2);
+        color: #333;
     }
 }
 
@@ -254,6 +358,11 @@ button:disabled:hover {
     button {
         padding: 10px 20px;
         margin: 0 10px;
+    }
+    
+    /* Hide info bubble on desktop since instructions are visible */
+    .info-bubble {
+        display: none;
     }
 }
 

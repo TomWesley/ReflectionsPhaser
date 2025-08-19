@@ -26,10 +26,27 @@
         <div id="status">Position your mirrors to protect the center!</div>
         <button id="launchBtn">Launch Lasers</button>
         <button id="resetBtn">Reset Game</button>
+        <button id="clearCacheBtn" style="background: #e74c3c;">Clear Cache</button>
     </div>
     
     <div id="gameContainer">
         <canvas id="gameCanvas" width="800" height="600"></canvas>
+    </div>
+
+    <!-- Mobile info bubble -->
+    <div id="infoBubble" class="info-bubble">
+        <button id="infoButton" class="info-button">i</button>
+        <div id="infoPopup" class="info-popup hidden">
+            <div class="info-content">
+                <button id="closeInfo" class="close-button">×</button>
+                <strong>How to Play:</strong><br>
+                1. Drag mirrors to position them on the grid<br>
+                2. Mirrors snap to grid lines when released<br>
+                3. Redirect lasers AWAY from the center target<br>
+                4. Tap "Launch Lasers" to start<br>
+                5. Protect the center - if any laser hits it, you lose!
+            </div>
+        </div>
     </div>
 
     <!-- Game Configuration -->
@@ -44,5 +61,65 @@
     
     <!-- Initialize Game -->
     <script src="js/main.js"></script>
+    
+    <!-- Simple cache clear test -->
+    <script>
+        console.log('Simple script test - this should show in console');
+        
+        // Try to add click handler directly in HTML
+        setTimeout(() => {
+            const btn = document.getElementById('clearCacheBtn');
+            console.log('Direct script found button:', btn);
+            
+            if (btn) {
+                btn.onclick = async function() {
+                    console.log('Clearing all caches...');
+                    
+                    try {
+                        // Clear service worker caches
+                        if ('caches' in window) {
+                            const cacheNames = await caches.keys();
+                            console.log('Found caches:', cacheNames);
+                            await Promise.all(
+                                cacheNames.map(cacheName => {
+                                    console.log('Deleting cache:', cacheName);
+                                    return caches.delete(cacheName);
+                                })
+                            );
+                        }
+                        
+                        // Clear storage
+                        localStorage.clear();
+                        sessionStorage.clear();
+                        
+                        // Clear IndexedDB
+                        if ('indexedDB' in window) {
+                            // This is more complex, but we'll do a basic clear
+                            try {
+                                indexedDB.deleteDatabase('gameData');
+                            } catch(e) {
+                                console.log('IndexedDB clear skipped:', e);
+                            }
+                        }
+                        
+                        console.log('All caches cleared successfully');
+                        alert('Cache cleared! Page will reload with fresh content...');
+                        
+                        // Add a unique timestamp to force cache bypass
+                        const timestamp = Date.now();
+                        const url = window.location.href.split('?')[0] + '?nocache=' + timestamp;
+                        
+                        // Reload with cache busting
+                        window.location.replace(url);
+                        
+                    } catch (error) {
+                        console.error('Cache clear error:', error);
+                        alert('Cache clear completed (some errors). Reloading...');
+                        window.location.reload(true);
+                    }
+                };
+            }
+        }, 1000);
+    </script>
 </body>
 </html>

@@ -19,12 +19,14 @@ class Game {
         this.statusElement = document.getElementById('status');
         this.launchButton = document.getElementById('launchBtn');
         this.resetButton = document.getElementById('resetBtn');
+        this.clearCacheButton = document.getElementById('clearCacheBtn');
         
         this.init();
     }
     
     init() {
         this.setupEventListeners();
+        this.setupInfoBubble();
         this.handleMobileLayout();
         this.generateMirrors();
         this.generateSpawners();
@@ -52,6 +54,55 @@ class Game {
         
         window.addEventListener('resize', () => {
             this.handleMobileLayout();
+        });
+    }
+    
+    setupInfoBubble() {
+        // Get info bubble elements
+        const infoButton = document.getElementById('infoButton');
+        const infoPopup = document.getElementById('infoPopup');
+        const closeButton = document.getElementById('closeInfo');
+        
+        if (!infoButton || !infoPopup || !closeButton) return;
+        
+        // Show popup when info button is clicked/touched
+        infoButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            infoPopup.classList.remove('hidden');
+        });
+        
+        infoButton.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            infoPopup.classList.remove('hidden');
+        });
+        
+        // Hide popup when close button is clicked/touched
+        closeButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            infoPopup.classList.add('hidden');
+        });
+        
+        closeButton.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            infoPopup.classList.add('hidden');
+        });
+        
+        // Hide popup when clicking outside of it
+        document.addEventListener('click', (e) => {
+            if (!infoButton.contains(e.target) && !infoPopup.contains(e.target)) {
+                infoPopup.classList.add('hidden');
+            }
+        });
+        
+        // Hide popup when touching outside of it
+        document.addEventListener('touchend', (e) => {
+            if (!infoButton.contains(e.target) && !infoPopup.contains(e.target)) {
+                infoPopup.classList.add('hidden');
+            }
         });
     }
     
@@ -93,6 +144,13 @@ class Game {
         // UI button events
         this.launchButton.addEventListener('click', () => this.launchLasers());
         this.resetButton.addEventListener('click', () => this.resetGame());
+        
+        if (this.clearCacheButton) {
+            this.clearCacheButton.addEventListener('click', () => this.clearCache());
+            console.log('Clear cache button found and event listener added');
+        } else {
+            console.error('Clear cache button not found!');
+        }
         
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
@@ -394,6 +452,44 @@ class Game {
         
         this.launchButton.disabled = false;
         this.updateStatus('Position your mirrors to protect the center!');
+    }
+    
+    clearCache() {
+        console.log('Clear cache button clicked!');
+        
+        // Show immediate feedback
+        this.updateStatus('Clearing cache...', 'status-playing');
+        
+        // Clear browser caches
+        if ('caches' in window) {
+            caches.keys().then(names => {
+                console.log('Clearing caches:', names);
+                names.forEach(name => {
+                    caches.delete(name);
+                });
+            }).catch(err => console.log('Cache clear error:', err));
+        }
+        
+        // Clear localStorage and sessionStorage
+        try {
+            localStorage.clear();
+            sessionStorage.clear();
+            console.log('Storage cleared');
+        } catch (e) {
+            console.log('Storage clear error:', e);
+        }
+        
+        // Force reload without cache
+        this.updateStatus('Cache cleared! Reloading...', 'status-success');
+        setTimeout(() => {
+            console.log('Forcing reload...');
+            // Try multiple reload methods
+            if (window.location.reload) {
+                window.location.reload(true);
+            } else {
+                window.location.href = window.location.href + '?nocache=' + Date.now();
+            }
+        }, 1000);
     }
     
     updateStatus(message, className = '') {
