@@ -20,6 +20,19 @@ class Game {
         this.launchButton = document.getElementById('launchBtn');
         this.resetButton = document.getElementById('resetBtn');
         this.clearCacheButton = document.getElementById('clearCacheBtn');
+        this.timerElement = document.getElementById('timer-value');
+        this.gameOverModal = document.getElementById('gameOverModal');
+        this.retryButton = document.getElementById('retryBtn');
+        
+        // Timer and scoring
+        this.startTime = 0;
+        this.elapsedTime = 0;
+        this.totalReflections = 0;
+        
+        // Debug element finding
+        console.log('Timer element found:', !!this.timerElement);
+        console.log('Game over modal found:', !!this.gameOverModal);
+        console.log('Retry button found:', !!this.retryButton);
         
         this.init();
     }
@@ -150,6 +163,13 @@ class Game {
             console.log('Clear cache button found and event listener added');
         } else {
             console.error('Clear cache button not found!');
+        }
+        
+        if (this.retryButton) {
+            this.retryButton.addEventListener('click', () => {
+                this.hideGameOverModal();
+                this.resetGame();
+            });
         }
         
         // Keyboard shortcuts
@@ -433,6 +453,11 @@ class Game {
         this.isPlaying = true;
         this.gameOver = false;
         this.lasers = [];
+        this.totalReflections = 0;
+        
+        // Start timer
+        this.startTime = performance.now();
+        this.elapsedTime = 0;
         
         // Create lasers from spawners
         this.spawners.forEach(spawner => {
@@ -440,18 +465,22 @@ class Game {
         });
         
         this.launchButton.disabled = true;
-        this.updateStatus('Lasers launched! Protect the center!', 'status-playing');
+        this.updateStatus('⚡ LASER SEQUENCE ACTIVE ⚡', 'status-playing');
     }
     
     resetGame() {
         this.isPlaying = false;
         this.gameOver = false;
         this.lasers = [];
+        this.totalReflections = 0;
+        this.elapsedTime = 0;
+        this.hideGameOverModal();
         this.generateMirrors();
         this.generateSpawners();
         
         this.launchButton.disabled = false;
-        this.updateStatus('Position your mirrors to protect the center!');
+        this.updateStatus('🎯 Position your mirrors to protect the core!');
+        this.updateTimer();
     }
     
     clearCache() {
@@ -492,13 +521,68 @@ class Game {
         }, 1000);
     }
     
+    updateTimer() {
+        if (this.timerElement) {
+            const minutes = Math.floor(this.elapsedTime / 60000);
+            const seconds = Math.floor((this.elapsedTime % 60000) / 1000);
+            const milliseconds = Math.floor(this.elapsedTime % 1000);
+            
+            const formattedTime = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${milliseconds.toString().padStart(3, '0')}`;
+            this.timerElement.textContent = formattedTime;
+        } else {
+            console.log('Timer element not found!');
+        }
+    }
+    
+    showGameOverModal() {
+        console.log('showGameOverModal called');
+        if (this.gameOverModal) {
+            console.log('Game over modal found, showing...');
+            // Calculate final score based on time and reflections
+            const timeBonus = Math.max(0, 10000 - this.elapsedTime);
+            const reflectionBonus = this.totalReflections * 100;
+            const finalScore = Math.round(timeBonus + reflectionBonus);
+            
+            console.log('Final stats:', { time: this.elapsedTime, reflections: this.totalReflections, score: finalScore });
+            
+            // Update modal content
+            const finalTimeElement = document.getElementById('finalTime');
+            const finalReflectionsElement = document.getElementById('finalReflections');
+            const finalScoreElement = document.getElementById('finalScore');
+            
+            if (finalTimeElement) finalTimeElement.textContent = this.timerElement ? this.timerElement.textContent : '00:00.000';
+            if (finalReflectionsElement) finalReflectionsElement.textContent = this.totalReflections;
+            if (finalScoreElement) finalScoreElement.textContent = finalScore.toLocaleString();
+            
+            // Show modal with animation
+            this.gameOverModal.classList.remove('hidden');
+        } else {
+            console.error('Game over modal not found!');
+        }
+    }
+    
+    hideGameOverModal() {
+        if (this.gameOverModal) {
+            this.gameOverModal.classList.add('hidden');
+        }
+        // Don't call resetGame here to avoid infinite loop - resetGame calls this method
+    }
+    
     updateStatus(message, className = '') {
-        this.statusElement.textContent = message;
-        this.statusElement.className = className;
+        if (this.statusElement) {
+            this.statusElement.textContent = message;
+            this.statusElement.className = `status-modern ${className}`;
+        }
     }
     
     // Game loop
     update() {
+        // Update timer when playing
+        if (this.isPlaying && !this.gameOver) {
+            this.elapsedTime = performance.now() - this.startTime;
+            this.updateTimer();
+        }
+        
         if (!this.isPlaying || this.gameOver) return;
         
         // Update lasers
@@ -510,6 +594,7 @@ class Game {
             for (let mirror of this.mirrors) {
                 if (SATCollision.checkLaserMirrorCollision(laser, mirror)) {
                     laser.reflectionCount++;
+                    this.totalReflections++;
                     break;
                 }
             }
@@ -517,7 +602,13 @@ class Game {
             // Check collision with center target
             if (laser.checkTargetCollision()) {
                 this.gameOver = true;
-                this.updateStatus('GAME OVER! Laser hit the center!', 'status-game-over');
+                this.isPlaying = false;
+                this.updateStatus('💥 CORE BREACH DETECTED 💥', 'status-game-over');
+                
+                // Show game over modal after brief delay for dramatic effect
+                setTimeout(() => {
+                    this.showGameOverModal();
+                }, 1500);
                 return;
             }
             

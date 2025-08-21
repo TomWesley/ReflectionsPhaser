@@ -73,40 +73,92 @@ class Laser {
     }
     
     draw(ctx) {
-        // Draw trail
+        // Draw enhanced trail with multiple glow layers
         if (this.trail.length > 1) {
-            ctx.strokeStyle = GameConfig.COLORS.LASER_TRAIL;
-            ctx.lineWidth = 2;
+            // Outer glow trail
+            ctx.lineWidth = 8;
+            ctx.strokeStyle = 'rgba(0, 255, 255, 0.1)';
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
             ctx.beginPath();
-            
             for (let i = 1; i < this.trail.length; i++) {
-                const alpha = i / this.trail.length;
-                ctx.globalAlpha = alpha * 0.3;
+                const alpha = (i / this.trail.length) * 0.1;
+                ctx.globalAlpha = alpha;
                 ctx.moveTo(this.trail[i-1].x, this.trail[i-1].y);
                 ctx.lineTo(this.trail[i].x, this.trail[i].y);
             }
-            
             ctx.stroke();
+            
+            // Middle glow trail
+            ctx.lineWidth = 4;
+            ctx.strokeStyle = 'rgba(0, 255, 255, 0.3)';
+            ctx.beginPath();
+            for (let i = 1; i < this.trail.length; i++) {
+                const alpha = (i / this.trail.length) * 0.3;
+                ctx.globalAlpha = alpha;
+                ctx.moveTo(this.trail[i-1].x, this.trail[i-1].y);
+                ctx.lineTo(this.trail[i].x, this.trail[i].y);
+            }
+            ctx.stroke();
+            
+            // Inner bright trail
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = 'rgba(0, 255, 255, 0.8)';
+            ctx.beginPath();
+            for (let i = 1; i < this.trail.length; i++) {
+                const alpha = (i / this.trail.length) * 0.8;
+                ctx.globalAlpha = alpha;
+                ctx.moveTo(this.trail[i-1].x, this.trail[i-1].y);
+                ctx.lineTo(this.trail[i].x, this.trail[i].y);
+            }
+            ctx.stroke();
+            
             ctx.globalAlpha = 1;
         }
         
-        // Draw laser point
-        ctx.fillStyle = GameConfig.COLORS.LASER_BEAM;
+        // Draw laser point with enhanced glow
+        ctx.save();
+        
+        // Outer glow
+        ctx.shadowColor = '#00ffff';
+        ctx.shadowBlur = 20;
+        ctx.fillStyle = 'rgba(0, 255, 255, 0.3)';
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, GameConfig.LASER_RADIUS * 3, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Middle glow
+        ctx.shadowBlur = 10;
+        ctx.fillStyle = 'rgba(0, 255, 255, 0.6)';
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, GameConfig.LASER_RADIUS * 2, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Core laser point
+        ctx.shadowBlur = 5;
+        ctx.fillStyle = '#00ffff';
         ctx.beginPath();
         ctx.arc(this.x, this.y, GameConfig.LASER_RADIUS, 0, Math.PI * 2);
         ctx.fill();
         
-        // Draw direction indicator (small line showing movement direction)
-        const dirLength = 8;
+        ctx.restore();
+        
+        // Draw direction indicator with glow
+        const dirLength = 12;
         const endX = this.x + (this.vx / GameConfig.LASER_SPEED) * dirLength;
         const endY = this.y + (this.vy / GameConfig.LASER_SPEED) * dirLength;
         
-        ctx.strokeStyle = GameConfig.COLORS.LASER_BEAM;
-        ctx.lineWidth = 1;
+        ctx.save();
+        ctx.shadowColor = '#00ffff';
+        ctx.shadowBlur = 8;
+        ctx.strokeStyle = '#00ffff';
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
         ctx.beginPath();
         ctx.moveTo(this.x, this.y);
         ctx.lineTo(endX, endY);
         ctx.stroke();
+        ctx.restore();
     }
     
     // Check collision with target

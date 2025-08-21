@@ -6,31 +6,66 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Reflection Game - Ultra Precise Edition</title>
-    <link rel="stylesheet" href="styles/game.css?v=8">
+    <title>REFLECTIONS - Precision Laser Defense</title>
+    <!-- Modern techie fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles/game.css?v=10">
 </head>
 <body>
-    <h1>Reflection Game - Ultra Precise Edition</h1>
+    <h1><span class="neon-text">REFLECTIONS</span></h1>
     
     <div id="instructions">
-        <strong>How to Play:</strong><br>
-        1. Drag the mirrors to position them on the grid (touch and drag on mobile)<br>
-        2. Mirrors snap perfectly to grid lines when released<br>
-        3. Place mirrors to redirect lasers AWAY from the center target<br>
-        4. Click "Launch Lasers" to start<br>
-        5. Protect the center - if any laser hits it, you lose!<br>
-        <em>Mobile users: Rotate to landscape for better experience</em>
+        <div class="instruction-header">⚡ MISSION BRIEFING ⚡</div>
+        <div class="instruction-content">
+            <div class="instruction-item">🎯 <strong>OBJECTIVE:</strong> Protect the core from laser breach</div>
+            <div class="instruction-item">🔧 <strong>CONTROLS:</strong> Drag mirrors to redirect laser paths</div>
+            <div class="instruction-item">⚙️ <strong>PRECISION:</strong> Mirrors snap to grid for perfect alignment</div>
+            <div class="instruction-item">🚀 <strong>EXECUTION:</strong> Launch sequence when ready</div>
+            <div class="instruction-item">📱 <strong>MOBILE:</strong> Rotate device for optimal experience</div>
+        </div>
+    </div>
+    
+    <div id="timer-display" class="timer-display">
+        <div class="timer-label">LASER DURATION</div>
+        <div id="timer-value" class="timer-value">00:00.000</div>
     </div>
     
     <div id="ui">
-        <div id="status">Position your mirrors to protect the center!</div>
-        <button id="launchBtn">Launch Lasers</button>
-        <button id="resetBtn">Reset Game</button>
-        <button id="clearCacheBtn" style="background: #e74c3c;">Clear Cache</button>
+        <div id="status" class="status-modern">Position your mirrors to protect the core!</div>
+        <button id="launchBtn" class="btn-primary">🚀 LAUNCH SEQUENCE</button>
+        <button id="resetBtn" class="btn-secondary">🔄 RESET GRID</button>
+        <button id="clearCacheBtn" class="btn-debug">🗑️ CLEAR CACHE</button>
     </div>
     
     <div id="gameContainer">
         <canvas id="gameCanvas" width="800" height="600"></canvas>
+    </div>
+
+    <!-- Game Over Modal -->
+    <div id="gameOverModal" class="game-over-modal hidden">
+        <div class="game-over-content">
+            <div class="game-over-animation">
+                <div class="explosion-effect"></div>
+                <div class="glitch-text">CORE BREACH</div>
+            </div>
+            <div class="game-over-stats">
+                <div class="stat-item">
+                    <div class="stat-label">LASER DURATION</div>
+                    <div id="finalTime" class="stat-value">00:00.000</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">REFLECTIONS</div>
+                    <div id="finalReflections" class="stat-value">0</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">PRECISION SCORE</div>
+                    <div id="finalScore" class="stat-value neon-text">0</div>
+                </div>
+            </div>
+            <button id="retryBtn" class="btn-primary retry-btn">🔄 RETRY MISSION</button>
+        </div>
     </div>
 
     <!-- Mobile info bubble -->
