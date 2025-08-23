@@ -16,27 +16,36 @@
 <body>
     <h1><span class="neon-text">REFLECTIONS</span></h1>
     
-    <div id="instructions">
-        <div class="instruction-header">⚡ MISSION BRIEFING ⚡</div>
-        <div class="instruction-content">
-            <div class="instruction-item">🎯 <strong>OBJECTIVE:</strong> Protect the core from laser breach</div>
-            <div class="instruction-item">🔧 <strong>CONTROLS:</strong> Drag mirrors to redirect laser paths</div>
-            <div class="instruction-item">⚙️ <strong>PRECISION:</strong> Mirrors snap to grid for perfect alignment</div>
-            <div class="instruction-item">🚀 <strong>EXECUTION:</strong> Launch sequence when ready</div>
-            <div class="instruction-item">📱 <strong>MOBILE:</strong> Rotate device for optimal experience</div>
+    <!-- Hidden Mission Briefing Modal -->
+    <div id="rulesModal" class="rules-modal hidden">
+        <div class="rules-content">
+            <div class="instruction-header">⚡ MISSION BRIEFING ⚡</div>
+            <div class="instruction-content">
+                <div class="instruction-item">🎯 <strong>OBJECTIVE:</strong> Protect the core from laser breach</div>
+                <div class="instruction-item">🔧 <strong>CONTROLS:</strong> Drag mirrors to redirect laser paths</div>
+                <div class="instruction-item">⚙️ <strong>PRECISION:</strong> Mirrors snap to grid for perfect alignment</div>
+                <div class="instruction-item">🚀 <strong>EXECUTION:</strong> Launch sequence when ready</div>
+                <div class="instruction-item">📱 <strong>MOBILE:</strong> Rotate device for optimal experience</div>
+            </div>
+            <button id="closeRules" class="btn-secondary close-rules">✕ Close</button>
         </div>
     </div>
     
-    <div id="timer-display" class="timer-display">
-        <div class="timer-label">LASER DURATION</div>
-        <div id="timer-value" class="timer-value">00:00.000</div>
-    </div>
-    
-    <div id="ui">
-        <div id="status" class="status-modern">Position your mirrors to protect the core!</div>
-        <button id="launchBtn" class="btn-primary">🚀 LAUNCH SEQUENCE</button>
-        <button id="resetBtn" class="btn-secondary">🔄 RESET GRID</button>
-        <button id="clearCacheBtn" class="btn-debug">🗑️ CLEAR CACHE</button>
+    <!-- Game Header with Timer and Controls -->
+    <div id="gameHeader" class="game-header">
+        <div id="timer-display" class="timer-display">
+            <div class="timer-label">LASER DURATION</div>
+            <div id="timer-value" class="timer-value">00:00.000</div>
+        </div>
+        
+        <div id="status" class="status-modern">🎯 Position your mirrors to protect the core!</div>
+        
+        <div id="controls" class="controls-row">
+            <button id="showRulesBtn" class="btn-info">📋 Show Rules</button>
+            <button id="launchBtn" class="btn-primary">🚀 Launch Sequence</button>
+            <button id="resetBtn" class="btn-secondary">🔄 Reset Grid</button>
+            <button id="clearCacheBtn" class="btn-debug">🗑️ Clear Cache</button>
+        </div>
     </div>
     
     <div id="gameContainer">

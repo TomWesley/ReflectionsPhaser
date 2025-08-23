@@ -23,6 +23,9 @@ class Game {
         this.timerElement = document.getElementById('timer-value');
         this.gameOverModal = document.getElementById('gameOverModal');
         this.retryButton = document.getElementById('retryBtn');
+        this.rulesModal = document.getElementById('rulesModal');
+        this.showRulesButton = document.getElementById('showRulesBtn');
+        this.closeRulesButton = document.getElementById('closeRules');
         
         // Timer and scoring
         this.startTime = 0;
@@ -40,10 +43,12 @@ class Game {
     init() {
         this.setupEventListeners();
         this.setupInfoBubble();
+        this.setupRulesModal();
         this.handleMobileLayout();
+        this.scaleCanvasToScreen();
         this.generateMirrors();
         this.generateSpawners();
-        this.updateStatus('Position your mirrors to protect the center!');
+        this.updateStatus('🎯 Position your mirrors to protect the core!');
         this.gameLoop();
     }
     
@@ -67,6 +72,9 @@ class Game {
         
         window.addEventListener('resize', () => {
             this.handleMobileLayout();
+            if (window.innerWidth > 768) {
+                this.scaleCanvasToScreen();
+            }
         });
     }
     
@@ -117,6 +125,63 @@ class Game {
                 infoPopup.classList.add('hidden');
             }
         });
+    }
+    
+    setupRulesModal() {
+        if (this.showRulesButton && this.rulesModal && this.closeRulesButton) {
+            this.showRulesButton.addEventListener('click', () => {
+                this.rulesModal.classList.remove('hidden');
+            });
+            
+            this.closeRulesButton.addEventListener('click', () => {
+                this.rulesModal.classList.add('hidden');
+            });
+            
+            // Close modal when clicking outside
+            this.rulesModal.addEventListener('click', (e) => {
+                if (e.target === this.rulesModal) {
+                    this.rulesModal.classList.add('hidden');
+                }
+            });
+        }
+    }
+    
+    scaleCanvasToScreen() {
+        // Calculate available screen space (leave some margin)
+        const margin = 40;
+        const headerHeight = document.getElementById('gameHeader')?.offsetHeight || 120;
+        const availableWidth = window.innerWidth - margin * 2;
+        const availableHeight = window.innerHeight - headerHeight - margin * 2;
+        
+        // Maintain aspect ratio (4:3)
+        const aspectRatio = 4 / 3;
+        let canvasWidth, canvasHeight;
+        
+        if (availableWidth / availableHeight > aspectRatio) {
+            // Height is the limiting factor
+            canvasHeight = availableHeight;
+            canvasWidth = canvasHeight * aspectRatio;
+        } else {
+            // Width is the limiting factor
+            canvasWidth = availableWidth;
+            canvasHeight = canvasWidth / aspectRatio;
+        }
+        
+        // Set minimum size
+        const minWidth = 600;
+        const minHeight = 450;
+        canvasWidth = Math.max(canvasWidth, minWidth);
+        canvasHeight = Math.max(canvasHeight, minHeight);
+        
+        // Apply scaling to canvas
+        this.canvas.style.width = canvasWidth + 'px';
+        this.canvas.style.height = canvasHeight + 'px';
+        
+        // Store scale factor for coordinate conversion
+        this.scaleX = this.canvas.width / canvasWidth;
+        this.scaleY = this.canvas.height / canvasHeight;
+        
+        console.log('Canvas scaled to:', { canvasWidth, canvasHeight, scaleX: this.scaleX, scaleY: this.scaleY });
     }
     
     setupEventListeners() {
@@ -370,8 +435,8 @@ class Game {
         if (this.isPlaying) return;
         
         const rect = this.canvas.getBoundingClientRect();
-        const scaleX = this.canvas.width / rect.width;
-        const scaleY = this.canvas.height / rect.height;
+        const scaleX = this.scaleX || (this.canvas.width / rect.width);
+        const scaleY = this.scaleY || (this.canvas.height / rect.height);
         
         const pointerX = (e.clientX - rect.left) * scaleX;
         const pointerY = (e.clientY - rect.top) * scaleY;
@@ -393,8 +458,8 @@ class Game {
         if (!this.draggedMirror || this.isPlaying) return;
         
         const rect = this.canvas.getBoundingClientRect();
-        const scaleX = this.canvas.width / rect.width;
-        const scaleY = this.canvas.height / rect.height;
+        const scaleX = this.scaleX || (this.canvas.width / rect.width);
+        const scaleY = this.scaleY || (this.canvas.height / rect.height);
         
         const pointerX = (e.clientX - rect.left) * scaleX;
         const pointerY = (e.clientY - rect.top) * scaleY;
@@ -538,12 +603,34 @@ class Game {
         console.log('showGameOverModal called');
         if (this.gameOverModal) {
             console.log('Game over modal found, showing...');
-            // Calculate final score based on time and reflections
-            const timeBonus = Math.max(0, 10000 - this.elapsedTime);
-            const reflectionBonus = this.totalReflections * 100;
-            const finalScore = Math.round(timeBonus + reflectionBonus);
+            // Calculate precision score with multiple factors
+            const survivedSeconds = this.elapsedTime / 1000;
             
-            console.log('Final stats:', { time: this.elapsedTime, reflections: this.totalReflections, score: finalScore });
+            // Time Bonus: More points for surviving longer (up to 60 seconds)
+            const timeBonus = Math.min(survivedSeconds * 150, 9000);
+            
+            // Reflection Bonus: Points for each laser reflection (skill demonstration)
+            const reflectionBonus = this.totalReflections * 75;
+            
+            // Precision Bonus: Extra points based on time vs reflections ratio
+            // Rewards players who create complex reflection patterns
+            const precisionRatio = this.totalReflections / Math.max(survivedSeconds, 1);
+            const precisionBonus = Math.round(precisionRatio * 200);
+            
+            // Base survival bonus for lasting any amount of time
+            const baseSurvivalBonus = survivedSeconds > 0 ? 500 : 0;
+            
+            const finalScore = Math.round(timeBonus + reflectionBonus + precisionBonus + baseSurvivalBonus);
+            
+            console.log('Score breakdown:', { 
+                survivedSeconds: survivedSeconds.toFixed(3), 
+                timeBonus, 
+                reflectionBonus, 
+                precisionBonus,
+                baseSurvivalBonus,
+                totalReflections: this.totalReflections, 
+                finalScore 
+            });
             
             // Update modal content
             const finalTimeElement = document.getElementById('finalTime');

@@ -54,7 +54,7 @@ const GameConfig = {
     // Gameplay Settings
     SPAWNER_COUNT: 3,
     LASER_ANGLE_VARIATION: 120, // ±60 degrees from center direction
-    LASER_TRAIL_LENGTH: 120,
+    LASER_TRAIL_LENGTH: 80,
     
     // Collision Settings
     TARGET_SAFE_RADIUS: 100, // Increased for larger target
