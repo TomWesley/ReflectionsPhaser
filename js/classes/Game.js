@@ -289,15 +289,19 @@ class Game {
     
     generateSpawners() {
         this.spawners = [];
-        const positions = Spawner.getEdgePositions();
         
-        // Pick random spawners
-        const selectedPositions = this.shuffleArray([...positions]).slice(0, GameConfig.SPAWNER_COUNT);
+        // Random number of spawners between 3-5
+        const spawnerCount = Math.floor(Math.random() * 3) + 3; // 3, 4, or 5
         
-        selectedPositions.forEach(pos => {
+        // Get random positions along the entire perimeter
+        const positions = Spawner.getRandomEdgePositions(spawnerCount);
+        
+        positions.forEach(pos => {
             const randomAngle = Spawner.generateRandomAngleToCenter(pos.x, pos.y);
             this.spawners.push(new Spawner(pos.x, pos.y, randomAngle));
         });
+        
+        console.log(`Generated ${spawnerCount} spawners at random perimeter positions`);
     }
     
     snapToGrid(value) {

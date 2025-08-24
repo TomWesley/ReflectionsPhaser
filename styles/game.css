@@ -312,16 +312,22 @@ h1 {
 }
 
 .btn-info {
-    background: linear-gradient(135deg, rgba(0, 128, 255, 0.8), rgba(0, 255, 255, 0.8));
-    color: var(--text-primary);
-    border: 1px solid var(--primary-blue);
-    box-shadow: 0 4px 15px rgba(0, 128, 255, 0.2);
+    background: linear-gradient(135deg, rgba(0, 255, 136, 0.8), rgba(0, 255, 255, 0.8));
+    color: var(--dark-bg);
+    border: 1px solid var(--success-green);
+    box-shadow: 
+        0 4px 15px rgba(0, 255, 136, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    text-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
 }
 
 .btn-info:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(0, 128, 255, 0.3);
-    background: linear-gradient(135deg, var(--primary-blue), var(--primary-cyan));
+    box-shadow: 
+        0 6px 20px rgba(0, 255, 136, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    background: linear-gradient(135deg, var(--success-green), var(--primary-cyan));
+    text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
 }
 
 .btn-primary:active, .btn-secondary:active, .btn-debug:active {
@@ -727,6 +733,11 @@ h1 {
     .btn-primary, .btn-secondary, .btn-debug, .btn-info {
         font-size: 1rem;
         padding: 10px 20px;
+    }
+    
+    /* Hide any remaining mission briefing elements on desktop */
+    #instructions {
+        display: none !important;
     }
 }
 

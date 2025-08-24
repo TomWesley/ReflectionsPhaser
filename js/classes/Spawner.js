@@ -7,29 +7,57 @@ class Spawner {
     }
     
     draw(ctx) {
-        // Draw spawner body
-        ctx.fillStyle = GameConfig.COLORS.SPAWNER_BODY;
+        ctx.save();
+        
+        // Draw glowing spawner body
+        ctx.shadowColor = '#ff0080';
+        ctx.shadowBlur = 15;
+        ctx.fillStyle = '#ff0080';
         ctx.beginPath();
-        ctx.arc(this.x, this.y, 8, 0, Math.PI * 2);
+        ctx.arc(this.x, this.y, 10, 0, Math.PI * 2);
         ctx.fill();
         
-        // Draw direction indicator
-        const directionLength = 20;
-        const endX = this.x + Math.cos(this.angle) * directionLength;
-        const endY = this.y + Math.sin(this.angle) * directionLength;
+        // Inner bright core
+        ctx.shadowBlur = 8;
+        ctx.fillStyle = '#ff66cc';
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, 6, 0, Math.PI * 2);
+        ctx.fill();
         
-        ctx.strokeStyle = GameConfig.COLORS.SPAWNER_ARROW;
+        // Draw laser preview path - bright and visible
+        const pathLength = 150;
+        const endX = this.x + Math.cos(this.angle) * pathLength;
+        const endY = this.y + Math.sin(this.angle) * pathLength;
+        
+        // Outer glow for path
+        ctx.shadowColor = '#ff0080';
+        ctx.shadowBlur = 12;
+        ctx.strokeStyle = 'rgba(255, 0, 128, 0.4)';
+        ctx.lineWidth = 8;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(this.x, this.y);
+        ctx.lineTo(endX, endY);
+        ctx.stroke();
+        
+        // Bright inner path
+        ctx.shadowBlur = 6;
+        ctx.strokeStyle = '#ff0080';
         ctx.lineWidth = 3;
         ctx.beginPath();
         ctx.moveTo(this.x, this.y);
         ctx.lineTo(endX, endY);
         ctx.stroke();
         
-        // Draw arrowhead
-        const arrowSize = 6;
+        // Bright arrowhead
+        const arrowSize = 12;
         const arrowAngle1 = this.angle + Math.PI * 0.8;
         const arrowAngle2 = this.angle - Math.PI * 0.8;
         
+        ctx.shadowBlur = 8;
+        ctx.strokeStyle = '#ff0080';
+        ctx.lineWidth = 4;
+        ctx.lineCap = 'round';
         ctx.beginPath();
         ctx.moveTo(endX, endY);
         ctx.lineTo(endX + Math.cos(arrowAngle1) * arrowSize, endY + Math.sin(arrowAngle1) * arrowSize);
@@ -37,14 +65,7 @@ class Spawner {
         ctx.lineTo(endX + Math.cos(arrowAngle2) * arrowSize, endY + Math.sin(arrowAngle2) * arrowSize);
         ctx.stroke();
         
-        // Draw angle indicator text (for debugging/clarity)
-        if (GameConfig.SHOW_DEBUG_INFO) {
-            const degrees = Math.round(this.angle * 180 / Math.PI);
-            ctx.fillStyle = GameConfig.COLORS.SPAWNER_BODY;
-            ctx.font = '12px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText(`${degrees}°`, this.x, this.y - 15);
-        }
+        ctx.restore();
     }
     
     // Create a laser from this spawner
@@ -52,14 +73,38 @@ class Spawner {
         return new Laser(this.x, this.y, this.angle);
     }
     
-    // Get position for placing spawner on edge
-    static getEdgePositions() {
-        return [
-            { x: 0, y: GameConfig.CANVAS_HEIGHT / 2 }, // Left edge
-            { x: GameConfig.CANVAS_WIDTH, y: GameConfig.CANVAS_HEIGHT / 2 }, // Right edge
-            { x: GameConfig.CANVAS_WIDTH / 2, y: 0 }, // Top edge
-            { x: GameConfig.CANVAS_WIDTH / 2, y: GameConfig.CANVAS_HEIGHT } // Bottom edge
-        ];
+    // Generate random positions anywhere along the perimeter
+    static getRandomEdgePositions(count) {
+        const positions = [];
+        const perimeter = 2 * (GameConfig.CANVAS_WIDTH + GameConfig.CANVAS_HEIGHT);
+        
+        // Generate random positions along perimeter
+        for (let i = 0; i < count; i++) {
+            const t = Math.random() * perimeter;
+            let x, y;
+            
+            if (t < GameConfig.CANVAS_WIDTH) {
+                // Top edge
+                x = t;
+                y = 0;
+            } else if (t < GameConfig.CANVAS_WIDTH + GameConfig.CANVAS_HEIGHT) {
+                // Right edge
+                x = GameConfig.CANVAS_WIDTH;
+                y = t - GameConfig.CANVAS_WIDTH;
+            } else if (t < 2 * GameConfig.CANVAS_WIDTH + GameConfig.CANVAS_HEIGHT) {
+                // Bottom edge
+                x = GameConfig.CANVAS_WIDTH - (t - GameConfig.CANVAS_WIDTH - GameConfig.CANVAS_HEIGHT);
+                y = GameConfig.CANVAS_HEIGHT;
+            } else {
+                // Left edge
+                x = 0;
+                y = GameConfig.CANVAS_HEIGHT - (t - 2 * GameConfig.CANVAS_WIDTH - GameConfig.CANVAS_HEIGHT);
+            }
+            
+            positions.push({ x: Math.round(x), y: Math.round(y) });
+        }
+        
+        return positions;
     }
     
     // Generate random angle towards center with variation
