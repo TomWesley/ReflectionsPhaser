@@ -11,7 +11,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles/game.css?v=11">
+    <link rel="stylesheet" href="styles/game.css">
 </head>
 <body>
     <h1><span class="neon-text">REFLECTIONS</span></h1>
@@ -21,30 +21,27 @@
         <div class="rules-content">
             <div class="instruction-header">⚡ MISSION BRIEFING ⚡</div>
             <div class="instruction-content">
-                <div class="instruction-item">🎯 <strong>OBJECTIVE:</strong> Protect the core from laser breach</div>
-                <div class="instruction-item">🔧 <strong>CONTROLS:</strong> Drag mirrors to redirect laser paths</div>
-                <div class="instruction-item">⚙️ <strong>PRECISION:</strong> Mirrors snap to grid for perfect alignment</div>
-                <div class="instruction-item">🚀 <strong>EXECUTION:</strong> Launch sequence when ready</div>
-                <div class="instruction-item">📱 <strong>MOBILE:</strong> Rotate device for optimal experience</div>
+                <div class="instruction-item">🎯 Drag mirrors to redirect incoming laser threats</div>
+                <div class="instruction-item">⚡ Mirrors auto-snap to defensive grid positions</div>
+                <div class="instruction-item">🛡️ Deflect ALL lasers away from the central core</div>
+                <div class="instruction-item">🚀 Launch sequence initiates defensive protocols</div>
+                <div class="instruction-item">💥 Core breach = Mission failure!</div>
             </div>
-            <button id="closeRules" class="btn-secondary close-rules">✕ Close</button>
+            <button class="btn-primary close-rules" onclick="closeRules()">INITIATE DEFENSE</button>
         </div>
     </div>
-    
-    <!-- Game Header with Timer and Controls -->
-    <div id="gameHeader" class="game-header">
-        <div id="timer-display" class="timer-display">
-            <div class="timer-label">LASER DURATION</div>
-            <div id="timer-value" class="timer-value">00:00.000</div>
+
+    <!-- Game Header with Controls -->
+    <div class="game-header">
+        <div class="controls-row">
+            <button id="launchBtn" class="btn-primary">Launch Lasers</button>
+            <button id="resetBtn" class="btn-secondary">Reset Game</button>
+            <button class="btn-info" onclick="openRules()">Mission Brief</button>
         </div>
-        
-        <div id="status" class="status-modern">🎯 Position your mirrors to protect the core!</div>
-        
-        <div id="controls" class="controls-row">
-            <button id="showRulesBtn" class="btn-info">⚡ Mission Brief</button>
-            <button id="launchBtn" class="btn-primary">🚀 Launch Sequence</button>
-            <button id="resetBtn" class="btn-secondary">🔄 Reset Grid</button>
-            <button id="clearCacheBtn" class="btn-debug">🗑️ Clear Cache</button>
+        <div id="status" class="status-modern">Position your mirrors to protect the center!</div>
+        <div class="timer-display">
+            <div class="timer-label">SURVIVAL TIME</div>
+            <div id="timer" class="timer-value">0:00</div>
         </div>
     </div>
     
@@ -52,118 +49,904 @@
         <canvas id="gameCanvas" width="800" height="600"></canvas>
     </div>
 
-    <!-- Game Over Modal -->
-    <div id="gameOverModal" class="game-over-modal hidden">
-        <div class="game-over-content">
-            <div class="game-over-animation">
-                <div class="explosion-effect"></div>
-                <div class="glitch-text">CORE BREACH</div>
-            </div>
-            <div class="game-over-stats">
-                <div class="stat-item">
-                    <div class="stat-label">LASER DURATION</div>
-                    <div id="finalTime" class="stat-value">00:00.000</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-label">REFLECTIONS</div>
-                    <div id="finalReflections" class="stat-value">0</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-label">PRECISION SCORE</div>
-                    <div id="finalScore" class="stat-value neon-text">0</div>
-                </div>
-            </div>
-            <button id="retryBtn" class="btn-primary retry-btn">🔄 RETRY MISSION</button>
-        </div>
-    </div>
-
     <!-- Mobile info bubble -->
-    <div id="infoBubble" class="info-bubble">
-        <button id="infoButton" class="info-button">i</button>
+    <div class="info-bubble">
+        <button class="info-button" onclick="toggleInfoPopup()">?</button>
         <div id="infoPopup" class="info-popup hidden">
+            <button class="close-button" onclick="toggleInfoPopup()">×</button>
             <div class="info-content">
-                <button id="closeInfo" class="close-button">×</button>
-                <strong>How to Play:</strong><br>
-                1. Drag mirrors to position them on the grid<br>
-                2. Mirrors snap to grid lines when released<br>
-                3. Redirect lasers AWAY from the center target<br>
-                4. Tap "Launch Lasers" to start<br>
-                5. Protect the center - if any laser hits it, you lose!
+                <strong>🎯 LASER DEFENSE PROTOCOL</strong><br><br>
+                🔧 Drag mirrors to redirect laser threats<br>
+                🎯 Protect the central core at all costs<br>
+                🚀 Launch when ready for action<br>
+                💥 Core breach = Mission failure
             </div>
         </div>
     </div>
 
-    <!-- Game Configuration -->
-    <script src="js/config/GameConfig.js"></script>
-    
-    <!-- Game Classes -->
-    <script src="js/classes/SATCollision.js?v=8"></script>
-    <script src="js/classes/Mirror.js?v=8"></script>
-    <script src="js/classes/Laser.js?v=8"></script>
-    <script src="js/classes/Spawner.js?v=8"></script>
-    <script src="js/classes/Game.js?v=8"></script>
-    
-    <!-- Initialize Game -->
-    <script src="js/main.js"></script>
-    
-    <!-- Simple cache clear test -->
     <script>
-        console.log('Simple script test - this should show in console');
-        
-        // Try to add click handler directly in HTML
-        setTimeout(() => {
-            const btn = document.getElementById('clearCacheBtn');
-            console.log('Direct script found button:', btn);
-            
-            if (btn) {
-                btn.onclick = async function() {
-                    console.log('Clearing all caches...');
-                    
-                    try {
-                        // Clear service worker caches
-                        if ('caches' in window) {
-                            const cacheNames = await caches.keys();
-                            console.log('Found caches:', cacheNames);
-                            await Promise.all(
-                                cacheNames.map(cacheName => {
-                                    console.log('Deleting cache:', cacheName);
-                                    return caches.delete(cacheName);
-                                })
-                            );
-                        }
-                        
-                        // Clear storage
-                        localStorage.clear();
-                        sessionStorage.clear();
-                        
-                        // Clear IndexedDB
-                        if ('indexedDB' in window) {
-                            // This is more complex, but we'll do a basic clear
-                            try {
-                                indexedDB.deleteDatabase('gameData');
-                            } catch(e) {
-                                console.log('IndexedDB clear skipped:', e);
-                            }
-                        }
-                        
-                        console.log('All caches cleared successfully');
-                        alert('Cache cleared! Page will reload with fresh content...');
-                        
-                        // Add a unique timestamp to force cache bypass
-                        const timestamp = Date.now();
-                        const url = window.location.href.split('?')[0] + '?nocache=' + timestamp;
-                        
-                        // Reload with cache busting
-                        window.location.replace(url);
-                        
-                    } catch (error) {
-                        console.error('Cache clear error:', error);
-                        alert('Cache clear completed (some errors). Reloading...');
-                        window.location.reload(true);
-                    }
-                };
+        // UI Functions
+        function openRules() {
+            document.getElementById('rulesModal').classList.remove('hidden');
+        }
+
+        function closeRules() {
+            document.getElementById('rulesModal').classList.add('hidden');
+        }
+
+        function toggleInfoPopup() {
+            const popup = document.getElementById('infoPopup');
+            popup.classList.toggle('hidden');
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('rulesModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeRules();
             }
-        }, 1000);
+        });
+        // Game Configuration
+        const CONFIG = {
+            CANVAS_WIDTH: 800,
+            CANVAS_HEIGHT: 600,
+            GRID_SIZE: 20,
+            MIRROR_SIZE: 40, // 2x2 grid cells
+            LASER_SPEED: 2,
+            LASER_RADIUS: 2,
+            TARGET_RADIUS: 25,
+            EDGE_MARGIN: 40,
+            ANGLE_INCREMENT: 15, // degrees
+            MIRROR_COUNT: 8
+        };
+
+        // Game State
+        class Game {
+            constructor() {
+                this.canvas = document.getElementById('gameCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.isPlaying = false;
+                this.gameOver = false;
+                this.startTime = 0;
+                this.gameTime = 0;
+                
+                // Game objects
+                this.mirrors = [];
+                this.lasers = [];
+                this.spawners = [];
+                
+                // Interaction state
+                this.draggedMirror = null;
+                this.dragOffset = { x: 0, y: 0 };
+                
+                this.init();
+            }
+            
+            init() {
+                this.setupEventListeners();
+                this.generateMirrors();
+                this.generateSpawners();
+                this.gameLoop();
+            }
+            
+            setupEventListeners() {
+                // Mouse events
+                this.canvas.addEventListener('mousedown', (e) => this.onMouseDown(e));
+                this.canvas.addEventListener('mousemove', (e) => this.onMouseMove(e));
+                this.canvas.addEventListener('mouseup', (e) => this.onMouseUp(e));
+                
+                // UI buttons
+                document.getElementById('launchBtn').addEventListener('click', () => this.launchLasers());
+                document.getElementById('resetBtn').addEventListener('click', () => this.resetGame());
+            }
+            
+            generateMirrors() {
+                this.mirrors = [];
+                const center = { x: CONFIG.CANVAS_WIDTH / 2, y: CONFIG.CANVAS_HEIGHT / 2 };
+                
+                for (let i = 0; i < CONFIG.MIRROR_COUNT; i++) {
+                    let x, y, attempts = 0;
+                    
+                    do {
+                        // Generate position in ring around center
+                        const angle = Math.random() * Math.PI * 2;
+                        const distance = 120 + Math.random() * 150;
+                        x = center.x + Math.cos(angle) * distance;
+                        y = center.y + Math.sin(angle) * distance;
+                        
+                        // Snap to grid
+                        x = this.snapToGrid(x);
+                        y = this.snapToGrid(y);
+                        
+                        attempts++;
+                    } while (!this.isValidMirrorPosition(x, y) && attempts < 100);
+                    
+                    this.mirrors.push(new Mirror(x, y));
+                }
+            }
+            
+            generateSpawners() {
+                this.spawners = [];
+                
+                // Generate random positions along each edge
+                const generateRandomPositions = () => {
+                    const positions = [];
+                    const margin = 50; // Keep spawners away from corners
+                    
+                    // Left edge - random Y position
+                    positions.push({ 
+                        x: 0, 
+                        y: margin + Math.random() * (CONFIG.CANVAS_HEIGHT - 2 * margin),
+                        edge: 'left'
+                    });
+                    
+                    // Right edge - random Y position  
+                    positions.push({ 
+                        x: CONFIG.CANVAS_WIDTH, 
+                        y: margin + Math.random() * (CONFIG.CANVAS_HEIGHT - 2 * margin),
+                        edge: 'right'
+                    });
+                    
+                    // Top edge - random X position
+                    positions.push({ 
+                        x: margin + Math.random() * (CONFIG.CANVAS_WIDTH - 2 * margin), 
+                        y: 0,
+                        edge: 'top'
+                    });
+                    
+                    // Bottom edge - random X position
+                    positions.push({ 
+                        x: margin + Math.random() * (CONFIG.CANVAS_WIDTH - 2 * margin), 
+                        y: CONFIG.CANVAS_HEIGHT,
+                        edge: 'bottom'
+                    });
+                    
+                    return positions;
+                };
+                
+                // Pick 3 random spawners from random edge positions
+                const allPositions = generateRandomPositions();
+                const selectedPositions = this.shuffleArray([...allPositions]).slice(0, 3);
+                
+                selectedPositions.forEach(pos => {
+                    const randomAngle = this.getRandomAngleInbound(pos.x, pos.y, pos.edge);
+                    this.spawners.push(new Spawner(pos.x, pos.y, randomAngle));
+                });
+            }
+            
+            snapToGrid(value) {
+                return Math.round(value / CONFIG.GRID_SIZE) * CONFIG.GRID_SIZE;
+            }
+            
+            isValidMirrorPosition(x, y) {
+                // Check bounds
+                if (x < CONFIG.EDGE_MARGIN || x > CONFIG.CANVAS_WIDTH - CONFIG.EDGE_MARGIN ||
+                    y < CONFIG.EDGE_MARGIN || y > CONFIG.CANVAS_HEIGHT - CONFIG.EDGE_MARGIN) {
+                    return false;
+                }
+                
+                // Check distance from center
+                const centerX = CONFIG.CANVAS_WIDTH / 2;
+                const centerY = CONFIG.CANVAS_HEIGHT / 2;
+                const distFromCenter = Math.sqrt((x - centerX) ** 2 + (y - centerY) ** 2);
+                if (distFromCenter < 80) {
+                    return false;
+                }
+                
+                // Check overlap with other mirrors (exact overlap only, allow touching)
+                for (let mirror of this.mirrors) {
+                    if (mirror.x === x && mirror.y === y) {
+                        return false; // Exact same position
+                    }
+                }
+                
+                return true;
+            }
+            
+            getRandomAngleInbound(x, y, edge) {
+                let baseAngleDegrees;
+                let allowedRange = 120; // ±60 degrees from base direction
+                
+                // Determine base inbound direction based on edge
+                switch(edge) {
+                    case 'left':
+                        baseAngleDegrees = 0; // Point right into the play area
+                        break;
+                    case 'right': 
+                        baseAngleDegrees = 180; // Point left into the play area
+                        break;
+                    case 'top':
+                        baseAngleDegrees = 90; // Point down into the play area
+                        break;
+                    case 'bottom':
+                        baseAngleDegrees = 270; // Point up into the play area
+                        break;
+                    default:
+                        // Fallback to center-pointing logic
+                        const centerX = CONFIG.CANVAS_WIDTH / 2;
+                        const centerY = CONFIG.CANVAS_HEIGHT / 2;
+                        const directAngle = Math.atan2(centerY - y, centerX - x);
+                        baseAngleDegrees = directAngle * 180 / Math.PI;
+                        break;
+                }
+                
+                // Add random variation within allowed range
+                const variation = (Math.random() - 0.5) * allowedRange;
+                const randomDegrees = baseAngleDegrees + variation;
+                
+                // Snap to 15-degree increments
+                const snappedDegrees = Math.round(randomDegrees / CONFIG.ANGLE_INCREMENT) * CONFIG.ANGLE_INCREMENT;
+                
+                // Convert to radians
+                return (snappedDegrees % 360) * Math.PI / 180;
+            }
+            
+            // Keep the old method for backwards compatibility if needed
+            getRandomAngleTowardsCenter(x, y) {
+                const centerX = CONFIG.CANVAS_WIDTH / 2;
+                const centerY = CONFIG.CANVAS_HEIGHT / 2;
+                
+                // Get the direct angle to center
+                const directAngle = Math.atan2(centerY - y, centerX - x);
+                const directDegrees = directAngle * 180 / Math.PI;
+                
+                // Add random variation (±60 degrees for good gameplay)
+                const variation = (Math.random() - 0.5) * 120; // ±60 degrees
+                const randomDegrees = directDegrees + variation;
+                
+                // Snap to 15-degree increments
+                const snappedDegrees = Math.round(randomDegrees / CONFIG.ANGLE_INCREMENT) * CONFIG.ANGLE_INCREMENT;
+                return snappedDegrees * Math.PI / 180;
+            }
+            
+            shuffleArray(array) {
+                for (let i = array.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [array[i], array[j]] = [array[j], array[i]];
+                }
+                return array;
+            }
+            
+            launchLasers() {
+                if (this.isPlaying) return;
+                
+                this.isPlaying = true;
+                this.gameOver = false;
+                this.startTime = Date.now();
+                this.gameTime = 0;
+                this.lasers = [];
+                
+                // Create lasers from spawners
+                this.spawners.forEach(spawner => {
+                    this.lasers.push(new Laser(spawner.x, spawner.y, spawner.angle));
+                });
+                
+                document.getElementById('launchBtn').disabled = true;
+                const statusEl = document.getElementById('status');
+                statusEl.textContent = 'Lasers launched! Protect the center!';
+                statusEl.className = 'status-modern status-playing';
+            }
+            
+            resetGame() {
+                this.isPlaying = false;
+                this.gameOver = false;
+                this.startTime = 0;
+                this.gameTime = 0;
+                this.lasers = [];
+                document.getElementById('timer').textContent = '0:00';
+                this.generateMirrors();
+                this.generateSpawners();
+                
+                document.getElementById('launchBtn').disabled = false;
+                const statusEl = document.getElementById('status');
+                statusEl.textContent = 'Position your mirrors to protect the center!';
+                statusEl.className = 'status-modern';
+            }
+            
+            onMouseDown(e) {
+                if (this.isPlaying) return;
+                
+                const rect = this.canvas.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left;
+                const mouseY = e.clientY - rect.top;
+                
+                // Check if clicking on a mirror
+                for (let mirror of this.mirrors) {
+                    if (mouseX >= mirror.x - CONFIG.MIRROR_SIZE/2 && 
+                        mouseX <= mirror.x + CONFIG.MIRROR_SIZE/2 &&
+                        mouseY >= mirror.y - CONFIG.MIRROR_SIZE/2 && 
+                        mouseY <= mirror.y + CONFIG.MIRROR_SIZE/2) {
+                        
+                        this.draggedMirror = mirror;
+                        this.dragOffset.x = mouseX - mirror.x;
+                        this.dragOffset.y = mouseY - mirror.y;
+                        this.canvas.style.cursor = 'grabbing';
+                        mirror.isDragging = true;
+                        console.log('Started dragging mirror at', mirror.x, mirror.y);
+                        break;
+                    }
+                }
+            }
+            
+            onMouseMove(e) {
+                if (!this.draggedMirror || this.isPlaying) return;
+                
+                const rect = this.canvas.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left;
+                const mouseY = e.clientY - rect.top;
+                
+                // Move smoothly without snapping during drag
+                const newX = mouseX - this.dragOffset.x;
+                const newY = mouseY - this.dragOffset.y;
+                
+                // Update mirror position directly (no validation during drag)
+                this.draggedMirror.x = newX;
+                this.draggedMirror.y = newY;
+                this.draggedMirror.isDragging = true;
+            }
+            
+            onMouseUp(e) {
+                if (this.draggedMirror) {
+                    // Snap to grid on release
+                    const snappedX = this.snapToGrid(this.draggedMirror.x);
+                    const snappedY = this.snapToGrid(this.draggedMirror.y);
+                    
+                    // Check if the snapped position is valid
+                    const tempX = this.draggedMirror.x;
+                    const tempY = this.draggedMirror.y;
+                    this.draggedMirror.x = snappedX;
+                    this.draggedMirror.y = snappedY;
+                    
+                    if (!this.isValidMirrorPosition(snappedX, snappedY)) {
+                        // If invalid, find nearest valid position
+                        const nearestValid = this.findNearestValidPosition(tempX, tempY);
+                        this.draggedMirror.x = nearestValid.x;
+                        this.draggedMirror.y = nearestValid.y;
+                    }
+                    
+                    this.draggedMirror.isDragging = false;
+                    console.log('Snapped mirror to', this.draggedMirror.x, this.draggedMirror.y);
+                }
+                this.draggedMirror = null;
+                this.canvas.style.cursor = 'crosshair';
+            }
+            
+            findNearestValidPosition(x, y) {
+                // Try positions in expanding spiral from current position
+                const startX = this.snapToGrid(x);
+                const startY = this.snapToGrid(y);
+                
+                for (let radius = 0; radius <= 100; radius += CONFIG.GRID_SIZE) {
+                    for (let angle = 0; angle < 360; angle += 45) {
+                        const testX = startX + Math.cos(angle * Math.PI / 180) * radius;
+                        const testY = startY + Math.sin(angle * Math.PI / 180) * radius;
+                        const snappedTestX = this.snapToGrid(testX);
+                        const snappedTestY = this.snapToGrid(testY);
+                        
+                        if (this.isValidMirrorPosition(snappedTestX, snappedTestY)) {
+                            return { x: snappedTestX, y: snappedTestY };
+                        }
+                    }
+                }
+                
+                // Fallback to original position if no valid position found
+                return { x: startX, y: startY };
+            }
+            
+            update() {
+                if (!this.isPlaying || this.gameOver) return;
+                
+                // Update game time
+                this.gameTime = (Date.now() - this.startTime) / 1000;
+                this.updateTimerDisplay();
+                
+                // Update lasers
+                for (let i = this.lasers.length - 1; i >= 0; i--) {
+                    const laser = this.lasers[i];
+                    laser.update();
+                    
+                    // Check collision with mirrors
+                    for (let mirror of this.mirrors) {
+                        if (this.checkLaserMirrorCollision(laser, mirror)) {
+                            laser.reflect(mirror);
+                            break;
+                        }
+                    }
+                    
+                    // Check collision with center target
+                    if (this.checkLaserTargetCollision(laser)) {
+                        this.gameOver = true;
+                        const statusEl = document.getElementById('status');
+                        statusEl.textContent = 'GAME OVER! Laser hit the center!';
+                        statusEl.className = 'status-modern status-game-over';
+                        return;
+                    }
+                    
+                    // Remove laser if out of bounds
+                    if (laser.x < 0 || laser.x > CONFIG.CANVAS_WIDTH || 
+                        laser.y < 0 || laser.y > CONFIG.CANVAS_HEIGHT) {
+                        this.lasers.splice(i, 1);
+                    }
+                }
+            }
+            
+            checkLaserMirrorCollision(laser, mirror) {
+                // Check if laser is inside mirror rectangle
+                const halfSize = CONFIG.MIRROR_SIZE / 2;
+                return laser.x >= mirror.x - halfSize && 
+                       laser.x <= mirror.x + halfSize &&
+                       laser.y >= mirror.y - halfSize && 
+                       laser.y <= mirror.y + halfSize;
+            }
+            
+            checkLaserTargetCollision(laser) {
+                const centerX = CONFIG.CANVAS_WIDTH / 2;
+                const centerY = CONFIG.CANVAS_HEIGHT / 2;
+                const distance = Math.sqrt((laser.x - centerX) ** 2 + (laser.y - centerY) ** 2);
+                return distance <= CONFIG.TARGET_RADIUS;
+            }
+            
+            render() {
+                // Clear canvas
+                this.ctx.clearRect(0, 0, CONFIG.CANVAS_WIDTH, CONFIG.CANVAS_HEIGHT);
+                
+                // Draw grid
+                this.drawGrid();
+                
+                // Draw center target
+                this.drawTarget();
+                
+                // Draw spawners
+                this.spawners.forEach(spawner => spawner.draw(this.ctx));
+                
+                // Draw mirrors
+                this.mirrors.forEach(mirror => mirror.draw(this.ctx));
+                
+                // Draw lasers
+                this.lasers.forEach(laser => laser.draw(this.ctx));
+                
+                // Draw forbidden zones
+                if (!this.isPlaying) {
+                    this.drawForbiddenZones();
+                }
+            }
+            
+            drawGrid() {
+                this.ctx.strokeStyle = '#ddd';
+                this.ctx.lineWidth = 1;
+                
+                // Vertical lines
+                for (let x = 0; x <= CONFIG.CANVAS_WIDTH; x += CONFIG.GRID_SIZE) {
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(x, 0);
+                    this.ctx.lineTo(x, CONFIG.CANVAS_HEIGHT);
+                    this.ctx.stroke();
+                }
+                
+                // Horizontal lines
+                for (let y = 0; y <= CONFIG.CANVAS_HEIGHT; y += CONFIG.GRID_SIZE) {
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(0, y);
+                    this.ctx.lineTo(CONFIG.CANVAS_WIDTH, y);
+                    this.ctx.stroke();
+                }
+            }
+            
+            drawTarget() {
+                const centerX = CONFIG.CANVAS_WIDTH / 2;
+                const centerY = CONFIG.CANVAS_HEIGHT / 2;
+                const radius = CONFIG.TARGET_RADIUS;
+                
+                this.ctx.save();
+                
+                // Outer protective aura - pulsing effect
+                const pulseIntensity = 0.8 + 0.2 * Math.sin(Date.now() / 300);
+                this.ctx.globalAlpha = pulseIntensity * 0.3;
+                this.ctx.shadowColor = this.gameOver ? '#ff0000' : '#00ff88';
+                this.ctx.shadowBlur = 40;
+                this.ctx.fillStyle = this.gameOver ? 'rgba(255, 0, 0, 0.1)' : 'rgba(0, 255, 136, 0.1)';
+                this.ctx.beginPath();
+                this.ctx.arc(centerX, centerY, radius * 2.5, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                // Middle aura ring
+                this.ctx.globalAlpha = pulseIntensity * 0.5;
+                this.ctx.shadowBlur = 25;
+                this.ctx.fillStyle = this.gameOver ? 'rgba(255, 0, 0, 0.2)' : 'rgba(0, 255, 136, 0.2)';
+                this.ctx.beginPath();
+                this.ctx.arc(centerX, centerY, radius * 1.8, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                // Inner aura
+                this.ctx.globalAlpha = pulseIntensity * 0.7;
+                this.ctx.shadowBlur = 15;
+                this.ctx.fillStyle = this.gameOver ? 'rgba(255, 0, 0, 0.3)' : 'rgba(0, 255, 136, 0.3)';
+                this.ctx.beginPath();
+                this.ctx.arc(centerX, centerY, radius * 1.3, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                this.ctx.globalAlpha = 1;
+                this.ctx.shadowBlur = 0;
+                
+                // Main computer chip body - hexagonal with rounded corners
+                const chipSize = radius * 0.9;
+                this.ctx.fillStyle = this.gameOver ? '#660000' : '#003322';
+                this.ctx.strokeStyle = this.gameOver ? '#ff3366' : '#00ff88';
+                this.ctx.lineWidth = 3;
+                
+                // Draw hexagonal chip outline
+                this.ctx.beginPath();
+                for (let i = 0; i < 6; i++) {
+                    const angle = (i * Math.PI * 2) / 6;
+                    const x = centerX + Math.cos(angle) * chipSize;
+                    const y = centerY + Math.sin(angle) * chipSize;
+                    if (i === 0) this.ctx.moveTo(x, y);
+                    else this.ctx.lineTo(x, y);
+                }
+                this.ctx.closePath();
+                this.ctx.fill();
+                this.ctx.stroke();
+                
+                // Inner chip core - smaller circle with glow
+                this.ctx.shadowColor = this.gameOver ? '#ff3366' : '#00ff88';
+                this.ctx.shadowBlur = 10;
+                this.ctx.fillStyle = this.gameOver ? '#ff1144' : '#00ff66';
+                this.ctx.beginPath();
+                this.ctx.arc(centerX, centerY, chipSize * 0.4, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                // Circuit pattern lines radiating from center
+                this.ctx.shadowBlur = 5;
+                this.ctx.strokeStyle = this.gameOver ? '#ff6699' : '#66ffaa';
+                this.ctx.lineWidth = 2;
+                this.ctx.lineCap = 'round';
+                
+                for (let i = 0; i < 8; i++) {
+                    const angle = (i * Math.PI * 2) / 8;
+                    const innerRadius = chipSize * 0.5;
+                    const outerRadius = chipSize * 0.8;
+                    
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(
+                        centerX + Math.cos(angle) * innerRadius,
+                        centerY + Math.sin(angle) * innerRadius
+                    );
+                    this.ctx.lineTo(
+                        centerX + Math.cos(angle) * outerRadius,
+                        centerY + Math.sin(angle) * outerRadius
+                    );
+                    this.ctx.stroke();
+                }
+                
+                // Corner connection points (like chip pins)
+                this.ctx.shadowBlur = 3;
+                this.ctx.fillStyle = this.gameOver ? '#ff4477' : '#44ff77';
+                for (let i = 0; i < 6; i++) {
+                    const angle = (i * Math.PI * 2) / 6;
+                    const x = centerX + Math.cos(angle) * chipSize * 0.9;
+                    const y = centerY + Math.sin(angle) * chipSize * 0.9;
+                    
+                    this.ctx.beginPath();
+                    this.ctx.arc(x, y, 2, 0, Math.PI * 2);
+                    this.ctx.fill();
+                }
+                
+                // Central processing indicator - pulsing dot
+                this.ctx.shadowBlur = 8;
+                this.ctx.fillStyle = this.gameOver ? '#ffffff' : '#ffffff';
+                const centralPulse = 0.5 + 0.5 * Math.sin(Date.now() / 150);
+                this.ctx.globalAlpha = centralPulse;
+                this.ctx.beginPath();
+                this.ctx.arc(centerX, centerY, 3, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                this.ctx.restore();
+            }
+            
+            drawForbiddenZones() {
+                this.ctx.fillStyle = 'rgba(255, 0, 0, 0.1)';
+                
+                // Center forbidden zone
+                const centerX = CONFIG.CANVAS_WIDTH / 2;
+                const centerY = CONFIG.CANVAS_HEIGHT / 2;
+                this.ctx.beginPath();
+                this.ctx.arc(centerX, centerY, 80, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                // Edge forbidden zones
+                this.ctx.fillRect(0, 0, CONFIG.CANVAS_WIDTH, CONFIG.EDGE_MARGIN);
+                this.ctx.fillRect(0, CONFIG.CANVAS_HEIGHT - CONFIG.EDGE_MARGIN, CONFIG.CANVAS_WIDTH, CONFIG.EDGE_MARGIN);
+                this.ctx.fillRect(0, 0, CONFIG.EDGE_MARGIN, CONFIG.CANVAS_HEIGHT);
+                this.ctx.fillRect(CONFIG.CANVAS_WIDTH - CONFIG.EDGE_MARGIN, 0, CONFIG.EDGE_MARGIN, CONFIG.CANVAS_HEIGHT);
+            }
+            
+            updateTimerDisplay() {
+                const minutes = Math.floor(this.gameTime / 60);
+                const seconds = Math.floor(this.gameTime % 60);
+                const timeString = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                document.getElementById('timer').textContent = timeString;
+            }
+            
+            gameLoop() {
+                this.update();
+                this.render();
+                requestAnimationFrame(() => this.gameLoop());
+            }
+        }
+
+        // Mirror Class
+        class Mirror {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.isDragging = false;
+            }
+            
+            draw(ctx) {
+                const halfSize = CONFIG.MIRROR_SIZE / 2;
+                
+                // Draw glow effect if being dragged
+                if (this.isDragging) {
+                    ctx.shadowColor = '#ffff00';
+                    ctx.shadowBlur = 15;
+                    ctx.fillStyle = 'rgba(255, 255, 0, 0.3)';
+                    ctx.fillRect(this.x - halfSize - 5, this.y - halfSize - 5, CONFIG.MIRROR_SIZE + 10, CONFIG.MIRROR_SIZE + 10);
+                    ctx.shadowBlur = 0;
+                }
+                
+                // Mirror surface (silver)
+                ctx.fillStyle = this.isDragging ? '#d0d0d0' : '#c0c0c0';
+                ctx.fillRect(this.x - halfSize, this.y - halfSize, CONFIG.MIRROR_SIZE, CONFIG.MIRROR_SIZE);
+                
+                // Highlight (top-left)
+                ctx.fillStyle = this.isDragging ? '#ffffff' : '#f0f0f0';
+                ctx.fillRect(this.x - halfSize, this.y - halfSize, CONFIG.MIRROR_SIZE, 4);
+                ctx.fillRect(this.x - halfSize, this.y - halfSize, 4, CONFIG.MIRROR_SIZE);
+                
+                // Frame
+                ctx.strokeStyle = this.isDragging ? '#000' : '#333';
+                ctx.lineWidth = this.isDragging ? 3 : 2;
+                ctx.strokeRect(this.x - halfSize, this.y - halfSize, CONFIG.MIRROR_SIZE, CONFIG.MIRROR_SIZE);
+            }
+            
+            reflect(laser) {
+                // For square mirrors, determine which edge was hit
+                const halfSize = CONFIG.MIRROR_SIZE / 2;
+                const relX = laser.x - this.x;
+                const relY = laser.y - this.y;
+                
+                // Determine which edge is closest
+                const distances = {
+                    left: Math.abs(relX + halfSize),
+                    right: Math.abs(relX - halfSize),
+                    top: Math.abs(relY + halfSize),
+                    bottom: Math.abs(relY - halfSize)
+                };
+                
+                const closestEdge = Object.keys(distances).reduce((a, b) => 
+                    distances[a] < distances[b] ? a : b
+                );
+                
+                // Reflect based on edge
+                if (closestEdge === 'left' || closestEdge === 'right') {
+                    laser.vx = -laser.vx; // Horizontal reflection
+                } else {
+                    laser.vy = -laser.vy; // Vertical reflection
+                }
+                
+                // Snap angle to 15-degree increments
+                const currentAngle = Math.atan2(laser.vy, laser.vx);
+                const degrees = currentAngle * 180 / Math.PI;
+                const snappedDegrees = Math.round(degrees / CONFIG.ANGLE_INCREMENT) * CONFIG.ANGLE_INCREMENT;
+                const snappedAngle = snappedDegrees * Math.PI / 180;
+                
+                laser.vx = Math.cos(snappedAngle) * CONFIG.LASER_SPEED;
+                laser.vy = Math.sin(snappedAngle) * CONFIG.LASER_SPEED;
+            }
+        }
+
+        // Laser Class
+        class Laser {
+            constructor(x, y, angle) {
+                this.x = x;
+                this.y = y;
+                this.vx = Math.cos(angle) * CONFIG.LASER_SPEED;
+                this.vy = Math.sin(angle) * CONFIG.LASER_SPEED;
+                this.trail = [];
+            }
+            
+            update() {
+                // Add current position to trail
+                this.trail.push({ x: this.x, y: this.y });
+                if (this.trail.length > 80) {
+                    this.trail.shift();
+                }
+                
+                // Move laser
+                this.x += this.vx;
+                this.y += this.vy;
+                
+                // Bounce off walls
+                if (this.x <= 0 || this.x >= CONFIG.CANVAS_WIDTH) {
+                    this.vx = -this.vx;
+                    this.x = Math.max(0, Math.min(CONFIG.CANVAS_WIDTH, this.x));
+                }
+                if (this.y <= 0 || this.y >= CONFIG.CANVAS_HEIGHT) {
+                    this.vy = -this.vy;
+                    this.y = Math.max(0, Math.min(CONFIG.CANVAS_HEIGHT, this.y));
+                }
+            }
+            
+            draw(ctx) {
+                // Draw enhanced trail with multiple glow layers
+                if (this.trail.length > 1) {
+                    ctx.save();
+                    ctx.lineCap = 'round';
+                    ctx.lineJoin = 'round';
+                    
+                    // Outer glow trail
+                    ctx.lineWidth = 8;
+                    ctx.strokeStyle = 'rgba(0, 255, 255, 0.1)';
+                    ctx.beginPath();
+                    for (let i = 1; i < this.trail.length; i++) {
+                        const alpha = (i / this.trail.length) * 0.1;
+                        ctx.globalAlpha = alpha;
+                        ctx.moveTo(this.trail[i-1].x, this.trail[i-1].y);
+                        ctx.lineTo(this.trail[i].x, this.trail[i].y);
+                    }
+                    ctx.stroke();
+                    
+                    // Middle glow trail
+                    ctx.lineWidth = 4;
+                    ctx.strokeStyle = 'rgba(0, 255, 255, 0.3)';
+                    ctx.beginPath();
+                    for (let i = 1; i < this.trail.length; i++) {
+                        const alpha = (i / this.trail.length) * 0.3;
+                        ctx.globalAlpha = alpha;
+                        ctx.moveTo(this.trail[i-1].x, this.trail[i-1].y);
+                        ctx.lineTo(this.trail[i].x, this.trail[i].y);
+                    }
+                    ctx.stroke();
+                    
+                    // Inner bright trail
+                    ctx.lineWidth = 2;
+                    ctx.strokeStyle = 'rgba(0, 255, 255, 0.8)';
+                    ctx.beginPath();
+                    for (let i = 1; i < this.trail.length; i++) {
+                        const alpha = (i / this.trail.length) * 0.8;
+                        ctx.globalAlpha = alpha;
+                        ctx.moveTo(this.trail[i-1].x, this.trail[i-1].y);
+                        ctx.lineTo(this.trail[i].x, this.trail[i].y);
+                    }
+                    ctx.stroke();
+                    
+                    ctx.restore();
+                }
+                
+                // Draw laser point with enhanced glow
+                ctx.save();
+                
+                // Outer glow
+                ctx.shadowColor = '#00ffff';
+                ctx.shadowBlur = 20;
+                ctx.fillStyle = 'rgba(0, 255, 255, 0.3)';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, CONFIG.LASER_RADIUS * 3, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Middle glow
+                ctx.shadowBlur = 10;
+                ctx.fillStyle = 'rgba(0, 255, 255, 0.6)';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, CONFIG.LASER_RADIUS * 2, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Core laser point
+                ctx.shadowBlur = 5;
+                ctx.fillStyle = '#00ffff';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, CONFIG.LASER_RADIUS, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.restore();
+                
+                // Draw direction indicator with glow
+                const dirLength = 12;
+                const endX = this.x + (this.vx / CONFIG.LASER_SPEED) * dirLength;
+                const endY = this.y + (this.vy / CONFIG.LASER_SPEED) * dirLength;
+                
+                ctx.save();
+                ctx.shadowColor = '#00ffff';
+                ctx.shadowBlur = 8;
+                ctx.strokeStyle = '#00ffff';
+                ctx.lineWidth = 2;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y);
+                ctx.lineTo(endX, endY);
+                ctx.stroke();
+                ctx.restore();
+            }
+            
+            reflect(mirror) {
+                mirror.reflect(this);
+            }
+        }
+
+        // Spawner Class
+        class Spawner {
+            constructor(x, y, angle) {
+                this.x = x;
+                this.y = y;
+                this.angle = angle;
+            }
+            
+            draw(ctx, showPreview = true) {
+                ctx.save();
+                
+                // Draw glowing spawner body
+                ctx.shadowColor = '#ff0080';
+                ctx.shadowBlur = 15;
+                ctx.fillStyle = '#ff0080';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, 10, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Inner bright core
+                ctx.shadowBlur = 8;
+                ctx.fillStyle = '#ff66cc';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, 6, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Draw laser preview path only during setup phase
+                if (showPreview) {
+                    const pathLength = 30; // Shorter preview path
+                    const endX = this.x + Math.cos(this.angle) * pathLength;
+                    const endY = this.y + Math.sin(this.angle) * pathLength;
+                    
+                    // Outer glow for path
+                    ctx.shadowColor = '#ff0080';
+                    ctx.shadowBlur = 12;
+                    ctx.strokeStyle = 'rgba(255, 0, 128, 0.4)';
+                    ctx.lineWidth = 8;
+                    ctx.lineCap = 'round';
+                    ctx.beginPath();
+                    ctx.moveTo(this.x, this.y);
+                    ctx.lineTo(endX, endY);
+                    ctx.stroke();
+                    
+                    // Bright inner path
+                    ctx.shadowBlur = 6;
+                    ctx.strokeStyle = '#ff0080';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.moveTo(this.x, this.y);
+                    ctx.lineTo(endX, endY);
+                    ctx.stroke();
+                    
+                    // Bright arrowhead
+                    const arrowSize = 12;
+                    const arrowAngle1 = this.angle + Math.PI * 0.8;
+                    const arrowAngle2 = this.angle - Math.PI * 0.8;
+                    
+                    ctx.shadowBlur = 8;
+                    ctx.strokeStyle = '#ff0080';
+                    ctx.lineWidth = 4;
+                    ctx.lineCap = 'round';
+                    ctx.beginPath();
+                    ctx.moveTo(endX, endY);
+                    ctx.lineTo(endX + Math.cos(arrowAngle1) * arrowSize, endY + Math.sin(arrowAngle1) * arrowSize);
+                    ctx.moveTo(endX, endY);
+                    ctx.lineTo(endX + Math.cos(arrowAngle2) * arrowSize, endY + Math.sin(arrowAngle2) * arrowSize);
+                    ctx.stroke();
+                }
+                
+                ctx.restore();
+            }
+        }
+
+        // Start the game
+        const game = new Game();
     </script>
 </body>
 </html>
