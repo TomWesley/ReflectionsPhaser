@@ -90,10 +90,11 @@
             CANVAS_WIDTH: 800,
             CANVAS_HEIGHT: 600,
             GRID_SIZE: 20,
-            MIRROR_SIZE: 40, // 2x2 grid cells
+            MIRROR_MIN_SIZE: 20, // 1x1 grid cells
+            MIRROR_MAX_SIZE: 60, // 3x3 grid cells
             LASER_SPEED: 2,
             LASER_RADIUS: 2,
-            TARGET_RADIUS: 25,
+            TARGET_RADIUS: 50, // Aligns hexagon top/bottom vertices with grid lines
             EDGE_MARGIN: 40,
             ANGLE_INCREMENT: 15, // degrees
             MIRROR_COUNT: 8
@@ -160,7 +161,10 @@
                         attempts++;
                     } while (!this.isValidMirrorPosition(x, y) && attempts < 100);
                     
-                    this.mirrors.push(new Mirror(x, y));
+                    // Create mirror and adjust position for grid alignment
+                    const mirror = new Mirror(x, y);
+                    this.adjustMirrorPositionForGrid(mirror);
+                    this.mirrors.push(mirror);
                 }
             }
             
@@ -215,6 +219,33 @@
             
             snapToGrid(value) {
                 return Math.round(value / CONFIG.GRID_SIZE) * CONFIG.GRID_SIZE;
+            }
+            
+            adjustMirrorPositionForGrid(mirror) {
+                // Adjust position so that borders align with grid lines
+                switch (mirror.shape) {
+                    case 'square':
+                    case 'rectangle':
+                        // For rectangles/squares, ensure all edges are on grid lines
+                        // This means width and height must be multiples of grid size
+                        // And center must be positioned so edges hit grid lines
+                        const halfWidth = mirror.width / 2;
+                        const halfHeight = mirror.height / 2;
+                        
+                        // Find nearest grid intersection where edges will align
+                        mirror.x = this.snapToGrid(mirror.x - halfWidth) + halfWidth;
+                        mirror.y = this.snapToGrid(mirror.y - halfHeight) + halfHeight;
+                        break;
+                        
+                    case 'rightTriangle':
+                    case 'isoscelesTriangle':
+                        // For triangles, ensure all vertices are at grid intersections
+                        const halfSize = mirror.size / 2;
+                        // Snap center to ensure vertices will be at grid intersections
+                        mirror.x = this.snapToGrid(mirror.x - halfSize) + halfSize;
+                        mirror.y = this.snapToGrid(mirror.y - halfSize) + halfSize;
+                        break;
+                }
             }
             
             isValidMirrorPosition(x, y) {
@@ -351,10 +382,27 @@
                 
                 // Check if clicking on a mirror
                 for (let mirror of this.mirrors) {
-                    if (mouseX >= mirror.x - CONFIG.MIRROR_SIZE/2 && 
-                        mouseX <= mirror.x + CONFIG.MIRROR_SIZE/2 &&
-                        mouseY >= mirror.y - CONFIG.MIRROR_SIZE/2 && 
-                        mouseY <= mirror.y + CONFIG.MIRROR_SIZE/2) {
+                    let isMouseOverMirror = false;
+                    
+                    switch (mirror.shape) {
+                        case 'square':
+                        case 'rectangle':
+                            const halfWidth = mirror.width / 2;
+                            const halfHeight = mirror.height / 2;
+                            isMouseOverMirror = mouseX >= mirror.x - halfWidth && 
+                                              mouseX <= mirror.x + halfWidth &&
+                                              mouseY >= mirror.y - halfHeight && 
+                                              mouseY <= mirror.y + halfHeight;
+                            break;
+                        case 'rightTriangle':
+                            isMouseOverMirror = this.pointInRightTriangle(mouseX, mouseY, mirror);
+                            break;
+                        case 'isoscelesTriangle':
+                            isMouseOverMirror = this.pointInIsoscelesTriangle(mouseX, mouseY, mirror);
+                            break;
+                    }
+                    
+                    if (isMouseOverMirror) {
                         
                         this.draggedMirror = mirror;
                         this.dragOffset.x = mouseX - mirror.x;
@@ -470,12 +518,107 @@
             }
             
             checkLaserMirrorCollision(laser, mirror) {
-                // Check if laser is inside mirror rectangle
-                const halfSize = CONFIG.MIRROR_SIZE / 2;
-                return laser.x >= mirror.x - halfSize && 
-                       laser.x <= mirror.x + halfSize &&
-                       laser.y >= mirror.y - halfSize && 
-                       laser.y <= mirror.y + halfSize;
+                switch (mirror.shape) {
+                    case 'square':
+                    case 'rectangle':
+                        const halfWidth = mirror.width / 2;
+                        const halfHeight = mirror.height / 2;
+                        return laser.x >= mirror.x - halfWidth && 
+                               laser.x <= mirror.x + halfWidth &&
+                               laser.y >= mirror.y - halfHeight && 
+                               laser.y <= mirror.y + halfHeight;
+                    
+                    case 'rightTriangle':
+                        return this.pointInRightTriangle(laser.x, laser.y, mirror);
+                    
+                    case 'isoscelesTriangle':
+                        return this.pointInIsoscelesTriangle(laser.x, laser.y, mirror);
+                    
+                    default:
+                        return false;
+                }
+            }
+            
+            pointInRightTriangle(px, py, mirror) {
+                const halfSize = mirror.size / 2;
+                
+                // Get triangle points with rotation applied
+                const points = this.getRightTrianglePoints(mirror);
+                
+                // Use barycentric coordinates to test if point is inside triangle
+                return this.pointInTriangle(px, py, points[0], points[1], points[2]);
+            }
+            
+            pointInIsoscelesTriangle(px, py, mirror) {
+                const halfSize = mirror.size / 2;
+                
+                // Get triangle points with rotation applied
+                const points = this.getIsoscelesTrianglePoints(mirror);
+                
+                // Use barycentric coordinates to test if point is inside triangle
+                return this.pointInTriangle(px, py, points[0], points[1], points[2]);
+            }
+            
+            getRightTrianglePoints(mirror) {
+                const halfSize = mirror.size / 2;
+                let points = [
+                    { x: mirror.x - halfSize, y: mirror.y + halfSize }, // bottom-left (right angle)
+                    { x: mirror.x + halfSize, y: mirror.y + halfSize }, // bottom-right
+                    { x: mirror.x - halfSize, y: mirror.y - halfSize }  // top-left
+                ];
+                
+                // Apply rotation if needed
+                if (mirror.rotation) {
+                    points = points.map(p => this.rotatePoint(p.x, p.y, mirror.x, mirror.y, mirror.rotation));
+                }
+                
+                return points;
+            }
+            
+            getIsoscelesTrianglePoints(mirror) {
+                const halfSize = mirror.size / 2;
+                let points = [
+                    { x: mirror.x, y: mirror.y - halfSize },           // top
+                    { x: mirror.x - halfSize, y: mirror.y + halfSize }, // bottom-left
+                    { x: mirror.x + halfSize, y: mirror.y + halfSize }  // bottom-right
+                ];
+                
+                // Apply rotation if needed
+                if (mirror.rotation) {
+                    points = points.map(p => this.rotatePoint(p.x, p.y, mirror.x, mirror.y, mirror.rotation));
+                }
+                
+                return points;
+            }
+            
+            rotatePoint(px, py, centerX, centerY, angleDegrees) {
+                const angle = angleDegrees * Math.PI / 180;
+                const cos = Math.cos(angle);
+                const sin = Math.sin(angle);
+                
+                // Translate to origin
+                const x = px - centerX;
+                const y = py - centerY;
+                
+                // Rotate
+                const rotatedX = x * cos - y * sin;
+                const rotatedY = x * sin + y * cos;
+                
+                // Translate back
+                return {
+                    x: rotatedX + centerX,
+                    y: rotatedY + centerY
+                };
+            }
+            
+            pointInTriangle(px, py, p1, p2, p3) {
+                // Using barycentric coordinates
+                const denom = (p2.y - p3.y) * (p1.x - p3.x) + (p3.x - p2.x) * (p1.y - p3.y);
+                const a = ((p2.y - p3.y) * (px - p3.x) + (p3.x - p2.x) * (py - p3.y)) / denom;
+                const b = ((p3.y - p1.y) * (px - p3.x) + (p1.x - p3.x) * (py - p3.y)) / denom;
+                const c = 1 - a - b;
+                
+                return a >= 0 && b >= 0 && c >= 0;
             }
             
             checkLaserTargetCollision(laser) {
@@ -679,47 +822,262 @@
                 this.x = x;
                 this.y = y;
                 this.isDragging = false;
+                
+                // Randomly select shape and size
+                this.shape = this.getRandomShape();
+                this.size = this.getRandomSize();
+                
+                // For rectangles, define width and height
+                if (this.shape === 'rectangle') {
+                    this.width = this.size;
+                    this.height = this.getRandomSize();
+                    // Ensure rectangle is actually rectangular
+                    while (this.height === this.width) {
+                        this.height = this.getRandomSize();
+                    }
+                } else {
+                    this.width = this.size;
+                    this.height = this.size;
+                }
+                
+                // For triangles, generate random rotation
+                if (this.shape === 'rightTriangle' || this.shape === 'isoscelesTriangle') {
+                    this.rotation = Math.floor(Math.random() * 4) * 90; // 0, 90, 180, or 270 degrees
+                }
+            }
+            
+            getRandomShape() {
+                const shapes = ['square', 'rectangle', 'rightTriangle', 'isoscelesTriangle'];
+                return shapes[Math.floor(Math.random() * shapes.length)];
+            }
+            
+            getRandomSize() {
+                const minSize = CONFIG.MIRROR_MIN_SIZE;
+                const maxSize = CONFIG.MIRROR_MAX_SIZE;
+                const gridIncrement = CONFIG.GRID_SIZE;
+                
+                // Generate size in grid increments
+                const numIncrements = Math.floor((maxSize - minSize) / gridIncrement) + 1;
+                const randomIncrement = Math.floor(Math.random() * numIncrements);
+                return minSize + (randomIncrement * gridIncrement);
             }
             
             draw(ctx) {
-                const halfSize = CONFIG.MIRROR_SIZE / 2;
+                ctx.save();
+                
+                // Apply rotation for triangles
+                if (this.rotation) {
+                    ctx.translate(this.x, this.y);
+                    ctx.rotate(this.rotation * Math.PI / 180);
+                    ctx.translate(-this.x, -this.y);
+                }
                 
                 // Draw glow effect if being dragged
                 if (this.isDragging) {
                     ctx.shadowColor = '#ffff00';
                     ctx.shadowBlur = 15;
                     ctx.fillStyle = 'rgba(255, 255, 0, 0.3)';
-                    ctx.fillRect(this.x - halfSize - 5, this.y - halfSize - 5, CONFIG.MIRROR_SIZE + 10, CONFIG.MIRROR_SIZE + 10);
+                    this.drawShapeOutline(ctx, 5);
                     ctx.shadowBlur = 0;
                 }
                 
-                // Mirror surface (silver)
-                ctx.fillStyle = this.isDragging ? '#d0d0d0' : '#c0c0c0';
-                ctx.fillRect(this.x - halfSize, this.y - halfSize, CONFIG.MIRROR_SIZE, CONFIG.MIRROR_SIZE);
+                // Mirror surface colors
+                const surfaceColor = this.isDragging ? '#d0d0d0' : '#c0c0c0';
+                const highlightColor = this.isDragging ? '#ffffff' : '#f0f0f0';
+                const frameColor = this.isDragging ? '#000' : '#333';
+                const frameWidth = this.isDragging ? 3 : 2;
                 
-                // Highlight (top-left)
-                ctx.fillStyle = this.isDragging ? '#ffffff' : '#f0f0f0';
-                ctx.fillRect(this.x - halfSize, this.y - halfSize, CONFIG.MIRROR_SIZE, 4);
-                ctx.fillRect(this.x - halfSize, this.y - halfSize, 4, CONFIG.MIRROR_SIZE);
+                // Draw based on shape
+                this.drawShape(ctx, surfaceColor, highlightColor, frameColor, frameWidth);
+                
+                ctx.restore();
+            }
+            
+            drawShape(ctx, surfaceColor, highlightColor, frameColor, frameWidth) {
+                switch (this.shape) {
+                    case 'square':
+                        this.drawSquare(ctx, surfaceColor, highlightColor, frameColor, frameWidth);
+                        break;
+                    case 'rectangle':
+                        this.drawRectangle(ctx, surfaceColor, highlightColor, frameColor, frameWidth);
+                        break;
+                    case 'rightTriangle':
+                        this.drawRightTriangle(ctx, surfaceColor, highlightColor, frameColor, frameWidth);
+                        break;
+                    case 'isoscelesTriangle':
+                        this.drawIsoscelesTriangle(ctx, surfaceColor, highlightColor, frameColor, frameWidth);
+                        break;
+                }
+            }
+            
+            drawSquare(ctx, surfaceColor, highlightColor, frameColor, frameWidth) {
+                const halfSize = this.size / 2;
+                
+                // Surface
+                ctx.fillStyle = surfaceColor;
+                ctx.fillRect(this.x - halfSize, this.y - halfSize, this.size, this.size);
+                
+                // Highlight (top-left edge)
+                ctx.fillStyle = highlightColor;
+                ctx.fillRect(this.x - halfSize, this.y - halfSize, this.size, 4);
+                ctx.fillRect(this.x - halfSize, this.y - halfSize, 4, this.size);
                 
                 // Frame
-                ctx.strokeStyle = this.isDragging ? '#000' : '#333';
-                ctx.lineWidth = this.isDragging ? 3 : 2;
-                ctx.strokeRect(this.x - halfSize, this.y - halfSize, CONFIG.MIRROR_SIZE, CONFIG.MIRROR_SIZE);
+                ctx.strokeStyle = frameColor;
+                ctx.lineWidth = frameWidth;
+                ctx.strokeRect(this.x - halfSize, this.y - halfSize, this.size, this.size);
+            }
+            
+            drawRectangle(ctx, surfaceColor, highlightColor, frameColor, frameWidth) {
+                const halfWidth = this.width / 2;
+                const halfHeight = this.height / 2;
+                
+                // Surface
+                ctx.fillStyle = surfaceColor;
+                ctx.fillRect(this.x - halfWidth, this.y - halfHeight, this.width, this.height);
+                
+                // Highlight (top-left edge)
+                ctx.fillStyle = highlightColor;
+                ctx.fillRect(this.x - halfWidth, this.y - halfHeight, this.width, 4);
+                ctx.fillRect(this.x - halfWidth, this.y - halfHeight, 4, this.height);
+                
+                // Frame
+                ctx.strokeStyle = frameColor;
+                ctx.lineWidth = frameWidth;
+                ctx.strokeRect(this.x - halfWidth, this.y - halfHeight, this.width, this.height);
+            }
+            
+            drawRightTriangle(ctx, surfaceColor, highlightColor, frameColor, frameWidth) {
+                const halfSize = this.size / 2;
+                
+                // Define triangle points (right angle at bottom-left)
+                const points = [
+                    { x: this.x - halfSize, y: this.y + halfSize }, // bottom-left (right angle)
+                    { x: this.x + halfSize, y: this.y + halfSize }, // bottom-right
+                    { x: this.x - halfSize, y: this.y - halfSize }  // top-left
+                ];
+                
+                // Surface
+                ctx.fillStyle = surfaceColor;
+                ctx.beginPath();
+                ctx.moveTo(points[0].x, points[0].y);
+                ctx.lineTo(points[1].x, points[1].y);
+                ctx.lineTo(points[2].x, points[2].y);
+                ctx.closePath();
+                ctx.fill();
+                
+                // Highlight (left edge)
+                ctx.fillStyle = highlightColor;
+                ctx.beginPath();
+                ctx.moveTo(points[0].x, points[0].y);
+                ctx.lineTo(points[0].x - 3, points[0].y);
+                ctx.lineTo(points[2].x - 3, points[2].y);
+                ctx.lineTo(points[2].x, points[2].y);
+                ctx.closePath();
+                ctx.fill();
+                
+                // Frame
+                ctx.strokeStyle = frameColor;
+                ctx.lineWidth = frameWidth;
+                ctx.beginPath();
+                ctx.moveTo(points[0].x, points[0].y);
+                ctx.lineTo(points[1].x, points[1].y);
+                ctx.lineTo(points[2].x, points[2].y);
+                ctx.closePath();
+                ctx.stroke();
+            }
+            
+            drawIsoscelesTriangle(ctx, surfaceColor, highlightColor, frameColor, frameWidth) {
+                const halfSize = this.size / 2;
+                
+                // Define triangle points (equilateral pointing up)
+                const points = [
+                    { x: this.x, y: this.y - halfSize },           // top
+                    { x: this.x - halfSize, y: this.y + halfSize }, // bottom-left
+                    { x: this.x + halfSize, y: this.y + halfSize }  // bottom-right
+                ];
+                
+                // Surface
+                ctx.fillStyle = surfaceColor;
+                ctx.beginPath();
+                ctx.moveTo(points[0].x, points[0].y);
+                ctx.lineTo(points[1].x, points[1].y);
+                ctx.lineTo(points[2].x, points[2].y);
+                ctx.closePath();
+                ctx.fill();
+                
+                // Highlight (left edge)
+                ctx.fillStyle = highlightColor;
+                const highlightOffset = 3;
+                ctx.beginPath();
+                ctx.moveTo(points[0].x - highlightOffset/2, points[0].y);
+                ctx.lineTo(points[1].x - highlightOffset, points[1].y);
+                ctx.lineTo(points[1].x, points[1].y);
+                ctx.lineTo(points[0].x, points[0].y);
+                ctx.closePath();
+                ctx.fill();
+                
+                // Frame
+                ctx.strokeStyle = frameColor;
+                ctx.lineWidth = frameWidth;
+                ctx.beginPath();
+                ctx.moveTo(points[0].x, points[0].y);
+                ctx.lineTo(points[1].x, points[1].y);
+                ctx.lineTo(points[2].x, points[2].y);
+                ctx.closePath();
+                ctx.stroke();
+            }
+            
+            drawShapeOutline(ctx, padding) {
+                // Draw glow outline based on shape
+                switch (this.shape) {
+                    case 'square':
+                        const halfSize = this.size / 2;
+                        ctx.fillRect(this.x - halfSize - padding, this.y - halfSize - padding, 
+                                   this.size + padding*2, this.size + padding*2);
+                        break;
+                    case 'rectangle':
+                        const halfWidth = this.width / 2;
+                        const halfHeight = this.height / 2;
+                        ctx.fillRect(this.x - halfWidth - padding, this.y - halfHeight - padding, 
+                                   this.width + padding*2, this.height + padding*2);
+                        break;
+                    case 'rightTriangle':
+                    case 'isoscelesTriangle':
+                        const size = this.size / 2;
+                        ctx.fillRect(this.x - size - padding, this.y - size - padding, 
+                                   this.size + padding*2, this.size + padding*2);
+                        break;
+                }
             }
             
             reflect(laser) {
-                // For square mirrors, determine which edge was hit
-                const halfSize = CONFIG.MIRROR_SIZE / 2;
+                switch (this.shape) {
+                    case 'square':
+                    case 'rectangle':
+                        this.reflectRectangle(laser);
+                        break;
+                    case 'rightTriangle':
+                        this.reflectTriangle(laser, 'right');
+                        break;
+                    case 'isoscelesTriangle':
+                        this.reflectTriangle(laser, 'isosceles');
+                        break;
+                }
+            }
+            
+            reflectRectangle(laser) {
+                const halfWidth = this.width / 2;
+                const halfHeight = this.height / 2;
                 const relX = laser.x - this.x;
                 const relY = laser.y - this.y;
                 
                 // Determine which edge is closest
                 const distances = {
-                    left: Math.abs(relX + halfSize),
-                    right: Math.abs(relX - halfSize),
-                    top: Math.abs(relY + halfSize),
-                    bottom: Math.abs(relY - halfSize)
+                    left: Math.abs(relX + halfWidth),
+                    right: Math.abs(relX - halfWidth),
+                    top: Math.abs(relY + halfHeight),
+                    bottom: Math.abs(relY - halfHeight)
                 };
                 
                 const closestEdge = Object.keys(distances).reduce((a, b) => 
@@ -733,6 +1091,149 @@
                     laser.vy = -laser.vy; // Vertical reflection
                 }
                 
+                this.snapLaserAngle(laser);
+            }
+            
+            reflectTriangle(laser, triangleType) {
+                // Get triangle edges
+                const edges = triangleType === 'right' ? 
+                    this.getRightTriangleEdges() : 
+                    this.getIsoscelesTriangleEdges();
+                
+                // Find which edge the laser is closest to
+                let closestEdge = null;
+                let minDistance = Infinity;
+                
+                for (const edge of edges) {
+                    const distance = this.distanceToLineSegment(laser.x, laser.y, edge.start, edge.end);
+                    if (distance < minDistance) {
+                        minDistance = distance;
+                        closestEdge = edge;
+                    }
+                }
+                
+                if (closestEdge) {
+                    // Calculate reflection based on edge normal
+                    const edgeVector = {
+                        x: closestEdge.end.x - closestEdge.start.x,
+                        y: closestEdge.end.y - closestEdge.start.y
+                    };
+                    
+                    // Calculate normal vector (perpendicular to edge)
+                    const normal = {
+                        x: -edgeVector.y,
+                        y: edgeVector.x
+                    };
+                    
+                    // Normalize the normal vector
+                    const length = Math.sqrt(normal.x * normal.x + normal.y * normal.y);
+                    normal.x /= length;
+                    normal.y /= length;
+                    
+                    // Reflect velocity vector
+                    const dot = laser.vx * normal.x + laser.vy * normal.y;
+                    laser.vx = laser.vx - 2 * dot * normal.x;
+                    laser.vy = laser.vy - 2 * dot * normal.y;
+                    
+                    this.snapLaserAngle(laser);
+                }
+            }
+            
+            getRightTriangleEdges() {
+                const points = this.getRightTrianglePoints();
+                return [
+                    { start: points[0], end: points[1] }, // bottom edge
+                    { start: points[1], end: points[2] }, // hypotenuse
+                    { start: points[2], end: points[0] }  // left edge
+                ];
+            }
+            
+            getIsoscelesTriangleEdges() {
+                const points = this.getIsoscelesTrianglePoints();
+                return [
+                    { start: points[0], end: points[1] }, // left edge
+                    { start: points[1], end: points[2] }, // bottom edge
+                    { start: points[2], end: points[0] }  // right edge
+                ];
+            }
+            
+            getRightTrianglePoints() {
+                const halfSize = this.size / 2;
+                let points = [
+                    { x: this.x - halfSize, y: this.y + halfSize }, // bottom-left (right angle)
+                    { x: this.x + halfSize, y: this.y + halfSize }, // bottom-right
+                    { x: this.x - halfSize, y: this.y - halfSize }  // top-left
+                ];
+                
+                // Apply rotation if needed
+                if (this.rotation) {
+                    const angle = this.rotation * Math.PI / 180;
+                    const cos = Math.cos(angle);
+                    const sin = Math.sin(angle);
+                    
+                    points = points.map(p => ({
+                        x: this.x + (p.x - this.x) * cos - (p.y - this.y) * sin,
+                        y: this.y + (p.x - this.x) * sin + (p.y - this.y) * cos
+                    }));
+                }
+                
+                return points;
+            }
+            
+            getIsoscelesTrianglePoints() {
+                const halfSize = this.size / 2;
+                let points = [
+                    { x: this.x, y: this.y - halfSize },           // top
+                    { x: this.x - halfSize, y: this.y + halfSize }, // bottom-left
+                    { x: this.x + halfSize, y: this.y + halfSize }  // bottom-right
+                ];
+                
+                // Apply rotation if needed
+                if (this.rotation) {
+                    const angle = this.rotation * Math.PI / 180;
+                    const cos = Math.cos(angle);
+                    const sin = Math.sin(angle);
+                    
+                    points = points.map(p => ({
+                        x: this.x + (p.x - this.x) * cos - (p.y - this.y) * sin,
+                        y: this.y + (p.x - this.x) * sin + (p.y - this.y) * cos
+                    }));
+                }
+                
+                return points;
+            }
+            
+            distanceToLineSegment(px, py, start, end) {
+                const A = px - start.x;
+                const B = py - start.y;
+                const C = end.x - start.x;
+                const D = end.y - start.y;
+                
+                const dot = A * C + B * D;
+                const lenSq = C * C + D * D;
+                let param = -1;
+                
+                if (lenSq !== 0) param = dot / lenSq;
+                
+                let xx, yy;
+                
+                if (param < 0) {
+                    xx = start.x;
+                    yy = start.y;
+                } else if (param > 1) {
+                    xx = end.x;
+                    yy = end.y;
+                } else {
+                    xx = start.x + param * C;
+                    yy = start.y + param * D;
+                }
+                
+                const dx = px - xx;
+                const dy = py - yy;
+                return Math.sqrt(dx * dx + dy * dy);
+            }
+            
+            snapLaserAngle(laser) {
                 // Snap angle to 15-degree increments
                 const currentAngle = Math.atan2(laser.vy, laser.vx);
                 const degrees = currentAngle * 180 / Math.PI;
