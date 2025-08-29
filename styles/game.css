@@ -788,3 +788,143 @@ h1 {
 .slide-up {
     animation: slideUp 0.4s ease-out;
 }
+
+/* Mode Selector Styles - Match game theme */
+.mode-selector {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 25px;
+    justify-content: center;
+}
+
+.mode-btn {
+    padding: 12px 24px;
+    background: linear-gradient(145deg, rgba(10, 20, 30, 0.9), rgba(15, 25, 35, 0.9));
+    border: 2px solid transparent;
+    border-radius: 12px;
+    color: var(--text-secondary);
+    font-family: 'Orbitron', monospace;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    position: relative;
+    backdrop-filter: blur(15px);
+    box-shadow: 
+        inset 0 1px 1px rgba(255, 255, 255, 0.1),
+        0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.mode-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 10px;
+    background: linear-gradient(45deg, var(--primary-cyan), var(--electric-purple));
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: -1;
+}
+
+.mode-btn:hover {
+    color: var(--primary-cyan);
+    text-shadow: 0 0 8px var(--primary-cyan);
+    box-shadow: 
+        inset 0 1px 1px rgba(255, 255, 255, 0.2),
+        0 4px 8px rgba(0, 0, 0, 0.3),
+        0 0 20px rgba(0, 255, 255, 0.2);
+    transform: translateY(-2px);
+}
+
+.mode-btn:hover::before {
+    opacity: 0.1;
+}
+
+.mode-btn.active {
+    background: linear-gradient(145deg, var(--primary-cyan), var(--primary-blue));
+    border-color: var(--primary-cyan);
+    color: var(--darker-bg);
+    font-weight: 700;
+    text-shadow: none;
+    box-shadow: 
+        inset 0 2px 4px rgba(255, 255, 255, 0.2),
+        0 0 20px rgba(0, 255, 255, 0.6),
+        0 4px 12px rgba(0, 0, 0, 0.4);
+    transform: translateY(-1px);
+}
+
+.mode-btn.completed {
+    background: linear-gradient(145deg, var(--success-green), #00cc88);
+    border-color: var(--success-green);
+    color: var(--darker-bg);
+    font-weight: 700;
+    text-shadow: none;
+    box-shadow: 
+        inset 0 2px 4px rgba(255, 255, 255, 0.2),
+        0 0 20px rgba(0, 255, 136, 0.6),
+        0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.mode-btn.completed::after {
+    content: ' ✓';
+    font-size: 16px;
+    margin-left: 8px;
+}
+
+.mode-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    pointer-events: none;
+    transform: none;
+}
+
+.mode-btn:active {
+    transform: translateY(0px);
+    box-shadow: 
+        inset 0 2px 4px rgba(0, 0, 0, 0.2),
+        0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Daily Challenge Info */
+.daily-info {
+    margin-top: 10px;
+    padding: 10px 15px;
+    background: rgba(0, 255, 255, 0.1);
+    border: 1px solid rgba(0, 255, 255, 0.3);
+    border-radius: 8px;
+    text-align: center;
+}
+
+.daily-date {
+    font-family: 'Orbitron', monospace;
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--primary-cyan);
+    margin-bottom: 5px;
+}
+
+.daily-status {
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.daily-status.completed {
+    color: var(--success-green);
+    font-weight: 600;
+}
+
+/* Hidden utility class */
+.hidden {
+    display: none !important;
+}
+
+/* Status success style */
+.status-success {
+    color: var(--success-green) !important;
+    text-shadow: 0 0 10px rgba(0, 255, 136, 0.5) !important;
+}
