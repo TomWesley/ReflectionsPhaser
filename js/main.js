@@ -5,6 +5,9 @@ import { DailyChallenge } from './utils/DailyChallenge.js';
 document.addEventListener('DOMContentLoaded', () => {
     const game = new Game();
     
+    // Expose game instance globally for modal functions
+    window.game = game;
+    
     // Add completion detection for daily challenges
     const originalUpdate = game.update?.bind(game);
     if (originalUpdate) {

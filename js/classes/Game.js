@@ -4,6 +4,7 @@ import { Laser } from './Laser.js';
 import { Spawner } from './Spawner.js';
 import { DailyChallenge } from '../utils/DailyChallenge.js';
 import { SurfaceAreaManager } from '../utils/SurfaceAreaManager.js';
+import { PerformanceRating } from '../utils/PerformanceRating.js';
 
 export class Game {
     constructor() {
@@ -342,21 +343,43 @@ export class Game {
                 mirror.y = baseY + gridSize / 2;
             }
         } else if (mirror.shape === 'isoscelesTriangle') {
-            // Isosceles triangles have even-grid-unit bases, so base vertices align to grid
-            // The apex alignment depends on the height
+            // Isosceles triangles: Handle alignment based on rotation
             const halfWidth = (mirror.width || mirror.size) / 2;
             const halfHeight = (mirror.height || mirror.size) / 2;
+            const rotation = mirror.rotation || 0;
             
-            if (halfHeight % gridSize === 0) {
-                // Height allows center on grid intersection
+            if (rotation === 0 || rotation === 180) {
+                // Standard orientation: base is horizontal (top or bottom)
+                // Always snap X to grid (for even base width, center X should be on grid line)
                 mirror.x = this.snapToGrid(mirror.x);
+                
+                // For Y positioning: base vertices need to be on grid lines
+                if (rotation === 0) {
+                    // Base at bottom: center.y + halfHeight = grid line
+                    const desiredBaseY = this.snapToGrid(mirror.y + halfHeight);
+                    mirror.y = desiredBaseY - halfHeight;
+                } else {
+                    // Base at top: center.y - halfHeight = grid line  
+                    const desiredBaseY = this.snapToGrid(mirror.y - halfHeight);
+                    mirror.y = desiredBaseY + halfHeight;
+                }
+            } else if (rotation === 90 || rotation === 270) {
+                // Rotated orientation: base is vertical (left or right)
+                // Now width/height are swapped due to rotation
+                
+                // Always snap Y to grid (for even base width, center Y should be on grid line)
                 mirror.y = this.snapToGrid(mirror.y);
-            } else {
-                // Height requires half-grid offset for apex to hit intersection
-                const baseX = this.snapToGrid(mirror.x);
-                const baseY = this.snapToGrid(mirror.y);
-                mirror.x = baseX;
-                mirror.y = baseY + gridSize / 2;
+                
+                // For X positioning: base vertices need to be on grid lines
+                if (rotation === 90) {
+                    // Base at right: center.x + halfHeight = grid line (height becomes horizontal extent)
+                    const desiredBaseX = this.snapToGrid(mirror.x + halfHeight);
+                    mirror.x = desiredBaseX - halfHeight;
+                } else {
+                    // Base at left: center.x - halfHeight = grid line
+                    const desiredBaseX = this.snapToGrid(mirror.x - halfHeight);
+                    mirror.x = desiredBaseX + halfHeight;
+                }
             }
         }
     }
@@ -927,10 +950,7 @@ export class Game {
             
             // Check collision with center target
             if (this.checkLaserTargetCollision(laser)) {
-                this.gameOver = true;
-                const statusEl = document.getElementById('status');
-                statusEl.textContent = 'GAME OVER! Laser hit the center!';
-                statusEl.className = 'status-modern status-game-over';
+                this.showGameOverModal();
                 return;
             }
             
@@ -1018,16 +1038,21 @@ export class Game {
         let points;
         if (mirror.shape === 'rightTriangle') {
             points = this.getRightTrianglePoints(mirror);
+            // For right triangles, all vertices should be on grid intersections
+            return points.every(point => 
+                this.isOnGridLine(point.x) && this.isOnGridLine(point.y)
+            );
         } else if (mirror.shape === 'isoscelesTriangle') {
             points = this.getIsoscelesTrianglePoints(mirror);
+            // For isosceles triangles, only require base vertices to be on grid lines
+            // Base vertices are the last two points (bottom-left and bottom-right)
+            const baseVertices = points.slice(1, 3); // Skip apex (index 0)
+            return baseVertices.every(point => 
+                this.isOnGridLine(point.x) && this.isOnGridLine(point.y)
+            );
         } else {
             return false;
         }
-        
-        // Check if all vertices are on grid intersections
-        return points.every(point => 
-            this.isOnGridLine(point.x) && this.isOnGridLine(point.y)
-        );
     }
     
     isInForbiddenZone(mirror) {
@@ -1454,8 +1479,54 @@ export class Game {
     updateTimerDisplay() {
         const minutes = Math.floor(this.gameTime / 60);
         const seconds = Math.floor(this.gameTime % 60);
-        const timeString = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        const centiseconds = Math.floor((this.gameTime % 1) * 100);
+        const timeString = `${minutes}:${seconds.toString().padStart(2, '0')}.${centiseconds.toString().padStart(2, '0')}`;
         document.getElementById('timer').textContent = timeString;
+    }
+    
+    async showGameOverModal() {
+        this.gameOver = true;
+        
+        // Format final time with centiseconds
+        const minutes = Math.floor(this.gameTime / 60);
+        const seconds = Math.floor(this.gameTime % 60);
+        const centiseconds = Math.floor((this.gameTime % 1) * 100);
+        const finalTimeString = `${minutes}:${seconds.toString().padStart(2, '0')}.${centiseconds.toString().padStart(2, '0')}`;
+        
+        // Update modal content
+        document.getElementById('finalTime').textContent = finalTimeString;
+        
+        // Get performance rating based on survival time
+        try {
+            const performanceData = await PerformanceRating.getRating(this.gameTime);
+            const performanceElement = document.getElementById('missionPerformance');
+            performanceElement.textContent = performanceData.rating;
+            performanceElement.style.color = performanceData.color;
+            performanceElement.style.textShadow = `0 0 10px ${performanceData.color}`;
+            performanceElement.title = performanceData.description; // Tooltip on hover
+        } catch (error) {
+            console.error('Error loading performance rating:', error);
+            const performanceElement = document.getElementById('missionPerformance');
+            performanceElement.textContent = 'Failed';
+            performanceElement.style.color = '#ff3366';
+        }
+        
+        // Show modal
+        document.getElementById('gameOverModal').classList.remove('hidden');
+        
+        // Update status
+        const statusEl = document.getElementById('status');
+        statusEl.textContent = 'CORE BREACH! Check your final score above.';
+        statusEl.className = 'status-modern status-game-over';
+    }
+    
+    continueAfterGameOver() {
+        // Allow player to continue playing after game over
+        this.gameOver = false;
+        this.isPlaying = false;
+        
+        // Reset the game state
+        this.resetGame();
     }
     
     gameLoop() {

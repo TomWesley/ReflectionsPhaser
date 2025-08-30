@@ -135,15 +135,6 @@ export class SurfaceAreaManager {
             selectedMirrors = [];
             currentSurfaceArea = 0;
             
-            // TEMPORARY: Force an isosceles triangle first to test
-            const isoscelesOptions = possibleMirrors.filter(m => m.shape === 'isoscelesTriangle');
-            if (isoscelesOptions.length > 0 && selectedMirrors.length === 0) {
-                const forcedIsosceles = isoscelesOptions[Math.floor(Math.random() * isoscelesOptions.length)];
-                selectedMirrors.push({ ...forcedIsosceles });
-                currentSurfaceArea += forcedIsosceles.surfaceArea;
-                console.log(`FORCED ISOSCELES: base=${forcedIsosceles.width/20}, height=${forcedIsosceles.height/20}, surface area=${forcedIsosceles.surfaceArea}`);
-            }
-            
             // Generate mirrors until we're close to target
             while (currentSurfaceArea < targetArea && selectedMirrors.length < 50) {
                 const remainingArea = targetArea - currentSurfaceArea;

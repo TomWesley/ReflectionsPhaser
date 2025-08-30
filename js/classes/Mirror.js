@@ -205,13 +205,14 @@ export class Mirror {
     }
     
     drawIsoscelesTriangle(ctx) {
-        const halfSize = this.size / 2;
+        const halfWidth = (this.width || this.size) / 2;  // Base half-width
+        const halfHeight = (this.height || this.size) / 2; // Height from center to top/bottom
         
-        // Define triangle points (equilateral pointing up)
+        // Define triangle points
         const points = [
-            { x: this.x, y: this.y - halfSize },           // top
-            { x: this.x - halfSize, y: this.y + halfSize }, // bottom-left
-            { x: this.x + halfSize, y: this.y + halfSize }  // bottom-right
+            { x: this.x, y: this.y - halfHeight },           // top apex
+            { x: this.x - halfWidth, y: this.y + halfHeight }, // bottom-left
+            { x: this.x + halfWidth, y: this.y + halfHeight }  // bottom-right
         ];
         
         // Add powder blue glow if dragging
@@ -383,11 +384,12 @@ export class Mirror {
     }
     
     getIsoscelesTrianglePoints() {
-        const halfSize = this.size / 2;
+        const halfWidth = (this.width || this.size) / 2;  // Base half-width
+        const halfHeight = (this.height || this.size) / 2; // Height from center to top/bottom
         let points = [
-            { x: this.x, y: this.y - halfSize },           // top
-            { x: this.x - halfSize, y: this.y + halfSize }, // bottom-left
-            { x: this.x + halfSize, y: this.y + halfSize }  // bottom-right
+            { x: this.x, y: this.y - halfHeight },           // top apex
+            { x: this.x - halfWidth, y: this.y + halfHeight }, // bottom-left
+            { x: this.x + halfWidth, y: this.y + halfHeight }  // bottom-right
         ];
         
         // Apply rotation if needed

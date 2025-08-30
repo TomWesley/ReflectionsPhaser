@@ -1,0 +1,52 @@
+{
+  "performanceRatings": [
+    {
+      "maxTime": 10,
+      "rating": "Dissatisfactory",
+      "color": "#ff3366",
+      "description": "Core breach occurred too quickly"
+    },
+    {
+      "maxTime": 30,
+      "rating": "Inadequate",
+      "color": "#ff6633",
+      "description": "Defense systems failed early"
+    },
+    {
+      "maxTime": 60,
+      "rating": "Marginal",
+      "color": "#ffaa33",
+      "description": "Basic defensive capability shown"
+    },
+    {
+      "maxTime": 120,
+      "rating": "Satisfactory",
+      "color": "#ffff33",
+      "description": "Acceptable defense duration"
+    },
+    {
+      "maxTime": 180,
+      "rating": "Good",
+      "color": "#aaffaa",
+      "description": "Solid defensive performance"
+    },
+    {
+      "maxTime": 300,
+      "rating": "Excellent",
+      "color": "#66ff66",
+      "description": "Superior tactical defense"
+    },
+    {
+      "maxTime": 600,
+      "rating": "Outstanding",
+      "color": "#33ff88",
+      "description": "Elite defensive mastery"
+    },
+    {
+      "maxTime": 999999,
+      "rating": "Legendary",
+      "color": "#00ffff",
+      "description": "Unprecedented defense achievement"
+    }
+  ]
+}

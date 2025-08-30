@@ -499,6 +499,72 @@ h1 {
     width: 100%;
 }
 
+/* Game Over Modal Specific Styles */
+.game-over-content {
+    text-align: center;
+    padding: 20px 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.final-score {
+    margin-bottom: 30px;
+}
+
+.score-label {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.9em;
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+    letter-spacing: 2px;
+}
+
+.score-value {
+    font-family: 'Orbitron', monospace;
+    font-size: 2.5em;
+    font-weight: 700;
+    color: var(--primary-cyan);
+    text-shadow: 0 0 20px var(--primary-cyan);
+    letter-spacing: 3px;
+}
+
+.score-details {
+    margin: 20px auto;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    width: 100%;
+    max-width: 400px;
+}
+
+.score-item {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 1.1em;
+    margin: 10px 0;
+    color: var(--text-secondary);
+}
+
+.status-failed {
+    color: var(--danger-red);
+    font-weight: 600;
+    text-shadow: 0 0 10px var(--danger-red);
+}
+
+#leaderboardPosition {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.performance-rating {
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: all 0.3s ease;
+}
+
 /* Mobile Styles */
 @media screen and (max-width: 768px) {
     h1 {

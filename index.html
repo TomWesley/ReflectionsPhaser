@@ -31,6 +31,24 @@
         </div>
     </div>
 
+    <!-- Game Over Modal -->
+    <div id="gameOverModal" class="rules-modal hidden">
+        <div class="rules-content">
+            <div class="instruction-header">💥 CORE BREACH! 💥</div>
+            <div class="game-over-content">
+                <div class="final-score">
+                    <div class="score-label">SURVIVAL TIME</div>
+                    <div id="finalTime" class="score-value">0:00.00</div>
+                </div>
+                <div class="score-details">
+                    <div class="score-item">Mission Performance: <span id="missionPerformance" class="performance-rating">Calculating...</span></div>
+                    <div class="score-item">Leaderboard Position: <span id="leaderboardPosition">Coming Soon</span></div>
+                </div>
+            </div>
+            <button class="btn-primary" onclick="closeGameOver()">CONTINUE DEFENDING</button>
+        </div>
+    </div>
+
     <!-- Game Mode Selection -->
     <div class="mode-selector">
         <button id="freePlayBtn" class="mode-btn active">Free Play</button>
@@ -90,10 +108,24 @@
             popup.classList.toggle('hidden');
         }
 
+        function closeGameOver() {
+            document.getElementById('gameOverModal').classList.add('hidden');
+            // Let the game know to allow continuing
+            if (window.game) {
+                window.game.continueAfterGameOver();
+            }
+        }
+
         // Close modal when clicking outside
         document.getElementById('rulesModal').addEventListener('click', function(e) {
             if (e.target === this) {
                 closeRules();
+            }
+        });
+
+        document.getElementById('gameOverModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeGameOver();
             }
         });
     </script>
