@@ -87,6 +87,7 @@ export class Game {
     updateModeButtons() {
         const freePlayBtn = document.getElementById('freePlayBtn');
         const dailyChallengeBtn = document.getElementById('dailyChallengeBtn');
+        const resetBtn = document.getElementById('resetBtn');
         
         // Update active states
         freePlayBtn.classList.toggle('active', this.gameMode === 'freePlay');
@@ -95,6 +96,11 @@ export class Game {
         // Update completed state for daily challenge
         const isCompleted = DailyChallenge.hasCompletedToday();
         dailyChallengeBtn.classList.toggle('completed', isCompleted);
+        
+        // Hide reset button during daily challenge mode
+        if (resetBtn) {
+            resetBtn.style.display = this.gameMode === 'dailyChallenge' ? 'none' : '';
+        }
         
         // Button text is handled by CSS for completed state
         dailyChallengeBtn.textContent = 'Daily Challenge';
