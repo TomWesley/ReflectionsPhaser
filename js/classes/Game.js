@@ -28,6 +28,8 @@ export class Game {
         // Interaction state
         this.draggedMirror = null;
         this.dragOffset = { x: 0, y: 0 };
+        this.dragStartPos = { x: 0, y: 0 };
+        this.mouseHasMoved = false;
         
         this.init();
     }
@@ -599,6 +601,9 @@ export class Game {
                 this.draggedMirror = mirror;
                 this.dragOffset.x = mouseX - mirror.x;
                 this.dragOffset.y = mouseY - mirror.y;
+                this.dragStartPos.x = mouseX;
+                this.dragStartPos.y = mouseY;
+                this.mouseHasMoved = false;
                 this.canvas.style.cursor = 'grabbing';
                 mirror.isDragging = true;
                 console.log('Started dragging mirror at', mirror.x, mirror.y);
@@ -614,6 +619,15 @@ export class Game {
         const mouseX = e.clientX - rect.left;
         const mouseY = e.clientY - rect.top;
         
+        // Check if mouse has moved significantly from start position
+        const moveThreshold = 5; // pixels
+        const deltaX = Math.abs(mouseX - this.dragStartPos.x);
+        const deltaY = Math.abs(mouseY - this.dragStartPos.y);
+        
+        if (deltaX > moveThreshold || deltaY > moveThreshold) {
+            this.mouseHasMoved = true;
+        }
+        
         // Move smoothly without snapping during drag
         const newX = mouseX - this.dragOffset.x;
         const newY = mouseY - this.dragOffset.y;
@@ -626,6 +640,14 @@ export class Game {
     
     onMouseUp(e) {
         if (this.draggedMirror) {
+            // If mouse didn't move, just restore original position and exit
+            if (!this.mouseHasMoved) {
+                this.draggedMirror.isDragging = false;
+                this.canvas.style.cursor = 'default';
+                this.draggedMirror = null;
+                return;
+            }
+            
             // Get the final mouse position
             const rect = this.canvas.getBoundingClientRect();
             const mouseX = e.clientX - rect.left;
