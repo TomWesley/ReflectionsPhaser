@@ -29,7 +29,7 @@ export class DailyChallenge {
         const mirrorCount = rng.nextInt(6, 10); // Slightly more mirrors for challenge
         const center = { x: CONFIG.CANVAS_WIDTH / 2, y: CONFIG.CANVAS_HEIGHT / 2 };
         
-        const shapes = ['square', 'rectangle', 'rightTriangle', 'isoscelesTriangle'];
+        const shapes = ['square', 'rectangle', 'rightTriangle', 'isoscelesTriangle', 'trapezoid', 'parallelogram'];
         
         for (let i = 0; i < mirrorCount; i++) {
             let attempts = 0;
@@ -56,16 +56,28 @@ export class DailyChallenge {
                     size,
                     x,
                     y,
-                    width: shape === 'rectangle' ? size : size,
-                    height: shape === 'rectangle' ? this.getMirrorSize(rng, shape) : size,
-                    rotation: (shape === 'rightTriangle' || shape === 'isoscelesTriangle') 
+                    width: size,
+                    height: size,
+                    rotation: (shape === 'rightTriangle' || shape === 'isoscelesTriangle' || 
+                              shape === 'trapezoid' || shape === 'parallelogram') 
                         ? rng.choice([0, 90, 180, 270]) : 0,
                     isDragging: false
                 };
                 
-                // Ensure rectangle is actually rectangular
-                if (shape === 'rectangle' && mirror.width === mirror.height) {
+                // Set specific properties based on shape
+                if (shape === 'rectangle') {
                     mirror.height = this.getMirrorSize(rng, shape);
+                    // Ensure rectangle is actually rectangular
+                    if (mirror.width === mirror.height) {
+                        mirror.height = this.getMirrorSize(rng, shape);
+                    }
+                } else if (shape === 'trapezoid') {
+                    mirror.height = this.getMirrorSize(rng, shape);
+                    mirror.topWidth = rng.choice([20, 40]); // Smaller top base
+                    mirror.width = Math.max(mirror.topWidth + 20, size); // Ensure bottom > top
+                } else if (shape === 'parallelogram') {
+                    mirror.height = this.getMirrorSize(rng, shape);
+                    mirror.skew = rng.choice([20, 40]); // Horizontal skew amount
                 }
                 
                 attempts++;

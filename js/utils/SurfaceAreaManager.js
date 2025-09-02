@@ -41,6 +41,33 @@ export class SurfaceAreaManager {
                 
                 return isoBase + 2 * roundedSideLength;
                 
+            case 'trapezoid':
+                // Trapezoid: top base + bottom base + 2 equal sides
+                const trapBottomBase = mirror.width / gridSize;  // Bottom base (wider)
+                const trapTopBase = mirror.topWidth / gridSize;  // Top base (narrower)
+                const trapHeight = mirror.height / gridSize;
+                
+                // Calculate the length of the two equal slanted sides
+                // Side length = sqrt(height^2 + ((bottom - top)/2)^2)
+                const trapBaseDiff = (trapBottomBase - trapTopBase) / 2;
+                const trapSideLength = Math.sqrt(trapHeight * trapHeight + trapBaseDiff * trapBaseDiff);
+                const roundedTrapSideLength = Math.round(trapSideLength);
+                
+                return trapBottomBase + trapTopBase + 2 * roundedTrapSideLength;
+                
+            case 'parallelogram':
+                // Parallelogram: 2 * (base + slanted side)
+                const paraBase = mirror.width / gridSize;        // Base length
+                const paraHeight = mirror.height / gridSize;     // Vertical height
+                const paraSkew = mirror.skew / gridSize;         // Horizontal skew amount
+                
+                // Calculate the slanted side using Pythagorean theorem
+                // Slanted side = sqrt(height^2 + skew^2)
+                const paraSlantedSide = Math.sqrt(paraHeight * paraHeight + paraSkew * paraSkew);
+                const roundedParaSlantedSide = Math.round(paraSlantedSide);
+                
+                return 2 * (paraBase + roundedParaSlantedSide);
+                
             default:
                 return 0;
         }
@@ -115,6 +142,58 @@ export class SurfaceAreaManager {
             }
         });
         
+        // Trapezoids (bottom base, top base, height combinations)
+        sizes.forEach(bottomBase => {
+            sizes.forEach(topBase => {
+                sizes.forEach(height => {
+                    // Only create trapezoids where bottom > top (proper trapezoid shape)
+                    if (bottomBase > topBase && topBase >= 20) { // Ensure minimum top base size
+                        mirrors.push({
+                            shape: 'trapezoid',
+                            size: Math.max(bottomBase, height),
+                            width: bottomBase,      // Bottom base (wider)
+                            topWidth: topBase,      // Top base (narrower)
+                            height: height,         // Vertical height
+                            rotation: 0,
+                            surfaceArea: this.calculateMirrorSurfaceArea({ 
+                                shape: 'trapezoid', 
+                                width: bottomBase, 
+                                topWidth: topBase, 
+                                height: height 
+                            })
+                        });
+                    }
+                });
+            });
+        });
+        
+        // Parallelograms (base, height, skew combinations)
+        sizes.forEach(baseSize => {
+            sizes.forEach(heightSize => {
+                // Create different skew amounts (horizontal displacement)
+                const skewAmounts = [20, 40, 60]; // 1, 2, 3 grid units of skew
+                skewAmounts.forEach(skew => {
+                    // Ensure skew is less than base for reasonable shapes
+                    if (skew < baseSize) {
+                        mirrors.push({
+                            shape: 'parallelogram',
+                            size: Math.max(baseSize, heightSize),
+                            width: baseSize,     // Base length
+                            height: heightSize,  // Vertical height
+                            skew: skew,          // Horizontal skew
+                            rotation: 0,
+                            surfaceArea: this.calculateMirrorSurfaceArea({ 
+                                shape: 'parallelogram', 
+                                width: baseSize, 
+                                height: heightSize,
+                                skew: skew 
+                            })
+                        });
+                    }
+                });
+            });
+        });
+        
         return mirrors;
     }
     
@@ -171,8 +250,9 @@ export class SurfaceAreaManager {
                 const randomMirror = candidateMirrors[Math.floor(Math.random() * candidateMirrors.length)];
                 const mirrorCopy = { ...randomMirror };
                 
-                // Add random rotation for triangles
-                if (mirrorCopy.shape === 'rightTriangle' || mirrorCopy.shape === 'isoscelesTriangle') {
+                // Add random rotation for triangles, trapezoids, and parallelograms
+                if (mirrorCopy.shape === 'rightTriangle' || mirrorCopy.shape === 'isoscelesTriangle' ||
+                    mirrorCopy.shape === 'trapezoid' || mirrorCopy.shape === 'parallelogram') {
                     mirrorCopy.rotation = [0, 90, 180, 270][Math.floor(Math.random() * 4)];
                 }
                 
@@ -213,9 +293,10 @@ export class SurfaceAreaManager {
             { shape: 'rightTriangle', size: 40, width: 40, height: 40, rotation: 0 } // Area: 6 (replaced invalid isosceles)
         ];
         
-        // Add random rotations for triangles
+        // Add random rotations for triangles, trapezoids, and parallelograms
         baseMirrors.forEach(mirror => {
-            if (mirror.shape === 'rightTriangle' || mirror.shape === 'isoscelesTriangle') {
+            if (mirror.shape === 'rightTriangle' || mirror.shape === 'isoscelesTriangle' ||
+                mirror.shape === 'trapezoid' || mirror.shape === 'parallelogram') {
                 mirror.rotation = [0, 90, 180, 270][Math.floor(Math.random() * 4)];
             }
             mirrors.push(mirror);

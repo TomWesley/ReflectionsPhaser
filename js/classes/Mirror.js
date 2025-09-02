@@ -10,7 +10,7 @@ export class Mirror {
         this.shape = this.getRandomShape();
         this.size = this.getRandomSize();
         
-        // For rectangles, define width and height
+        // Set shape-specific properties
         if (this.shape === 'rectangle') {
             this.width = this.size;
             this.height = this.getRandomSize();
@@ -18,19 +18,28 @@ export class Mirror {
             while (this.height === this.width) {
                 this.height = this.getRandomSize();
             }
+        } else if (this.shape === 'trapezoid') {
+            this.width = this.size;  // Bottom base
+            this.height = this.getRandomSize();
+            this.topWidth = Math.max(20, this.width - 20); // Top base (smaller)
+        } else if (this.shape === 'parallelogram') {
+            this.width = this.size;  // Base
+            this.height = this.getRandomSize();
+            this.skew = 20; // Default horizontal skew
         } else {
             this.width = this.size;
             this.height = this.size;
         }
         
-        // For triangles, generate random rotation
-        if (this.shape === 'rightTriangle' || this.shape === 'isoscelesTriangle') {
+        // For triangles, trapezoids, and parallelograms, generate random rotation
+        if (this.shape === 'rightTriangle' || this.shape === 'isoscelesTriangle' || 
+            this.shape === 'trapezoid' || this.shape === 'parallelogram') {
             this.rotation = Math.floor(Math.random() * 4) * 90; // 0, 90, 180, or 270 degrees
         }
     }
     
     getRandomShape() {
-        const shapes = ['square', 'rectangle', 'rightTriangle', 'isoscelesTriangle'];
+        const shapes = ['square', 'rectangle', 'rightTriangle', 'isoscelesTriangle', 'trapezoid', 'parallelogram'];
         return shapes[Math.floor(Math.random() * shapes.length)];
     }
     
@@ -60,7 +69,7 @@ export class Mirror {
     draw(ctx) {
         ctx.save();
         
-        // Apply rotation for triangles
+        // Apply rotation for triangles, trapezoids, and parallelograms
         if (this.rotation) {
             ctx.translate(this.x, this.y);
             ctx.rotate(this.rotation * Math.PI / 180);
@@ -86,6 +95,12 @@ export class Mirror {
                 break;
             case 'isoscelesTriangle':
                 this.drawIsoscelesTriangle(ctx);
+                break;
+            case 'trapezoid':
+                this.drawTrapezoid(ctx);
+                break;
+            case 'parallelogram':
+                this.drawParallelogram(ctx);
                 break;
         }
     }
@@ -254,6 +269,114 @@ export class Mirror {
         ctx.shadowBlur = 0;
     }
     
+    drawTrapezoid(ctx) {
+        const halfHeight = this.height / 2;
+        const bottomHalfWidth = this.width / 2;
+        const topHalfWidth = (this.topWidth || this.width * 0.6) / 2;
+        
+        // Define trapezoid points (bottom base is wider)
+        const points = [
+            { x: this.x - bottomHalfWidth, y: this.y + halfHeight },  // bottom-left
+            { x: this.x + bottomHalfWidth, y: this.y + halfHeight },  // bottom-right
+            { x: this.x + topHalfWidth, y: this.y - halfHeight },     // top-right
+            { x: this.x - topHalfWidth, y: this.y - halfHeight }      // top-left
+        ];
+        
+        // Add powder blue glow if dragging
+        if (this.isDragging) {
+            ctx.shadowColor = '#87ceeb';
+            ctx.shadowBlur = 15;
+        } else {
+            ctx.shadowBlur = 0;
+        }
+        
+        // Surface - solid silver
+        ctx.fillStyle = '#c0c0c0';
+        ctx.beginPath();
+        ctx.moveTo(points[0].x, points[0].y);
+        ctx.lineTo(points[1].x, points[1].y);
+        ctx.lineTo(points[2].x, points[2].y);
+        ctx.lineTo(points[3].x, points[3].y);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Reset shadow for border
+        ctx.shadowBlur = 0;
+        
+        // Border with glow if dragging
+        if (this.isDragging) {
+            ctx.shadowColor = '#87ceeb';
+            ctx.shadowBlur = 8;
+        }
+        
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(points[0].x, points[0].y);
+        ctx.lineTo(points[1].x, points[1].y);
+        ctx.lineTo(points[2].x, points[2].y);
+        ctx.lineTo(points[3].x, points[3].y);
+        ctx.closePath();
+        ctx.stroke();
+        
+        // Reset shadow
+        ctx.shadowBlur = 0;
+    }
+    
+    drawParallelogram(ctx) {
+        const halfHeight = this.height / 2;
+        const halfWidth = this.width / 2;
+        const skew = this.skew || 20;
+        
+        // Define parallelogram points (skewed rectangle)
+        const points = [
+            { x: this.x - halfWidth, y: this.y + halfHeight },        // bottom-left
+            { x: this.x + halfWidth, y: this.y + halfHeight },        // bottom-right
+            { x: this.x + halfWidth + skew, y: this.y - halfHeight }, // top-right (skewed)
+            { x: this.x - halfWidth + skew, y: this.y - halfHeight }  // top-left (skewed)
+        ];
+        
+        // Add powder blue glow if dragging
+        if (this.isDragging) {
+            ctx.shadowColor = '#87ceeb';
+            ctx.shadowBlur = 15;
+        } else {
+            ctx.shadowBlur = 0;
+        }
+        
+        // Surface - solid silver
+        ctx.fillStyle = '#c0c0c0';
+        ctx.beginPath();
+        ctx.moveTo(points[0].x, points[0].y);
+        ctx.lineTo(points[1].x, points[1].y);
+        ctx.lineTo(points[2].x, points[2].y);
+        ctx.lineTo(points[3].x, points[3].y);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Reset shadow for border
+        ctx.shadowBlur = 0;
+        
+        // Border with glow if dragging
+        if (this.isDragging) {
+            ctx.shadowColor = '#87ceeb';
+            ctx.shadowBlur = 8;
+        }
+        
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(points[0].x, points[0].y);
+        ctx.lineTo(points[1].x, points[1].y);
+        ctx.lineTo(points[2].x, points[2].y);
+        ctx.lineTo(points[3].x, points[3].y);
+        ctx.closePath();
+        ctx.stroke();
+        
+        // Reset shadow
+        ctx.shadowBlur = 0;
+    }
+    
     reflect(laser) {
         switch (this.shape) {
             case 'square':
@@ -265,6 +388,12 @@ export class Mirror {
                 break;
             case 'isoscelesTriangle':
                 this.reflectTriangle(laser, 'isosceles');
+                break;
+            case 'trapezoid':
+                this.reflectTrapezoid(laser);
+                break;
+            case 'parallelogram':
+                this.reflectParallelogram(laser);
                 break;
         }
     }
@@ -436,6 +565,17 @@ export class Mirror {
         const dy = py - yy;
         return Math.sqrt(dx * dx + dy * dy);
     }
+    
+    reflectTrapezoid(laser) {
+        // For now, just use rectangle reflection as baseline
+        this.reflectRectangle(laser);
+    }
+    
+    reflectParallelogram(laser) {
+        // For now, just use rectangle reflection as baseline  
+        this.reflectRectangle(laser);
+    }
+    
     
     snapLaserAngle(laser) {
         // Snap angle to 15-degree increments

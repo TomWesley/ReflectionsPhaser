@@ -7,9 +7,20 @@ export class Laser {
         this.vx = Math.cos(angle) * CONFIG.LASER_SPEED;
         this.vy = Math.sin(angle) * CONFIG.LASER_SPEED;
         this.trail = [];
+        this.lastReflectedMirror = null;
+        this.reflectionCooldown = 0;
     }
     
     update() {
+        // Store previous position for continuous collision detection
+        this.prevX = this.x;
+        this.prevY = this.y;
+        
+        // Decrease reflection cooldown
+        if (this.reflectionCooldown > 0) {
+            this.reflectionCooldown--;
+        }
+        
         // Add current position to trail
         this.trail.push({ x: this.x, y: this.y });
         if (this.trail.length > 80) {
@@ -29,6 +40,15 @@ export class Laser {
             this.vy = -this.vy;
             this.y = Math.max(0, Math.min(CONFIG.CANVAS_HEIGHT, this.y));
         }
+    }
+    
+    reflect(mirror) {
+        // Set cooldown to prevent immediate re-reflection
+        this.reflectionCooldown = 3; // frames
+        this.lastReflectedMirror = mirror;
+        
+        // Call the mirror's reflection logic
+        mirror.reflect(this);
     }
     
     draw(ctx) {

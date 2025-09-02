@@ -392,6 +392,115 @@ export class Game {
         }
     }
     
+    alignTrapezoidToGrid(mirror) {
+        const halfHeight = mirror.height / 2;
+        const bottomHalfWidth = mirror.width / 2;
+        const topHalfWidth = (mirror.topWidth || mirror.width * 0.6) / 2;
+        const rotation = mirror.rotation || 0;
+        
+        if (rotation === 0 || rotation === 180) {
+            // Standard orientation
+            // Bottom vertices: (x-bottomHalfWidth, y+halfHeight), (x+bottomHalfWidth, y+halfHeight)
+            // Top vertices: (x-topHalfWidth, y-halfHeight), (x+topHalfWidth, y-halfHeight)
+            
+            // Ensure both top and bottom edges are on grid lines
+            const bottomY = this.snapToGrid(mirror.y + halfHeight);
+            const topY = this.snapToGrid(mirror.y - halfHeight);
+            
+            // Position mirror so both edges align
+            mirror.y = (bottomY + topY) / 2;
+            
+            // Ensure vertices are on grid intersections
+            // For trapezoids, we need to ensure the center X is positioned so that
+            // all 4 vertices land on grid intersections
+            
+            // Try to align bottom-left vertex to grid
+            const desiredBottomLeftX = this.snapToGrid(mirror.x - bottomHalfWidth);
+            mirror.x = desiredBottomLeftX + bottomHalfWidth;
+            
+            // Check if top vertices also align (they should if topWidth is even grid units)
+            const topLeftX = mirror.x - topHalfWidth;
+            const topRightX = mirror.x + topHalfWidth;
+            
+            // If top vertices don't align to grid, adjust position
+            const topLeftGridX = this.snapToGrid(topLeftX);
+            const topRightGridX = this.snapToGrid(topRightX);
+            
+            // Find the position that best aligns both top vertices
+            if (Math.abs(topLeftX - topLeftGridX) > 0.1) {
+                const adjustment = topLeftGridX - topLeftX;
+                mirror.x += adjustment;
+            }
+            
+        } else if (rotation === 90 || rotation === 270) {
+            // Rotated orientation: bases become vertical
+            
+            // Ensure both left and right edges are on grid lines  
+            const leftX = this.snapToGrid(mirror.x - halfHeight);
+            const rightX = this.snapToGrid(mirror.x + halfHeight);
+            
+            // Position mirror so both edges align
+            mirror.x = (leftX + rightX) / 2;
+            
+            // Ensure vertices align to grid intersections
+            const desiredBottomY = this.snapToGrid(mirror.y - bottomHalfWidth);
+            mirror.y = desiredBottomY + bottomHalfWidth;
+            
+            // Check top vertices alignment
+            const topY = mirror.y - topHalfWidth;
+            const topGridY = this.snapToGrid(topY);
+            
+            if (Math.abs(topY - topGridY) > 0.1) {
+                const adjustment = topGridY - topY;
+                mirror.y += adjustment;
+            }
+        }
+    }
+    
+    alignParallelogramToGrid(mirror) {
+        const halfHeight = mirror.height / 2;
+        const halfWidth = mirror.width / 2;
+        const skew = mirror.skew || 20;
+        const rotation = mirror.rotation || 0;
+        
+        if (rotation === 0 || rotation === 180) {
+            // Standard orientation
+            // Bottom vertices: (x-halfWidth, y+halfHeight), (x+halfWidth, y+halfHeight)
+            // Top vertices: (x-halfWidth+skew, y-halfHeight), (x+halfWidth+skew, y-halfHeight)
+            
+            // Ensure bottom edge is on grid line
+            const bottomY = this.snapToGrid(mirror.y + halfHeight);
+            mirror.y = bottomY - halfHeight;
+            
+            // Ensure top edge is on grid line  
+            const topY = this.snapToGrid(mirror.y - halfHeight);
+            mirror.y = topY + halfHeight;
+            
+            // Ensure bottom-left vertex is on grid intersection
+            const bottomLeftX = this.snapToGrid(mirror.x - halfWidth);
+            mirror.x = bottomLeftX + halfWidth;
+            
+            // Since skew is already a multiple of grid size (20px), and we've aligned
+            // the bottom-left to grid, all other vertices should automatically align
+            
+        } else if (rotation === 90 || rotation === 270) {
+            // Rotated 90/270 degrees
+            // After rotation, width becomes height and vice versa
+            
+            // Ensure left edge is on grid line (was bottom before rotation)
+            const leftX = this.snapToGrid(mirror.x - halfHeight);
+            mirror.x = leftX + halfHeight;
+            
+            // Ensure right edge is on grid line (was top before rotation)
+            const rightX = this.snapToGrid(mirror.x + halfHeight);  
+            mirror.x = rightX - halfHeight;
+            
+            // Ensure one vertex is on grid intersection
+            const bottomY = this.snapToGrid(mirror.y - halfWidth);
+            mirror.y = bottomY + halfWidth;
+        }
+    }
+    
     isValidMirrorPosition(testMirror) {
         // Get mirror bounds first
         const bounds = this.getMirrorBounds(testMirror);
@@ -594,6 +703,12 @@ export class Game {
                 case 'isoscelesTriangle':
                     isMouseOverMirror = this.pointInIsoscelesTriangle(mouseX, mouseY, mirror);
                     break;
+                case 'trapezoid':
+                    isMouseOverMirror = this.pointInTrapezoid(mouseX, mouseY, mirror);
+                    break;
+                case 'parallelogram':
+                    isMouseOverMirror = this.pointInParallelogram(mouseX, mouseY, mirror);
+                    break;
             }
             
             if (isMouseOverMirror) {
@@ -754,6 +869,14 @@ export class Game {
                     mirror.y = targetTriangleY;
                 }
                 break;
+                
+            case 'trapezoid':
+                this.alignTrapezoidToGrid(mirror);
+                break;
+                
+            case 'parallelogram':
+                this.alignParallelogramToGrid(mirror);
+                break;
         }
         
         // After alignment, enforce forbidden zones
@@ -854,6 +977,12 @@ export class Game {
                 // For triangles, use the triangle-specific alignment
                 this.alignTriangleToGrid(mirror);
                 break;
+            case 'trapezoid':
+                this.alignTrapezoidToGrid(mirror);
+                break;
+            case 'parallelogram':
+                this.alignParallelogramToGrid(mirror);
+                break;
         }
     }
     
@@ -925,6 +1054,30 @@ export class Game {
                     top: Math.min(...ys),
                     bottom: Math.max(...ys)
                 };
+            case 'trapezoid':
+                // Get actual trapezoid vertices and calculate bounding box
+                const trapVertices = this.getTrapezoidVertices(mirror);
+                const trapXs = trapVertices.map(v => v.x);
+                const trapYs = trapVertices.map(v => v.y);
+                
+                return {
+                    left: Math.min(...trapXs),
+                    right: Math.max(...trapXs),
+                    top: Math.min(...trapYs),
+                    bottom: Math.max(...trapYs)
+                };
+            case 'parallelogram':
+                // Get actual parallelogram vertices and calculate bounding box
+                const paraVertices = this.getParallelogramVertices(mirror);
+                const paraXs = paraVertices.map(v => v.x);
+                const paraYs = paraVertices.map(v => v.y);
+                
+                return {
+                    left: Math.min(...paraXs),
+                    right: Math.max(...paraXs),
+                    top: Math.min(...paraYs),
+                    bottom: Math.max(...paraYs)
+                };
             default:
                 return { left: mirror.x, right: mirror.x, top: mirror.y, bottom: mirror.y };
         }
@@ -968,9 +1121,9 @@ export class Game {
             const laser = this.lasers[i];
             laser.update();
             
-            // Check collision with mirrors
+            // Check continuous collision with mirrors (check path from previous to current position)
             for (let mirror of this.mirrors) {
-                if (this.checkLaserMirrorCollision(laser, mirror)) {
+                if (this.checkContinuousLaserMirrorCollision(laser, mirror)) {
                     laser.reflect(mirror);
                     break;
                 }
@@ -1050,6 +1203,11 @@ export class Game {
                 // For triangles, check if vertices are properly aligned to grid
                 return this.areTriangleVerticesAligned(mirror);
                 
+            case 'trapezoid':
+            case 'parallelogram':
+                // For trapezoids and parallelograms, check if flat sides are on grid lines
+                return this.areQuadrilateralSidesAligned(mirror);
+                
             default:
                 return true;
         }
@@ -1081,6 +1239,80 @@ export class Game {
         } else {
             return false;
         }
+    }
+    
+    areQuadrilateralSidesAligned(mirror) {
+        // Check if all vertices are on grid intersections
+        let vertices;
+        
+        if (mirror.shape === 'trapezoid') {
+            vertices = this.getTrapezoidVertices(mirror);
+        } else if (mirror.shape === 'parallelogram') {
+            vertices = this.getParallelogramVertices(mirror);
+        } else {
+            return true;
+        }
+        
+        // All vertices must be on grid intersections
+        return vertices.every(vertex => 
+            this.isOnGridLine(vertex.x) && this.isOnGridLine(vertex.y)
+        );
+    }
+    
+    getTrapezoidVertices(mirror) {
+        const halfHeight = mirror.height / 2;
+        const bottomHalfWidth = mirror.width / 2;
+        const topHalfWidth = (mirror.topWidth || mirror.width * 0.6) / 2;
+        const rotation = mirror.rotation || 0;
+        
+        // Calculate vertices based on rotation
+        if (rotation === 0 || rotation === 180) {
+            // Standard orientation: bases are horizontal
+            return [
+                { x: mirror.x - bottomHalfWidth, y: mirror.y + halfHeight },  // bottom-left
+                { x: mirror.x + bottomHalfWidth, y: mirror.y + halfHeight },  // bottom-right
+                { x: mirror.x + topHalfWidth, y: mirror.y - halfHeight },     // top-right
+                { x: mirror.x - topHalfWidth, y: mirror.y - halfHeight }      // top-left
+            ];
+        } else if (rotation === 90 || rotation === 270) {
+            // Rotated 90/270: bases become vertical, height/width swap meanings
+            return [
+                { x: mirror.x - halfHeight, y: mirror.y + bottomHalfWidth },  // bottom-left (now wider base)
+                { x: mirror.x - halfHeight, y: mirror.y - bottomHalfWidth },  // top-left  
+                { x: mirror.x + halfHeight, y: mirror.y - topHalfWidth },     // top-right (now narrower base)
+                { x: mirror.x + halfHeight, y: mirror.y + topHalfWidth }      // bottom-right
+            ];
+        }
+        
+        return [];
+    }
+    
+    getParallelogramVertices(mirror) {
+        const halfHeight = mirror.height / 2;
+        const halfWidth = mirror.width / 2;
+        const skew = mirror.skew || 20;
+        const rotation = mirror.rotation || 0;
+        
+        // Calculate vertices based on rotation
+        if (rotation === 0 || rotation === 180) {
+            // Standard orientation: skew is horizontal
+            return [
+                { x: mirror.x - halfWidth, y: mirror.y + halfHeight },        // bottom-left
+                { x: mirror.x + halfWidth, y: mirror.y + halfHeight },        // bottom-right
+                { x: mirror.x + halfWidth + skew, y: mirror.y - halfHeight }, // top-right (skewed)
+                { x: mirror.x - halfWidth + skew, y: mirror.y - halfHeight }  // top-left (skewed)
+            ];
+        } else if (rotation === 90 || rotation === 270) {
+            // Rotated 90/270: skew becomes vertical, dimensions swap
+            return [
+                { x: mirror.x - halfHeight, y: mirror.y - halfWidth },        // top-left
+                { x: mirror.x - halfHeight, y: mirror.y + halfWidth },        // bottom-left  
+                { x: mirror.x + halfHeight, y: mirror.y + halfWidth + skew }, // bottom-right (skewed)
+                { x: mirror.x + halfHeight, y: mirror.y - halfWidth + skew }  // top-right (skewed)
+            ];
+        }
+        
+        return [];
     }
     
     isInForbiddenZone(mirror) {
@@ -1167,6 +1399,12 @@ export class Game {
                 // Use the same alignment logic as alignTriangleToGrid
                 this.alignTriangleToGrid(mirror);
                 break;
+            case 'trapezoid':
+                this.alignTrapezoidToGrid(mirror);
+                break;
+            case 'parallelogram':
+                this.alignParallelogramToGrid(mirror);
+                break;
         }
     }
     
@@ -1211,6 +1449,129 @@ export class Game {
         return false;
     }
     
+    checkContinuousLaserMirrorCollision(laser, mirror) {
+        // Skip collision if laser is in cooldown with this specific mirror
+        if (laser.reflectionCooldown > 0 && laser.lastReflectedMirror === mirror) {
+            return false;
+        }
+        
+        // If laser doesn't have previous position yet, fall back to point collision
+        if (laser.prevX === undefined || laser.prevY === undefined) {
+            return this.checkLaserMirrorCollision(laser, mirror);
+        }
+        
+        // Check if previous position was outside and current position is inside
+        const wasOutside = !this.checkLaserMirrorCollision({x: laser.prevX, y: laser.prevY}, mirror);
+        const isInside = this.checkLaserMirrorCollision(laser, mirror);
+        
+        if (wasOutside && isInside) {
+            // Laser just entered mirror - this is a proper collision
+            this.moveLaserToMirrorEdge(laser, mirror);
+            
+            // Additional safeguard: push laser slightly away from mirror to prevent immediate re-collision
+            this.nudgeLaserAwayFromMirror(laser, mirror);
+            
+            return true;
+        }
+        
+        if (isInside && !wasOutside) {
+            // Laser is stuck inside - emergency escape (but only if not in cooldown)
+            if (laser.reflectionCooldown === 0) {
+                this.emergencyEscapeLaser(laser, mirror);
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
+    moveLaserToMirrorEdge(laser, mirror) {
+        // Try to find the exact collision point between previous and current position
+        let bestX = laser.prevX;
+        let bestY = laser.prevY;
+        
+        // Binary search for exact collision point
+        let t1 = 0;  // Previous position (known to be outside)
+        let t2 = 1;  // Current position (known to be inside)
+        
+        for (let iterations = 0; iterations < 10; iterations++) {
+            const t = (t1 + t2) / 2;
+            const testX = laser.prevX + (laser.x - laser.prevX) * t;
+            const testY = laser.prevY + (laser.y - laser.prevY) * t;
+            
+            if (this.checkLaserMirrorCollision({x: testX, y: testY}, mirror)) {
+                // Still inside, move t2 back
+                t2 = t;
+            } else {
+                // Outside, move t1 forward and update best position
+                t1 = t;
+                bestX = testX;
+                bestY = testY;
+            }
+        }
+        
+        laser.x = bestX;
+        laser.y = bestY;
+    }
+    
+    emergencyEscapeLaser(laser, mirror) {
+        // Laser is stuck inside - push it out in the direction opposite to its velocity
+        const escapeDistance = 5; // Push out by 5 pixels
+        const normalizedVx = laser.vx / CONFIG.LASER_SPEED;
+        const normalizedVy = laser.vy / CONFIG.LASER_SPEED;
+        
+        // Try pushing in opposite direction of movement
+        let testX = laser.x - normalizedVx * escapeDistance;
+        let testY = laser.y - normalizedVy * escapeDistance;
+        
+        if (!this.checkLaserMirrorCollision({x: testX, y: testY}, mirror)) {
+            laser.x = testX;
+            laser.y = testY;
+            return;
+        }
+        
+        // If that doesn't work, try all cardinal directions
+        const directions = [
+            {x: escapeDistance, y: 0},
+            {x: -escapeDistance, y: 0},
+            {x: 0, y: escapeDistance},
+            {x: 0, y: -escapeDistance}
+        ];
+        
+        for (let dir of directions) {
+            testX = laser.x + dir.x;
+            testY = laser.y + dir.y;
+            
+            if (!this.checkLaserMirrorCollision({x: testX, y: testY}, mirror)) {
+                laser.x = testX;
+                laser.y = testY;
+                return;
+            }
+        }
+        
+        // Ultimate fallback: use previous position
+        laser.x = laser.prevX;
+        laser.y = laser.prevY;
+    }
+    
+    nudgeLaserAwayFromMirror(laser, mirror) {
+        // Push laser slightly away from mirror in the direction opposite to its velocity
+        const nudgeDistance = 1; // Small nudge distance
+        const speed = Math.sqrt(laser.vx * laser.vx + laser.vy * laser.vy);
+        const normalizedVx = laser.vx / speed;
+        const normalizedVy = laser.vy / speed;
+        
+        // Try nudging backwards first
+        let testX = laser.x - normalizedVx * nudgeDistance;
+        let testY = laser.y - normalizedVy * nudgeDistance;
+        
+        if (!this.checkLaserMirrorCollision({x: testX, y: testY}, mirror)) {
+            laser.x = testX;
+            laser.y = testY;
+        }
+    }
+    
+    
     checkLaserMirrorCollision(laser, mirror) {
         switch (mirror.shape) {
             case 'square':
@@ -1227,6 +1588,12 @@ export class Game {
             
             case 'isoscelesTriangle':
                 return this.pointInIsoscelesTriangle(laser.x, laser.y, mirror);
+            
+            case 'trapezoid':
+                return this.pointInTrapezoid(laser.x, laser.y, mirror);
+                
+            case 'parallelogram':
+                return this.pointInParallelogram(laser.x, laser.y, mirror);
             
             default:
                 return false;
@@ -1315,6 +1682,29 @@ export class Game {
         const c = 1 - a - b;
         
         return a >= 0 && b >= 0 && c >= 0;
+    }
+    
+    pointInTrapezoid(px, py, mirror) {
+        const vertices = this.getTrapezoidVertices(mirror);
+        return this.pointInPolygon(px, py, vertices);
+    }
+    
+    pointInParallelogram(px, py, mirror) {
+        const vertices = this.getParallelogramVertices(mirror);
+        return this.pointInPolygon(px, py, vertices);
+    }
+    
+    pointInPolygon(px, py, vertices) {
+        let inside = false;
+        for (let i = 0, j = vertices.length - 1; i < vertices.length; j = i++) {
+            const xi = vertices[i].x, yi = vertices[i].y;
+            const xj = vertices[j].x, yj = vertices[j].y;
+            
+            if (((yi > py) !== (yj > py)) && (px < (xj - xi) * (py - yi) / (yj - yi) + xi)) {
+                inside = !inside;
+            }
+        }
+        return inside;
     }
     
     checkLaserTargetCollision(laser) {
