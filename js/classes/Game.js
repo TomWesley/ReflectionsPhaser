@@ -399,61 +399,82 @@ export class Game {
         const rotation = mirror.rotation || 0;
         
         if (rotation === 0 || rotation === 180) {
-            // Standard orientation
-            // Bottom vertices: (x-bottomHalfWidth, y+halfHeight), (x+bottomHalfWidth, y+halfHeight)
-            // Top vertices: (x-topHalfWidth, y-halfHeight), (x+topHalfWidth, y-halfHeight)
+            // Standard orientation: horizontal bases
             
-            // Ensure both top and bottom edges are on grid lines
+            // Step 1: Align both Y edges to grid lines
             const bottomY = this.snapToGrid(mirror.y + halfHeight);
             const topY = this.snapToGrid(mirror.y - halfHeight);
-            
-            // Position mirror so both edges align
             mirror.y = (bottomY + topY) / 2;
             
-            // Ensure vertices are on grid intersections
-            // For trapezoids, we need to ensure the center X is positioned so that
-            // all 4 vertices land on grid intersections
+            // Step 2: Find X position where ALL vertices land on grid intersections
+            // We need both bottom corners AND top corners to be on grid intersections
             
-            // Try to align bottom-left vertex to grid
-            const desiredBottomLeftX = this.snapToGrid(mirror.x - bottomHalfWidth);
-            mirror.x = desiredBottomLeftX + bottomHalfWidth;
+            // Try different X positions to find one where all vertices align
+            const currentX = mirror.x;
+            let bestX = currentX;
+            let bestScore = Infinity;
             
-            // Check if top vertices also align (they should if topWidth is even grid units)
-            const topLeftX = mirror.x - topHalfWidth;
-            const topRightX = mirror.x + topHalfWidth;
-            
-            // If top vertices don't align to grid, adjust position
-            const topLeftGridX = this.snapToGrid(topLeftX);
-            const topRightGridX = this.snapToGrid(topRightX);
-            
-            // Find the position that best aligns both top vertices
-            if (Math.abs(topLeftX - topLeftGridX) > 0.1) {
-                const adjustment = topLeftGridX - topLeftX;
-                mirror.x += adjustment;
+            // Test X positions in a reasonable range around current position
+            for (let testX = currentX - CONFIG.GRID_SIZE; testX <= currentX + CONFIG.GRID_SIZE; testX += CONFIG.GRID_SIZE / 4) {
+                // Calculate all 4 vertex positions with this X
+                const bottomLeft = testX - bottomHalfWidth;
+                const bottomRight = testX + bottomHalfWidth;
+                const topLeft = testX - topHalfWidth;
+                const topRight = testX + topHalfWidth;
+                
+                // Calculate how far each vertex is from nearest grid intersection
+                const bottomLeftError = Math.abs(bottomLeft - this.snapToGrid(bottomLeft));
+                const bottomRightError = Math.abs(bottomRight - this.snapToGrid(bottomRight));
+                const topLeftError = Math.abs(topLeft - this.snapToGrid(topLeft));
+                const topRightError = Math.abs(topRight - this.snapToGrid(topRight));
+                
+                const totalError = bottomLeftError + bottomRightError + topLeftError + topRightError;
+                
+                if (totalError < bestScore) {
+                    bestScore = totalError;
+                    bestX = testX;
+                }
             }
+            
+            mirror.x = bestX;
             
         } else if (rotation === 90 || rotation === 270) {
-            // Rotated orientation: bases become vertical
+            // Rotated orientation: vertical bases (dimensions swap)
+            // When rotated 90°: height becomes horizontal extent, width/topWidth become vertical extents
             
-            // Ensure both left and right edges are on grid lines  
+            // Step 1: Align both X edges to grid lines (using original height as horizontal extent)
             const leftX = this.snapToGrid(mirror.x - halfHeight);
             const rightX = this.snapToGrid(mirror.x + halfHeight);
-            
-            // Position mirror so both edges align
             mirror.x = (leftX + rightX) / 2;
             
-            // Ensure vertices align to grid intersections
-            const desiredBottomY = this.snapToGrid(mirror.y - bottomHalfWidth);
-            mirror.y = desiredBottomY + bottomHalfWidth;
+            // Step 2: Find Y position where all vertices align
+            const currentY = mirror.y;
+            let bestY = currentY;
+            let bestScore = Infinity;
             
-            // Check top vertices alignment
-            const topY = mirror.y - topHalfWidth;
-            const topGridY = this.snapToGrid(topY);
-            
-            if (Math.abs(topY - topGridY) > 0.1) {
-                const adjustment = topGridY - topY;
-                mirror.y += adjustment;
+            for (let testY = currentY - CONFIG.GRID_SIZE; testY <= currentY + CONFIG.GRID_SIZE; testY += CONFIG.GRID_SIZE / 4) {
+                // For rotated trapezoid, width/topWidth become the vertical distances from center
+                // The "bottom" (wider) base is now vertical, extending bottomHalfWidth from center
+                // The "top" (narrower) base is now vertical, extending topHalfWidth from center
+                const bottomTop = testY - bottomHalfWidth;    // top of wider base
+                const bottomBottom = testY + bottomHalfWidth; // bottom of wider base  
+                const topTop = testY - topHalfWidth;          // top of narrower base
+                const topBottom = testY + topHalfWidth;       // bottom of narrower base
+                
+                const bottomTopError = Math.abs(bottomTop - this.snapToGrid(bottomTop));
+                const bottomBottomError = Math.abs(bottomBottom - this.snapToGrid(bottomBottom));
+                const topTopError = Math.abs(topTop - this.snapToGrid(topTop));
+                const topBottomError = Math.abs(topBottom - this.snapToGrid(topBottom));
+                
+                const totalError = bottomTopError + bottomBottomError + topTopError + topBottomError;
+                
+                if (totalError < bestScore) {
+                    bestScore = totalError;
+                    bestY = testY;
+                }
             }
+            
+            mirror.y = bestY;
         }
     }
     
