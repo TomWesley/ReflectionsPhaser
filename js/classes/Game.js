@@ -5,6 +5,7 @@ import { Spawner } from './Spawner.js';
 import { DailyChallenge } from '../utils/DailyChallenge.js';
 import { SurfaceAreaManager } from '../utils/SurfaceAreaManager.js';
 import { PerformanceRating } from '../utils/PerformanceRating.js';
+import { MirrorPlacementValidation } from '../utils/MirrorPlacementValidation.js';
 
 export class Game {
     constructor() {
@@ -35,6 +36,9 @@ export class Game {
     }
     
     init() {
+        // Initialize the validation system first
+        MirrorPlacementValidation.initialize();
+        
         this.setupEventListeners();
         this.setupModeButtons();
         this.updateDailyInfo();
@@ -146,96 +150,106 @@ export class Game {
             // Generate daily challenge puzzle
             this.dailyPuzzle = DailyChallenge.generatePuzzle();
             
-            // Create mirrors from daily puzzle data
-            this.dailyPuzzle.mirrors.forEach(mirrorData => {
-                const mirror = new Mirror(mirrorData.x, mirrorData.y);
-                // Override the random properties with puzzle data
-                mirror.shape = mirrorData.shape;
-                mirror.size = mirrorData.size;
-                mirror.width = mirrorData.width;
-                mirror.height = mirrorData.height;
-                mirror.rotation = mirrorData.rotation;
-                this.mirrors.push(mirror);
-            });
+            // Create mirrors from daily puzzle data and validate them
+            for (let mirrorData of this.dailyPuzzle.mirrors) {
+                let mirror = this.createValidatedMirror(mirrorData);
+                if (mirror) {
+                    this.mirrors.push(mirror);
+                }
+            }
             return;
         }
         
-        // Free play mode - use surface area management for exact target area
+        // Free play mode - use surface area management with validation
         const mirrorConfigs = SurfaceAreaManager.generateMirrorsWithTargetSurfaceArea();
-        const center = { x: CONFIG.CANVAS_WIDTH / 2, y: CONFIG.CANVAS_HEIGHT / 2 };
         
-        // Create mirrors from surface area configurations
         for (let config of mirrorConfigs) {
-            let mirror, attempts = 0;
-            
-            do {
-                // Generate position in ring around center
-                const angle = Math.random() * Math.PI * 2;
-                const distance = 140 + Math.random() * 180;
-                let x = center.x + Math.cos(angle) * distance;
-                let y = center.y + Math.sin(angle) * distance;
-                
-                // Snap to grid
-                x = this.snapToGrid(x);
-                y = this.snapToGrid(y);
-                
-                // Create mirror with predetermined properties from surface area config
-                mirror = new Mirror(x, y);
-                mirror.shape = config.shape;
-                mirror.size = config.size;
-                mirror.width = config.width;
-                mirror.height = config.height;
-                mirror.rotation = config.rotation;
-                
-                this.adjustMirrorPositionForGrid(mirror);
-                
-                attempts++;
-            } while (!this.isValidMirrorPosition(mirror) && attempts < 100);
-            
-            if (attempts < 100) {
+            let mirror = this.createValidatedMirror(config);
+            if (mirror) {
                 this.mirrors.push(mirror);
+            } else {
+                // If we can't place this specific mirror config, try generating a replacement
+                console.warn('Could not place mirror config, generating replacement:', config);
+                mirror = this.generateReplacementMirror(config);
+                if (mirror) {
+                    this.mirrors.push(mirror);
+                }
             }
         }
         
         // Debug: Log total surface area
         const totalSurfaceArea = SurfaceAreaManager.calculateTotalSurfaceArea(this.mirrors);
         console.log(`Free play mirrors generated: ${this.mirrors.length} mirrors, total surface area: ${totalSurfaceArea} (target: ${SurfaceAreaManager.TARGET_SURFACE_AREA})`);
+    }
+    
+    createValidatedMirror(config) {
+        const center = { x: CONFIG.CANVAS_WIDTH / 2, y: CONFIG.CANVAS_HEIGHT / 2 };
+        const maxAttempts = 100;
         
-        // Fallback if we couldn't place enough mirrors
-        if (this.mirrors.length < SurfaceAreaManager.MIN_MIRRORS) {
-            console.warn('Not enough mirrors placed, using fallback generation');
-            this.mirrors = [];
-            const fallbackConfigs = SurfaceAreaManager.generateFallbackMirrors();
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+            // Generate position in ring around center
+            const angle = Math.random() * Math.PI * 2;
+            const distance = 140 + Math.random() * 180;
+            let x = center.x + Math.cos(angle) * distance;
+            let y = center.y + Math.sin(angle) * distance;
             
-            for (let config of fallbackConfigs) {
-                let mirror, attempts = 0;
+            // Snap to grid
+            x = this.snapToGrid(x);
+            y = this.snapToGrid(y);
+            
+            // Create mirror with config properties
+            const mirror = new Mirror(x, y);
+            mirror.shape = config.shape;
+            mirror.size = config.size;
+            mirror.width = config.width;
+            mirror.height = config.height;
+            mirror.rotation = config.rotation || 0;
+            
+            // Copy special shape properties
+            if (config.topWidth) mirror.topWidth = config.topWidth;
+            if (config.skew) mirror.skew = config.skew;
+            
+            // Validate placement using new system
+            const validation = MirrorPlacementValidation.isValidPlacement(mirror, this.mirrors);
+            if (validation.valid) {
+                return mirror;
+            }
+            
+            // Try to find a nearby valid position
+            const nearestValidPos = MirrorPlacementValidation.findNearestValidPosition(mirror, this.mirrors);
+            if (nearestValidPos) {
+                mirror.x = nearestValidPos.x;
+                mirror.y = nearestValidPos.y;
                 
-                do {
-                    const angle = Math.random() * Math.PI * 2;
-                    const distance = 140 + Math.random() * 180;
-                    let x = center.x + Math.cos(angle) * distance;
-                    let y = center.y + Math.sin(angle) * distance;
-                    
-                    x = this.snapToGrid(x);
-                    y = this.snapToGrid(y);
-                    
-                    mirror = new Mirror(x, y);
-                    mirror.shape = config.shape;
-                    mirror.size = config.size;
-                    mirror.width = config.width;
-                    mirror.height = config.height;
-                    mirror.rotation = config.rotation;
-                    
-                    this.adjustMirrorPositionForGrid(mirror);
-                    
-                    attempts++;
-                } while (!this.isValidMirrorPosition(mirror) && attempts < 100);
-                
-                if (attempts < 100) {
-                    this.mirrors.push(mirror);
+                // Re-validate the corrected position
+                const revalidation = MirrorPlacementValidation.isValidPlacement(mirror, this.mirrors);
+                if (revalidation.valid) {
+                    return mirror;
                 }
             }
         }
+        
+        return null; // Could not place this mirror
+    }
+    
+    generateReplacementMirror(originalConfig) {
+        // Generate a simpler mirror that's easier to place
+        const simpleMirrors = [
+            { shape: 'square', size: 40, width: 40, height: 40, rotation: 0 },
+            { shape: 'square', size: 60, width: 60, height: 60, rotation: 0 },
+            { shape: 'rectangle', size: 60, width: 60, height: 40, rotation: 0 },
+            { shape: 'rectangle', size: 60, width: 40, height: 60, rotation: 0 }
+        ];
+        
+        for (let simpleConfig of simpleMirrors) {
+            let mirror = this.createValidatedMirror(simpleConfig);
+            if (mirror) {
+                console.log('Generated replacement mirror:', simpleConfig.shape);
+                return mirror;
+            }
+        }
+        
+        return null;
     }
     
     generateSpawners() {
@@ -742,6 +756,11 @@ export class Game {
                 this.mouseHasMoved = false;
                 this.canvas.style.cursor = 'grabbing';
                 mirror.isDragging = true;
+                
+                // Store original position for potential revert
+                mirror.originalX = mirror.x;
+                mirror.originalY = mirror.y;
+                
                 console.log('Started dragging mirror at', mirror.x, mirror.y);
                 break;
             }
@@ -797,57 +816,34 @@ export class Game {
             const targetX = this.snapToGrid(dropX);
             const targetY = this.snapToGrid(dropY);
             
-            // Try to place mirror at target position with proper shape alignment
+            // Try to place mirror at target position
             this.draggedMirror.x = targetX;
             this.draggedMirror.y = targetY;
-            this.ensureMirrorShapeAlignment(this.draggedMirror);
             
-            // Test if this position is valid (considering forbidden zones and overlaps)
-            if (!this.isValidMirrorPosition(this.draggedMirror) || this.isOverlappingWithOthers(this.draggedMirror)) {
-                // Find the nearest valid position that doesn't overlap
-                const validPosition = this.findNearestValidPosition(this.draggedMirror);
-                if (validPosition) {
-                    this.draggedMirror.x = validPosition.x;
-                    this.draggedMirror.y = validPosition.y;
+            // Get other mirrors (excluding the one being dragged)
+            const otherMirrors = this.mirrors.filter(m => m !== this.draggedMirror);
+            
+            // Validate placement using new system
+            const validation = MirrorPlacementValidation.isValidPlacement(this.draggedMirror, otherMirrors);
+            
+            if (!validation.valid) {
+                // Find the nearest valid position
+                const nearestValidPos = MirrorPlacementValidation.findNearestValidPosition(this.draggedMirror, otherMirrors);
+                
+                if (nearestValidPos) {
+                    this.draggedMirror.x = nearestValidPos.x;
+                    this.draggedMirror.y = nearestValidPos.y;
+                    console.log(`Mirror moved to nearest valid position: (${nearestValidPos.x}, ${nearestValidPos.y}). Reason: ${validation.reason}`);
                 } else {
-                    // Fallback: try small area around drop point
-                    const testMirror = { ...this.draggedMirror };
-                    let found = false;
-                    
-                    // Try positions in expanding grid around drop point
-                    for (let radius = 1; radius <= 5 && !found; radius++) {
-                        const offsets = [
-                            [-radius * CONFIG.GRID_SIZE, 0], [radius * CONFIG.GRID_SIZE, 0],
-                            [0, -radius * CONFIG.GRID_SIZE], [0, radius * CONFIG.GRID_SIZE],
-                            [-radius * CONFIG.GRID_SIZE, -radius * CONFIG.GRID_SIZE], 
-                            [radius * CONFIG.GRID_SIZE, -radius * CONFIG.GRID_SIZE],
-                            [-radius * CONFIG.GRID_SIZE, radius * CONFIG.GRID_SIZE], 
-                            [radius * CONFIG.GRID_SIZE, radius * CONFIG.GRID_SIZE]
-                        ];
-                        
-                        for (const [dx, dy] of offsets) {
-                            testMirror.x = targetX + dx;
-                            testMirror.y = targetY + dy;
-                            this.ensureMirrorShapeAlignment(testMirror);
-                            
-                            if (this.isValidMirrorPosition(testMirror) && !this.overlapsWithOtherMirrors(testMirror, this.draggedMirror)) {
-                                this.draggedMirror.x = testMirror.x;
-                                this.draggedMirror.y = testMirror.y;
-                                found = true;
-                                break;
-                            }
-                        }
-                    }
-                    
-                    // Final fallback: use the iron-clad system to fix it
-                    if (!found) {
-                        this.forceCorrectPlacement(this.draggedMirror);
-                    }
+                    // Final fallback: move to original position
+                    console.warn('Could not find valid position, reverting to original');
+                    this.draggedMirror.x = this.draggedMirror.originalX || targetX;
+                    this.draggedMirror.y = this.draggedMirror.originalY || targetY;
                 }
             }
             
             this.draggedMirror.isDragging = false;
-            console.log('Dropped mirror at', this.draggedMirror.x, this.draggedMirror.y);
+            console.log('Mirror placed at', this.draggedMirror.x, this.draggedMirror.y);
         }
         this.draggedMirror = null;
         this.canvas.style.cursor = 'crosshair';
@@ -1126,10 +1122,7 @@ export class Game {
     }
     
     update() {
-        // IRON-CLAD VALIDATION: Run continuously during placement phase
-        if (!this.isPlaying) {
-            this.enforceIronCladValidation();
-        }
+        // Validation is now handled by MirrorPlacementValidation system
         
         if (!this.isPlaying || this.gameOver) return;
         
