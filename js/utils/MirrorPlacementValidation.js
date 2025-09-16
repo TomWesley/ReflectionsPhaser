@@ -222,7 +222,7 @@ export class MirrorPlacementValidation {
     }
     
     /**
-     * Check if a point is in a forbidden zone
+     * Check if a point is in a forbidden zone (inside, not on the boundary)
      */
     static isPointInForbiddenZone(point) {
         for (let zone of this.forbiddenZones) {
@@ -230,14 +230,16 @@ export class MirrorPlacementValidation {
                 const distance = Math.sqrt(
                     (point.x - zone.x) ** 2 + (point.y - zone.y) ** 2
                 );
-                if (distance <= zone.radius) {
+                // Point is forbidden if it's INSIDE the circle (not on the edge)
+                if (distance < zone.radius) {
                     return true;
                 }
             } else if (zone.type === 'rectangle') {
-                if (point.x >= zone.x && 
-                    point.x <= zone.x + zone.width &&
-                    point.y >= zone.y && 
-                    point.y <= zone.y + zone.height) {
+                // Point is forbidden if it's INSIDE the rectangle (not on the edges)
+                if (point.x > zone.x && 
+                    point.x < zone.x + zone.width &&
+                    point.y > zone.y && 
+                    point.y < zone.y + zone.height) {
                     return true;
                 }
             }
@@ -300,7 +302,7 @@ export class MirrorPlacementValidation {
     }
     
     /**
-     * Check if line intersects circle
+     * Check if line intersects circle (crosses inside, not just touches)
      */
     static lineIntersectsCircle(lineStart, lineEnd, circle) {
         const dx = lineEnd.x - lineStart.x;
@@ -314,22 +316,45 @@ export class MirrorPlacementValidation {
         
         const discriminant = b * b - 4 * a * c;
         
-        if (discriminant < 0) {
-            return false; // No intersection
+        if (discriminant <= 0) {
+            return false; // No intersection or just touching (tangent)
         }
         
         const discriminantSqrt = Math.sqrt(discriminant);
         const t1 = (-b - discriminantSqrt) / (2 * a);
         const t2 = (-b + discriminantSqrt) / (2 * a);
         
-        return (0 <= t1 && t1 <= 1) || (0 <= t2 && t2 <= 1);
+        // Check if line actually crosses through the circle (both endpoints outside or one inside)
+        const startDistance = Math.sqrt(fx * fx + fy * fy);
+        const endDistance = Math.sqrt((lineEnd.x - circle.x) ** 2 + (lineEnd.y - circle.y) ** 2);
+        
+        // Allow if line is tangent or both endpoints are outside and line doesn't cross
+        if (startDistance >= circle.radius && endDistance >= circle.radius) {
+            // Both endpoints outside - only forbidden if line passes through interior
+            return (0 < t1 && t1 < 1) || (0 < t2 && t2 < 1);
+        }
+        
+        // If one or both endpoints are inside, that's forbidden
+        return startDistance < circle.radius || endDistance < circle.radius;
     }
     
     /**
-     * Check if line intersects rectangle
+     * Check if line intersects rectangle (crosses interior, not just touches boundary)
      */
     static lineIntersectsRectangle(lineStart, lineEnd, rect) {
-        // Check intersection with each edge of the rectangle
+        // Check if either endpoint is inside the rectangle
+        const startInside = lineStart.x > rect.x && lineStart.x < rect.x + rect.width &&
+                           lineStart.y > rect.y && lineStart.y < rect.y + rect.height;
+        const endInside = lineEnd.x > rect.x && lineEnd.x < rect.x + rect.width &&
+                         lineEnd.y > rect.y && lineEnd.y < rect.y + rect.height;
+        
+        // If either endpoint is inside, that's forbidden
+        if (startInside || endInside) {
+            return true;
+        }
+        
+        // Check if line passes through the interior (not just touching edges)
+        // Use ray casting to see if line crosses rectangle boundaries
         const rectCorners = [
             { x: rect.x, y: rect.y },
             { x: rect.x + rect.width, y: rect.y },
@@ -337,14 +362,17 @@ export class MirrorPlacementValidation {
             { x: rect.x, y: rect.y + rect.height }
         ];
         
+        let crossings = 0;
         for (let i = 0; i < rectCorners.length; i++) {
             const next = (i + 1) % rectCorners.length;
             if (this.doLinesIntersect(lineStart, lineEnd, rectCorners[i], rectCorners[next])) {
-                return true;
+                crossings++;
             }
         }
         
-        return false;
+        // If line crosses rectangle boundary an odd number of times, it goes through interior
+        // If even (including 0), it either doesn't cross or just touches
+        return crossings > 0 && crossings % 2 === 1;
     }
     
     /**

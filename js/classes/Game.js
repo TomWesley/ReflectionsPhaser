@@ -252,6 +252,43 @@ export class Game {
         return null;
     }
     
+    enforceValidationDuringPlacement() {
+        // Check every mirror every frame during placement stage
+        for (let mirror of this.mirrors) {
+            // Skip the mirror being dragged - allow temporary violations during drag
+            if (mirror.isDragging) continue;
+            
+            // Get other mirrors (excluding this one)
+            const otherMirrors = this.mirrors.filter(m => m !== mirror);
+            
+            // Validate this mirror's placement
+            const validation = MirrorPlacementValidation.isValidPlacement(mirror, otherMirrors);
+            
+            if (!validation.valid) {
+                console.warn(`Mirror violation detected: ${validation.reason}`, mirror);
+                
+                // Find the nearest valid position
+                const nearestValidPos = MirrorPlacementValidation.findNearestValidPosition(mirror, otherMirrors);
+                
+                if (nearestValidPos) {
+                    console.log(`Moving mirror from (${mirror.x}, ${mirror.y}) to (${nearestValidPos.x}, ${nearestValidPos.y})`);
+                    mirror.x = nearestValidPos.x;
+                    mirror.y = nearestValidPos.y;
+                } else {
+                    // Emergency fallback: move to a safe area
+                    const center = { x: CONFIG.CANVAS_WIDTH / 2, y: CONFIG.CANVAS_HEIGHT / 2 };
+                    const safeDistance = 200;
+                    const angle = Math.random() * Math.PI * 2;
+                    
+                    mirror.x = this.snapToGrid(center.x + Math.cos(angle) * safeDistance);
+                    mirror.y = this.snapToGrid(center.y + Math.sin(angle) * safeDistance);
+                    
+                    console.warn('Emergency relocation for mirror:', mirror);
+                }
+            }
+        }
+    }
+    
     generateSpawners() {
         this.spawners = [];
         
@@ -784,8 +821,16 @@ export class Game {
         }
         
         // Move smoothly without snapping during drag
-        const newX = mouseX - this.dragOffset.x;
-        const newY = mouseY - this.dragOffset.y;
+        let newX = mouseX - this.dragOffset.x;
+        let newY = mouseY - this.dragOffset.y;
+        
+        // Constrain to canvas bounds with margin for mirror size
+        const maxMirrorSize = Math.max(this.draggedMirror.width || this.draggedMirror.size, 
+                                      this.draggedMirror.height || this.draggedMirror.size);
+        const margin = maxMirrorSize / 2 + 10; // Half mirror size plus small buffer
+        
+        newX = Math.max(margin, Math.min(CONFIG.CANVAS_WIDTH - margin, newX));
+        newY = Math.max(margin, Math.min(CONFIG.CANVAS_HEIGHT - margin, newY));
         
         // Update mirror position directly (no validation during drag)
         this.draggedMirror.x = newX;
@@ -1122,7 +1167,10 @@ export class Game {
     }
     
     update() {
-        // Validation is now handled by MirrorPlacementValidation system
+        // CONTINUOUS VALIDATION: Run during placement phase to prevent forbidden placements
+        if (!this.isPlaying) {
+            this.enforceValidationDuringPlacement();
+        }
         
         if (!this.isPlaying || this.gameOver) return;
         
