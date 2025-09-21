@@ -90,6 +90,17 @@ export class MirrorPlacementValidation {
     }
     
     /**
+     * Snap a vertex to the nearest grid intersection
+     */
+    static snapVertexToGrid(vertex) {
+        const gridSize = CONFIG.GRID_SIZE;
+        return {
+            x: Math.round(vertex.x / gridSize) * gridSize,
+            y: Math.round(vertex.y / gridSize) * gridSize
+        };
+    }
+    
+    /**
      * Get all vertex coordinates for a mirror
      */
     static getMirrorVertices(mirror) {
@@ -111,10 +122,12 @@ export class MirrorPlacementValidation {
                 squareCorners.forEach(corner => {
                     const rotatedX = corner.x * Math.cos(rotation) - corner.y * Math.sin(rotation);
                     const rotatedY = corner.x * Math.sin(rotation) + corner.y * Math.cos(rotation);
-                    vertices.push({
+                    const worldVertex = {
                         x: centerX + rotatedX,
                         y: centerY + rotatedY
-                    });
+                    };
+                    const snappedVertex = this.snapVertexToGrid(worldVertex);
+                    vertices.push(snappedVertex);
                 });
                 break;
                 
@@ -131,10 +144,12 @@ export class MirrorPlacementValidation {
                 rectCorners.forEach(corner => {
                     const rotatedX = corner.x * Math.cos(rotation) - corner.y * Math.sin(rotation);
                     const rotatedY = corner.x * Math.sin(rotation) + corner.y * Math.cos(rotation);
-                    vertices.push({
+                    const worldVertex = {
                         x: centerX + rotatedX,
                         y: centerY + rotatedY
-                    });
+                    };
+                    const snappedVertex = this.snapVertexToGrid(worldVertex);
+                    vertices.push(snappedVertex);
                 });
                 break;
                 
@@ -149,10 +164,12 @@ export class MirrorPlacementValidation {
                 rtCorners.forEach(corner => {
                     const rotatedX = corner.x * Math.cos(rotation) - corner.y * Math.sin(rotation);
                     const rotatedY = corner.x * Math.sin(rotation) + corner.y * Math.cos(rotation);
-                    vertices.push({
+                    const worldVertex = {
                         x: centerX + rotatedX,
                         y: centerY + rotatedY
-                    });
+                    };
+                    const snappedVertex = this.snapVertexToGrid(worldVertex);
+                    vertices.push(snappedVertex);
                 });
                 break;
                 
@@ -168,17 +185,29 @@ export class MirrorPlacementValidation {
                 isoCorners.forEach(corner => {
                     const rotatedX = corner.x * Math.cos(rotation) - corner.y * Math.sin(rotation);
                     const rotatedY = corner.x * Math.sin(rotation) + corner.y * Math.cos(rotation);
-                    vertices.push({
+                    const worldVertex = {
                         x: centerX + rotatedX,
                         y: centerY + rotatedY
-                    });
+                    };
+                    const snappedVertex = this.snapVertexToGrid(worldVertex);
+                    vertices.push(snappedVertex);
                 });
                 break;
                 
             case 'trapezoid':
                 const trapHeight = mirror.height / 2;
                 const trapBottomHalf = mirror.width / 2;
-                const trapTopHalf = (mirror.topWidth || mirror.width * 0.6) / 2;
+                // Ensure proper symmetric trapezoid with grid-aligned topWidth
+                let trapTopWidth = mirror.topWidth;
+                if (!trapTopWidth) {
+                    // Fallback: use grid-aligned reduction instead of 0.6 multiplier
+                    const gridSize = CONFIG.GRID_SIZE;
+                    const reduction = Math.min(gridSize * 2, mirror.width - gridSize); // 40px or less
+                    trapTopWidth = mirror.width - reduction;
+                }
+                const trapTopHalf = trapTopWidth / 2;
+                
+                // Ensure proper symmetric trapezoid - top base centered under bottom base
                 const trapCorners = [
                     { x: -trapBottomHalf, y: trapHeight },   // bottom-left
                     { x: trapBottomHalf, y: trapHeight },    // bottom-right
@@ -186,34 +215,42 @@ export class MirrorPlacementValidation {
                     { x: -trapTopHalf, y: -trapHeight }      // top-left
                 ];
                 
+                
                 trapCorners.forEach(corner => {
                     const rotatedX = corner.x * Math.cos(rotation) - corner.y * Math.sin(rotation);
                     const rotatedY = corner.x * Math.sin(rotation) + corner.y * Math.cos(rotation);
-                    vertices.push({
+                    const worldVertex = {
                         x: centerX + rotatedX,
                         y: centerY + rotatedY
-                    });
+                    };
+                    const snappedVertex = this.snapVertexToGrid(worldVertex);
+                    vertices.push(snappedVertex);
                 });
                 break;
                 
             case 'parallelogram':
-                const paraBaseHalf = mirror.width / 2;
-                const paraHeightHalf = mirror.height / 2;
-                const paraSkew = mirror.skew || 0;
+                const paraHalfHeight = mirror.height / 2;
+                const paraHalfWidth = mirror.width / 2;
+                const paraSkew = mirror.skew || 20;
+                
+                // Use the exact same formula as the drawing code
                 const paraCorners = [
-                    { x: -paraBaseHalf - paraSkew/2, y: -paraHeightHalf },  // top-left
-                    { x: paraBaseHalf - paraSkew/2, y: -paraHeightHalf },   // top-right
-                    { x: paraBaseHalf + paraSkew/2, y: paraHeightHalf },    // bottom-right
-                    { x: -paraBaseHalf + paraSkew/2, y: paraHeightHalf }    // bottom-left
+                    { x: -paraHalfWidth, y: paraHalfHeight },        // bottom-left
+                    { x: paraHalfWidth, y: paraHalfHeight },         // bottom-right
+                    { x: paraHalfWidth + paraSkew, y: -paraHalfHeight }, // top-right (skewed)
+                    { x: -paraHalfWidth + paraSkew, y: -paraHalfHeight }  // top-left (skewed)
                 ];
                 
                 paraCorners.forEach(corner => {
                     const rotatedX = corner.x * Math.cos(rotation) - corner.y * Math.sin(rotation);
                     const rotatedY = corner.x * Math.sin(rotation) + corner.y * Math.cos(rotation);
-                    vertices.push({
+                    const worldVertex = {
                         x: centerX + rotatedX,
                         y: centerY + rotatedY
-                    });
+                    };
+                    // Snap to nearest grid intersection for perfect alignment
+                    const snappedVertex = this.snapVertexToGrid(worldVertex);
+                    vertices.push(snappedVertex);
                 });
                 break;
         }
@@ -222,9 +259,16 @@ export class MirrorPlacementValidation {
     }
     
     /**
-     * Check if a point is in a forbidden zone (inside, not on the boundary)
+     * Check if a point is in a forbidden zone or on game boundary edges
      */
     static isPointInForbiddenZone(point) {
+        // First check: No vertices can be on the very edges of the game grid
+        if (point.x <= 0 || point.x >= CONFIG.CANVAS_WIDTH || 
+            point.y <= 0 || point.y >= CONFIG.CANVAS_HEIGHT) {
+            return true;
+        }
+        
+        // Second check: Standard forbidden zones
         for (let zone of this.forbiddenZones) {
             if (zone.type === 'circle') {
                 const distance = Math.sqrt(
@@ -235,11 +279,11 @@ export class MirrorPlacementValidation {
                     return true;
                 }
             } else if (zone.type === 'rectangle') {
-                // Point is forbidden if it's INSIDE the rectangle (not on the edges)
-                if (point.x > zone.x && 
-                    point.x < zone.x + zone.width &&
-                    point.y > zone.y && 
-                    point.y < zone.y + zone.height) {
+                // Point is forbidden if it's INSIDE or ON the rectangle edges
+                if (point.x >= zone.x && 
+                    point.x <= zone.x + zone.width &&
+                    point.y >= zone.y && 
+                    point.y <= zone.y + zone.height) {
                     return true;
                 }
             }
@@ -282,9 +326,18 @@ export class MirrorPlacementValidation {
     }
     
     /**
-     * Check if a line segment intersects with any forbidden zone
+     * Check if a line segment intersects with any forbidden zone or game boundaries
      */
     static doesLineIntersectForbiddenZone(lineStart, lineEnd) {
+        // First check: No lines can touch or cross the game boundary edges
+        if (lineStart.x <= 0 || lineStart.x >= CONFIG.CANVAS_WIDTH || 
+            lineStart.y <= 0 || lineStart.y >= CONFIG.CANVAS_HEIGHT ||
+            lineEnd.x <= 0 || lineEnd.x >= CONFIG.CANVAS_WIDTH || 
+            lineEnd.y <= 0 || lineEnd.y >= CONFIG.CANVAS_HEIGHT) {
+            return true;
+        }
+        
+        // Second check: Standard forbidden zones
         for (let zone of this.forbiddenZones) {
             if (zone.type === 'circle') {
                 // Check if line intersects circle
@@ -339,22 +392,21 @@ export class MirrorPlacementValidation {
     }
     
     /**
-     * Check if line intersects rectangle (crosses interior, not just touches boundary)
+     * Check if line intersects rectangle (crosses interior or touches boundary)
      */
     static lineIntersectsRectangle(lineStart, lineEnd, rect) {
-        // Check if either endpoint is inside the rectangle
-        const startInside = lineStart.x > rect.x && lineStart.x < rect.x + rect.width &&
-                           lineStart.y > rect.y && lineStart.y < rect.y + rect.height;
-        const endInside = lineEnd.x > rect.x && lineEnd.x < rect.x + rect.width &&
-                         lineEnd.y > rect.y && lineEnd.y < rect.y + rect.height;
+        // Check if either endpoint is inside or on the rectangle boundary
+        const startInside = lineStart.x >= rect.x && lineStart.x <= rect.x + rect.width &&
+                           lineStart.y >= rect.y && lineStart.y <= rect.y + rect.height;
+        const endInside = lineEnd.x >= rect.x && lineEnd.x <= rect.x + rect.width &&
+                         lineEnd.y >= rect.y && lineEnd.y <= rect.y + rect.height;
         
-        // If either endpoint is inside, that's forbidden
+        // If either endpoint is inside or on boundary, that's forbidden
         if (startInside || endInside) {
             return true;
         }
         
-        // Check if line passes through the interior (not just touching edges)
-        // Use ray casting to see if line crosses rectangle boundaries
+        // Check if line crosses through the rectangle
         const rectCorners = [
             { x: rect.x, y: rect.y },
             { x: rect.x + rect.width, y: rect.y },
@@ -362,17 +414,15 @@ export class MirrorPlacementValidation {
             { x: rect.x, y: rect.y + rect.height }
         ];
         
-        let crossings = 0;
+        // Check intersection with each edge of the rectangle
         for (let i = 0; i < rectCorners.length; i++) {
             const next = (i + 1) % rectCorners.length;
             if (this.doLinesIntersect(lineStart, lineEnd, rectCorners[i], rectCorners[next])) {
-                crossings++;
+                return true; // Line intersects rectangle boundary
             }
         }
         
-        // If line crosses rectangle boundary an odd number of times, it goes through interior
-        // If even (including 0), it either doesn't cross or just touches
-        return crossings > 0 && crossings % 2 === 1;
+        return false;
     }
     
     /**
@@ -403,13 +453,13 @@ export class MirrorPlacementValidation {
             }
         }
         
-        // Check 4: No mirror edges intersect with other mirror edges
+        // Check 4: No overlap with other mirrors (comprehensive overlap detection)
         for (let otherMirror of existingMirrors) {
             if (otherMirror === mirror) continue; // Skip self
             
             const otherVertices = this.getMirrorVertices(otherMirror);
             
-            // Check each edge of this mirror against each edge of other mirror
+            // Check A: Edge intersections
             for (let i = 0; i < vertices.length; i++) {
                 const next = (i + 1) % vertices.length;
                 const thisEdge = { start: vertices[i], end: vertices[next] };
@@ -423,9 +473,46 @@ export class MirrorPlacementValidation {
                     }
                 }
             }
+            
+            // Check B: Polygon containment (one mirror completely inside another)
+            // Check if any vertex of this mirror is inside the other mirror
+            for (let vertex of vertices) {
+                if (this.isPointInPolygon(vertex, otherVertices)) {
+                    return { valid: false, reason: 'Mirror overlaps inside another mirror', vertex };
+                }
+            }
+            
+            // Check if any vertex of other mirror is inside this mirror
+            for (let otherVertex of otherVertices) {
+                if (this.isPointInPolygon(otherVertex, vertices)) {
+                    return { valid: false, reason: 'Another mirror overlaps inside this mirror', otherVertex };
+                }
+            }
         }
         
         return { valid: true };
+    }
+    
+    /**
+     * Check if a point is inside a polygon using ray casting algorithm
+     */
+    static isPointInPolygon(point, polygonVertices) {
+        let inside = false;
+        const x = point.x;
+        const y = point.y;
+        
+        for (let i = 0, j = polygonVertices.length - 1; i < polygonVertices.length; j = i++) {
+            const xi = polygonVertices[i].x;
+            const yi = polygonVertices[i].y;
+            const xj = polygonVertices[j].x;
+            const yj = polygonVertices[j].y;
+            
+            if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) {
+                inside = !inside;
+            }
+        }
+        
+        return inside;
     }
     
     /**

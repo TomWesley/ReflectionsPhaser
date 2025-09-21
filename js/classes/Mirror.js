@@ -1,4 +1,5 @@
 import { CONFIG } from '../config.js';
+import { MirrorPlacementValidation } from '../utils/MirrorPlacementValidation.js';
 
 export class Mirror {
     constructor(x, y) {
@@ -21,7 +22,14 @@ export class Mirror {
         } else if (this.shape === 'trapezoid') {
             this.width = this.size;  // Bottom base
             this.height = this.getRandomSize();
-            this.topWidth = Math.max(20, this.width - 20); // Top base (smaller)
+            // Ensure topWidth is grid-aligned and creates symmetric trapezoid
+            const gridSize = CONFIG.GRID_SIZE;
+            const minTopWidth = gridSize; // At least 1 grid unit
+            const maxReduction = Math.floor(this.width / gridSize) * gridSize / 2; // Half of bottom width max
+            const reductions = [gridSize, gridSize * 2, gridSize * 3]; // 20, 40, 60px reductions
+            const validReductions = reductions.filter(r => r <= maxReduction && this.width - r >= minTopWidth);
+            const reduction = validReductions[Math.floor(Math.random() * validReductions.length)] || gridSize;
+            this.topWidth = this.width - reduction;
         } else if (this.shape === 'parallelogram') {
             this.width = this.size;  // Base
             this.height = this.getRandomSize();
@@ -106,7 +114,8 @@ export class Mirror {
     }
     
     drawSquare(ctx) {
-        const halfSize = this.size / 2;
+        // Get the exact same vertices used by the validation system
+        const points = MirrorPlacementValidation.getMirrorVertices(this);
         
         // Add powder blue glow if dragging
         if (this.isDragging) {
@@ -118,7 +127,13 @@ export class Mirror {
         
         // Surface - solid silver
         ctx.fillStyle = '#c0c0c0';
-        ctx.fillRect(this.x - halfSize, this.y - halfSize, this.size, this.size);
+        ctx.beginPath();
+        ctx.moveTo(points[0].x, points[0].y);
+        ctx.lineTo(points[1].x, points[1].y);
+        ctx.lineTo(points[2].x, points[2].y);
+        ctx.lineTo(points[3].x, points[3].y);
+        ctx.closePath();
+        ctx.fill();
         
         // Reset shadow for border
         ctx.shadowBlur = 0;
@@ -131,15 +146,21 @@ export class Mirror {
         
         ctx.strokeStyle = '#000000';
         ctx.lineWidth = 2;
-        ctx.strokeRect(this.x - halfSize, this.y - halfSize, this.size, this.size);
+        ctx.beginPath();
+        ctx.moveTo(points[0].x, points[0].y);
+        ctx.lineTo(points[1].x, points[1].y);
+        ctx.lineTo(points[2].x, points[2].y);
+        ctx.lineTo(points[3].x, points[3].y);
+        ctx.closePath();
+        ctx.stroke();
         
         // Reset shadow
         ctx.shadowBlur = 0;
     }
     
     drawRectangle(ctx) {
-        const halfWidth = this.width / 2;
-        const halfHeight = this.height / 2;
+        // Get the exact same vertices used by the validation system
+        const points = MirrorPlacementValidation.getMirrorVertices(this);
         
         // Add powder blue glow if dragging
         if (this.isDragging) {
@@ -151,7 +172,13 @@ export class Mirror {
         
         // Surface - solid silver
         ctx.fillStyle = '#c0c0c0';
-        ctx.fillRect(this.x - halfWidth, this.y - halfHeight, this.width, this.height);
+        ctx.beginPath();
+        ctx.moveTo(points[0].x, points[0].y);
+        ctx.lineTo(points[1].x, points[1].y);
+        ctx.lineTo(points[2].x, points[2].y);
+        ctx.lineTo(points[3].x, points[3].y);
+        ctx.closePath();
+        ctx.fill();
         
         // Reset shadow for border
         ctx.shadowBlur = 0;
@@ -164,21 +191,21 @@ export class Mirror {
         
         ctx.strokeStyle = '#000000';
         ctx.lineWidth = 2;
-        ctx.strokeRect(this.x - halfWidth, this.y - halfHeight, this.width, this.height);
+        ctx.beginPath();
+        ctx.moveTo(points[0].x, points[0].y);
+        ctx.lineTo(points[1].x, points[1].y);
+        ctx.lineTo(points[2].x, points[2].y);
+        ctx.lineTo(points[3].x, points[3].y);
+        ctx.closePath();
+        ctx.stroke();
         
         // Reset shadow
         ctx.shadowBlur = 0;
     }
     
     drawRightTriangle(ctx) {
-        const halfSize = this.size / 2;
-        
-        // Define triangle points (right angle at bottom-left)
-        const points = [
-            { x: this.x - halfSize, y: this.y + halfSize }, // bottom-left (right angle)
-            { x: this.x + halfSize, y: this.y + halfSize }, // bottom-right
-            { x: this.x - halfSize, y: this.y - halfSize }  // top-left
-        ];
+        // Get the exact same vertices used by the validation system
+        const points = MirrorPlacementValidation.getMirrorVertices(this);
         
         // Add powder blue glow if dragging
         if (this.isDragging) {
@@ -220,15 +247,8 @@ export class Mirror {
     }
     
     drawIsoscelesTriangle(ctx) {
-        const halfWidth = (this.width || this.size) / 2;  // Base half-width
-        const halfHeight = (this.height || this.size) / 2; // Height from center to top/bottom
-        
-        // Define triangle points
-        const points = [
-            { x: this.x, y: this.y - halfHeight },           // top apex
-            { x: this.x - halfWidth, y: this.y + halfHeight }, // bottom-left
-            { x: this.x + halfWidth, y: this.y + halfHeight }  // bottom-right
-        ];
+        // Get the exact same vertices used by the validation system
+        const points = MirrorPlacementValidation.getMirrorVertices(this);
         
         // Add powder blue glow if dragging
         if (this.isDragging) {
@@ -270,17 +290,8 @@ export class Mirror {
     }
     
     drawTrapezoid(ctx) {
-        const halfHeight = this.height / 2;
-        const bottomHalfWidth = this.width / 2;
-        const topHalfWidth = (this.topWidth || this.width * 0.6) / 2;
-        
-        // Define trapezoid points (bottom base is wider)
-        const points = [
-            { x: this.x - bottomHalfWidth, y: this.y + halfHeight },  // bottom-left
-            { x: this.x + bottomHalfWidth, y: this.y + halfHeight },  // bottom-right
-            { x: this.x + topHalfWidth, y: this.y - halfHeight },     // top-right
-            { x: this.x - topHalfWidth, y: this.y - halfHeight }      // top-left
-        ];
+        // Get the exact same vertices used by the validation system
+        const points = MirrorPlacementValidation.getMirrorVertices(this);
         
         // Add powder blue glow if dragging
         if (this.isDragging) {
@@ -324,17 +335,8 @@ export class Mirror {
     }
     
     drawParallelogram(ctx) {
-        const halfHeight = this.height / 2;
-        const halfWidth = this.width / 2;
-        const skew = this.skew || 20;
-        
-        // Define parallelogram points (skewed rectangle)
-        const points = [
-            { x: this.x - halfWidth, y: this.y + halfHeight },        // bottom-left
-            { x: this.x + halfWidth, y: this.y + halfHeight },        // bottom-right
-            { x: this.x + halfWidth + skew, y: this.y - halfHeight }, // top-right (skewed)
-            { x: this.x - halfWidth + skew, y: this.y - halfHeight }  // top-left (skewed)
-        ];
+        // Get the exact same vertices used by the validation system
+        const points = MirrorPlacementValidation.getMirrorVertices(this);
         
         // Add powder blue glow if dragging
         if (this.isDragging) {

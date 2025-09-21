@@ -48,10 +48,15 @@ export class Game {
     }
     
     setupEventListeners() {
-        // Mouse events
+        // Mouse events on canvas
         this.canvas.addEventListener('mousedown', (e) => this.onMouseDown(e));
         this.canvas.addEventListener('mousemove', (e) => this.onMouseMove(e));
         this.canvas.addEventListener('mouseup', (e) => this.onMouseUp(e));
+        this.canvas.addEventListener('mouseleave', (e) => this.onMouseLeave(e));
+        
+        // Global mouse events to handle off-canvas dragging
+        document.addEventListener('mousemove', (e) => this.onGlobalMouseMove(e));
+        document.addEventListener('mouseup', (e) => this.onGlobalMouseUp(e));
         
         // UI buttons
         document.getElementById('launchBtn').addEventListener('click', () => this.launchLasers());
@@ -894,6 +899,51 @@ export class Game {
         this.canvas.style.cursor = 'crosshair';
     }
     
+    onMouseLeave(e) {
+        // When mouse leaves canvas, continue tracking with global events
+        // Don't cancel drag here - let global mouseup handle it
+        if (this.draggedMirror) {
+            console.log('Mouse left canvas during drag - continuing with global tracking');
+        }
+    }
+    
+    onGlobalMouseMove(e) {
+        // Only handle if we have a dragged mirror and mouse left canvas
+        if (!this.draggedMirror) return;
+        
+        const rect = this.canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+        
+        // Check if mouse is outside canvas bounds
+        const isOutside = mouseX < 0 || mouseX > CONFIG.CANVAS_WIDTH || 
+                         mouseY < 0 || mouseY > CONFIG.CANVAS_HEIGHT;
+        
+        if (isOutside) {
+            // Constrain the drag to canvas edges
+            let newX = mouseX - this.dragOffset.x;
+            let newY = mouseY - this.dragOffset.y;
+            
+            const maxMirrorSize = Math.max(this.draggedMirror.width || this.draggedMirror.size, 
+                                          this.draggedMirror.height || this.draggedMirror.size);
+            const margin = maxMirrorSize / 2 + 10;
+            
+            newX = Math.max(margin, Math.min(CONFIG.CANVAS_WIDTH - margin, newX));
+            newY = Math.max(margin, Math.min(CONFIG.CANVAS_HEIGHT - margin, newY));
+            
+            this.draggedMirror.x = newX;
+            this.draggedMirror.y = newY;
+            this.mouseHasMoved = true;
+        }
+    }
+    
+    onGlobalMouseUp(e) {
+        // Handle mouse up anywhere on the page
+        if (this.draggedMirror) {
+            this.onMouseUp(e);
+        }
+    }
+    
     ensureMirrorShapeAlignment(mirror) {
         // Apply proper alignment based on shape, but only if it doesn't cause major position changes
         const originalX = mirror.x;
@@ -1167,8 +1217,8 @@ export class Game {
     }
     
     update() {
-        // CONTINUOUS VALIDATION: Run during placement phase to prevent forbidden placements
-        if (!this.isPlaying) {
+        // Only validate if no drag operation is active
+        if (!this.isPlaying && !this.draggedMirror) {
             this.enforceValidationDuringPlacement();
         }
         
