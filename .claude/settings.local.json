@@ -4,7 +4,8 @@
       "Bash(python:*)",
       "Bash(open http://localhost:8000)",
       "Bash(grep:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(python3:*)"
     ],
     "deny": [],
     "ask": []

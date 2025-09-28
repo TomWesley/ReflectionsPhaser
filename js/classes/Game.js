@@ -451,7 +451,21 @@ export class Game {
     alignTrapezoidToGrid(mirror) {
         const halfHeight = mirror.height / 2;
         const bottomHalfWidth = mirror.width / 2;
-        const topHalfWidth = (mirror.topWidth || mirror.width * 0.6) / 2;
+
+        // Ensure topWidth is grid-aligned for symmetrical trapezoids
+        let topWidth = mirror.topWidth;
+        if (!topWidth) {
+            // Use same logic as Mirror.js to ensure grid alignment
+            const gridSize = CONFIG.GRID_SIZE;
+            const minTopWidth = gridSize;
+            const maxReduction = Math.floor(mirror.width / gridSize) * gridSize / 2;
+            const reductions = [gridSize, gridSize * 2, gridSize * 3];
+            const validReductions = reductions.filter(r => r <= maxReduction && mirror.width - r >= minTopWidth);
+            const reduction = validReductions[0] || gridSize; // Use first valid reduction for consistency
+            topWidth = mirror.width - reduction;
+            mirror.topWidth = topWidth; // Set the mirror's topWidth to ensure consistency
+        }
+        const topHalfWidth = topWidth / 2;
         const rotation = mirror.rotation || 0;
         
         if (rotation === 0 || rotation === 180) {
@@ -1374,7 +1388,20 @@ export class Game {
     getTrapezoidVertices(mirror) {
         const halfHeight = mirror.height / 2;
         const bottomHalfWidth = mirror.width / 2;
-        const topHalfWidth = (mirror.topWidth || mirror.width * 0.6) / 2;
+
+        // Ensure topWidth is grid-aligned for symmetrical trapezoids
+        let topWidth = mirror.topWidth;
+        if (!topWidth) {
+            // Use same logic as Mirror.js to ensure grid alignment
+            const gridSize = CONFIG.GRID_SIZE;
+            const minTopWidth = gridSize;
+            const maxReduction = Math.floor(mirror.width / gridSize) * gridSize / 2;
+            const reductions = [gridSize, gridSize * 2, gridSize * 3];
+            const validReductions = reductions.filter(r => r <= maxReduction && mirror.width - r >= minTopWidth);
+            const reduction = validReductions[0] || gridSize; // Use first valid reduction for consistency
+            topWidth = mirror.width - reduction;
+        }
+        const topHalfWidth = topWidth / 2;
         const rotation = mirror.rotation || 0;
         
         // Calculate vertices based on rotation
