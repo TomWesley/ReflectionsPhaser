@@ -9,52 +9,70 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     try {
         // Import modules with error handling
-        const { Game } = await import('./classes/Game.js');
+        const { Game } = await import('./core/Game.js');
         const { DailyChallenge } = await import('./utils/DailyChallenge.js');
         
         const game = new Game();
         
         // Expose game instance globally for modal functions
         window.game = game;
-    
+
+        // Setup game control buttons
+        const launchBtn = document.getElementById('launchBtn');
+        const resetBtn = document.getElementById('resetBtn');
+
+        if (launchBtn) {
+            launchBtn.addEventListener('click', () => {
+                console.log('Launch button clicked!');
+                game.gameState.launchLasers();
+            });
+        }
+
+        if (resetBtn) {
+            resetBtn.addEventListener('click', () => {
+                console.log('Reset button clicked!');
+                game.gameState.resetGame();
+            });
+        }
+
         // Add completion detection for daily challenges
         const originalUpdate = game.update?.bind(game);
         if (originalUpdate) {
             game.update = function() {
                 const result = originalUpdate();
-                
+
                 // Check for Daily Challenge completion
-                if (this.gameMode === 'dailyChallenge' && this.isPlaying && !this.challengeCompleted) {
+                if (this.gameState.gameMode === 'dailyChallenge' && this.gameState.isPlaying && !this.gameState.challengeCompleted) {
                     // If all lasers are gone and none hit the center, challenge is complete
-                    if (this.lasers.length === 0 && !this.gameOver) {
+                    if (this.lasers.length === 0 && !this.gameState.gameOver) {
                         // Wait a moment to ensure all lasers have been processed
                         setTimeout(() => {
-                            if (this.lasers.length === 0 && !this.gameOver) {
+                            if (this.lasers.length === 0 && !this.gameState.gameOver) {
                                 this.completeDaily();
                             }
                         }, 1000);
                     }
                 }
-                
+
                 return result;
             };
         }
-        
+
         // Add daily challenge completion method
         game.completeDaily = function() {
-            if (this.challengeCompleted) return;
-            
-            this.challengeCompleted = true;
-            const completionTime = Math.round(this.gameTime);
+            if (this.gameState.challengeCompleted) return;
+
+            this.gameState.challengeCompleted = true;
+            const completionTime = Math.round(this.gameState.gameTime);
             const score = Math.max(1000 - completionTime * 10, 100); // Higher score for faster completion
-            
+
             // Mark as completed in localStorage
             DailyChallenge.markCompleted(score, completionTime);
-            
+
             // Update UI
-            this.updateModeButtons();
-            this.updateDailyInfo();
-            
+            this.gameState.updateModeButtons();
+            this.gameState.updateDailyInfo();
+
             // Show success message
             const statusEl = document.getElementById('status');
             statusEl.textContent = `Daily Challenge Complete! Time: ${completionTime}s, Score: ${score}`;

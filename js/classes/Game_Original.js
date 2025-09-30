@@ -6,9 +6,6 @@ import { DailyChallenge } from '../utils/DailyChallenge.js';
 import { SurfaceAreaManager } from '../utils/SurfaceAreaManager.js';
 import { PerformanceRating } from '../utils/PerformanceRating.js';
 import { MirrorPlacementValidation } from '../utils/MirrorPlacementValidation.js';
-// New modular components
-import { InputHandler } from '../core/InputHandler.js';
-import { GameState } from '../core/GameState.js';
 
 export class Game {
     constructor() {
@@ -34,11 +31,7 @@ export class Game {
         this.dragOffset = { x: 0, y: 0 };
         this.dragStartPos = { x: 0, y: 0 };
         this.mouseHasMoved = false;
-
-        // Initialize modular components (keeping original functionality)
-        this.inputHandler = new InputHandler(this);
-        this.gameState = new GameState(this);
-
+        
         this.init();
     }
     

@@ -3,8 +3,12 @@ export const CONFIG = {
     CANVAS_WIDTH: 800,
     CANVAS_HEIGHT: 600,
     GRID_SIZE: 20,
+    SHOW_GRID: true,
+    CENTER_RADIUS: 20,
     MIRROR_MIN_SIZE: 20, // 1x1 grid cells
     MIRROR_MAX_SIZE: 120, // 6x6 grid cells
+    MAX_MIRRORS: 15,
+    MIN_MIRRORS: 8,
     LASER_SPEED: 2.2, // 10% faster than original 2
     LASER_RADIUS: 2,
     TARGET_RADIUS: 50, // Aligns hexagon top/bottom vertices with grid lines
