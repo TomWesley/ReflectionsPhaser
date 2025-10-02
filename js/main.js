@@ -24,14 +24,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (launchBtn) {
             launchBtn.addEventListener('click', () => {
                 console.log('Launch button clicked!');
-                game.gameState.launchLasers();
+                game.launchLasers();
             });
         }
 
         if (resetBtn) {
             resetBtn.addEventListener('click', () => {
                 console.log('Reset button clicked!');
-                game.gameState.resetGame();
+                game.resetGame();
             });
         }
 
@@ -42,12 +42,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const result = originalUpdate();
 
                 // Check for Daily Challenge completion
-                if (this.gameState.gameMode === 'dailyChallenge' && this.gameState.isPlaying && !this.gameState.challengeCompleted) {
+                if (this.gameMode === 'dailyChallenge' && this.isPlaying && !this.challengeCompleted) {
                     // If all lasers are gone and none hit the center, challenge is complete
-                    if (this.lasers.length === 0 && !this.gameState.gameOver) {
+                    if (this.lasers.length === 0 && !this.gameOver) {
                         // Wait a moment to ensure all lasers have been processed
                         setTimeout(() => {
-                            if (this.lasers.length === 0 && !this.gameState.gameOver) {
+                            if (this.lasers.length === 0 && !this.gameOver) {
                                 this.completeDaily();
                             }
                         }, 1000);
@@ -60,18 +60,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Add daily challenge completion method
         game.completeDaily = function() {
-            if (this.gameState.challengeCompleted) return;
+            if (this.challengeCompleted) return;
 
-            this.gameState.challengeCompleted = true;
-            const completionTime = Math.round(this.gameState.gameTime);
+            this.challengeCompleted = true;
+            const completionTime = Math.round(this.gameTime);
             const score = Math.max(1000 - completionTime * 10, 100); // Higher score for faster completion
 
             // Mark as completed in localStorage
             DailyChallenge.markCompleted(score, completionTime);
 
             // Update UI
-            this.gameState.updateModeButtons();
-            this.gameState.updateDailyInfo();
+            this.updateModeButtons();
+            this.updateDailyInfo();
 
             // Show success message
             const statusEl = document.getElementById('status');

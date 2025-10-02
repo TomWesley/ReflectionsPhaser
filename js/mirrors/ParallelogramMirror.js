@@ -17,7 +17,7 @@ export class ParallelogramMirror extends BaseMirror {
     }
 
     drawShape(ctx) {
-        const points = this.getVertices();
+        const points = this.getParallelogramPoints();
         this.drawMirrorSurface(ctx, points);
         this.drawMirrorBorder(ctx, points);
     }
@@ -49,5 +49,33 @@ export class ParallelogramMirror extends BaseMirror {
         }
 
         this.snapLaserAngle(laser);
+    }
+
+    getParallelogramPoints() {
+        const halfHeight = this.height / 2;
+        const halfWidth = this.width / 2;
+        const skew = this.skew || 20;
+
+        // Create parallelogram points - same as validation system
+        let points = [
+            { x: this.x - halfWidth, y: this.y + halfHeight },        // bottom-left
+            { x: this.x + halfWidth, y: this.y + halfHeight },        // bottom-right
+            { x: this.x + halfWidth + skew, y: this.y - halfHeight }, // top-right (skewed)
+            { x: this.x - halfWidth + skew, y: this.y - halfHeight }  // top-left (skewed)
+        ];
+
+        // Apply rotation if needed
+        if (this.rotation) {
+            const angle = this.rotation * Math.PI / 180;
+            const cos = Math.cos(angle);
+            const sin = Math.sin(angle);
+
+            points = points.map(p => ({
+                x: this.x + (p.x - this.x) * cos - (p.y - this.y) * sin,
+                y: this.y + (p.x - this.x) * sin + (p.y - this.y) * cos
+            }));
+        }
+
+        return points;
     }
 }

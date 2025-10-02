@@ -26,14 +26,14 @@ export class TrapezoidMirror extends BaseMirror {
     }
 
     drawShape(ctx) {
-        const points = this.getVertices();
+        const points = this.getTrapezoidPoints();
         this.drawMirrorSurface(ctx, points);
         this.drawMirrorBorder(ctx, points);
     }
 
     reflectShape(laser) {
         // Get trapezoid vertices for accurate edge detection
-        const vertices = this.getVertices();
+        const vertices = this.getTrapezoidPoints();
 
         // Define the four edges of the trapezoid
         const edges = [
@@ -59,6 +59,34 @@ export class TrapezoidMirror extends BaseMirror {
         if (closestEdge && minDistance < 5) {
             this.reflectAcrossLine(laser, closestEdge.x1, closestEdge.y1, closestEdge.x2, closestEdge.y2);
         }
+    }
+
+    getTrapezoidPoints() {
+        const trapHeight = this.height / 2;
+        const trapBottomHalf = this.width / 2;
+        const trapTopHalf = this.topWidth / 2;
+
+        // Create trapezoid points - symmetric trapezoid with top base centered under bottom base
+        let points = [
+            { x: this.x - trapBottomHalf, y: this.y + trapHeight },   // bottom-left
+            { x: this.x + trapBottomHalf, y: this.y + trapHeight },   // bottom-right
+            { x: this.x + trapTopHalf, y: this.y - trapHeight },      // top-right
+            { x: this.x - trapTopHalf, y: this.y - trapHeight }       // top-left
+        ];
+
+        // Apply rotation if needed
+        if (this.rotation) {
+            const angle = this.rotation * Math.PI / 180;
+            const cos = Math.cos(angle);
+            const sin = Math.sin(angle);
+
+            points = points.map(p => ({
+                x: this.x + (p.x - this.x) * cos - (p.y - this.y) * sin,
+                y: this.y + (p.x - this.x) * sin + (p.y - this.y) * cos
+            }));
+        }
+
+        return points;
     }
 
     distanceToLineSegmentCoords(px, py, x1, y1, x2, y2) {

@@ -6,7 +6,9 @@
       "Bash(grep:*)",
       "Bash(find:*)",
       "Bash(python3:*)",
-      "Bash(open http://localhost:7000)"
+      "Bash(open http://localhost:7000)",
+      "Bash(node:*)",
+      "Bash(open http://localhost:7000/test_mirrors.html)"
     ],
     "deny": [],
     "ask": []

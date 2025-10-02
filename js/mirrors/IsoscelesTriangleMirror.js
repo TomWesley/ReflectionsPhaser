@@ -16,7 +16,7 @@ export class IsoscelesTriangleMirror extends BaseMirror {
     }
 
     drawShape(ctx) {
-        const points = this.getVertices();
+        const points = this.getIsoscelesTrianglePoints();
         this.drawMirrorSurface(ctx, points);
         this.drawMirrorBorder(ctx, points);
     }

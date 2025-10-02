@@ -16,7 +16,7 @@ export class RightTriangleMirror extends BaseMirror {
     }
 
     drawShape(ctx) {
-        const points = this.getVertices();
+        const points = this.getRightTrianglePoints();
         this.drawMirrorSurface(ctx, points);
         this.drawMirrorBorder(ctx, points);
     }

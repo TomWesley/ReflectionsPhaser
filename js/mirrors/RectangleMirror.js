@@ -19,7 +19,7 @@ export class RectangleMirror extends BaseMirror {
     }
 
     drawShape(ctx) {
-        const points = this.getVertices();
+        const points = this.getRectanglePoints();
         this.drawMirrorSurface(ctx, points);
         this.drawMirrorBorder(ctx, points);
     }
@@ -50,5 +50,32 @@ export class RectangleMirror extends BaseMirror {
         }
 
         this.snapLaserAngle(laser);
+    }
+
+    getRectanglePoints() {
+        const halfWidth = this.width / 2;
+        const halfHeight = this.height / 2;
+
+        // Create rectangle points
+        let points = [
+            { x: this.x - halfWidth, y: this.y - halfHeight }, // top-left
+            { x: this.x + halfWidth, y: this.y - halfHeight }, // top-right
+            { x: this.x + halfWidth, y: this.y + halfHeight }, // bottom-right
+            { x: this.x - halfWidth, y: this.y + halfHeight }  // bottom-left
+        ];
+
+        // Apply rotation if needed (rectangles currently don't rotate, but keeping for consistency)
+        if (this.rotation) {
+            const angle = this.rotation * Math.PI / 180;
+            const cos = Math.cos(angle);
+            const sin = Math.sin(angle);
+
+            points = points.map(p => ({
+                x: this.x + (p.x - this.x) * cos - (p.y - this.y) * sin,
+                y: this.y + (p.x - this.x) * sin + (p.y - this.y) * cos
+            }));
+        }
+
+        return points;
     }
 }
