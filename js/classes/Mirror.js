@@ -1,91 +1,25 @@
-import { BaseMirror } from '../mirrors/BaseMirror.js';
-import { MirrorRenderer } from '../mirrors/MirrorRenderer.js';
-import { MirrorReflection } from '../mirrors/MirrorReflection.js';
+import { MirrorFactory } from '../mirrors/MirrorFactory.js';
 
 /**
- * Mirror class that maintains exact same interface as original
- * but delegates to modular components
+ * Mirror class that uses proper inheritance hierarchy
+ * Maintains backward compatibility by acting as a factory
  */
-export class Mirror extends BaseMirror {
-    constructor(x, y) {
-        super(x, y);
+export class Mirror {
+    constructor(x, y, shapeType = null) {
+        // Use factory to create the appropriate mirror type
+        const mirror = MirrorFactory.createMirror(x, y, shapeType);
+
+        // Copy all properties from the created mirror to this instance
+        Object.assign(this, mirror);
+
+        // Preserve the prototype chain for methods
+        Object.setPrototypeOf(this, Object.getPrototypeOf(mirror));
+
+        return mirror;
     }
 
-    // Maintain exact same interface as original
-    draw(ctx) {
-        MirrorRenderer.draw(this, ctx);
-    }
-
-    reflect(laser) {
-        MirrorReflection.reflect(this, laser);
-    }
-
-    // Keep all original methods for compatibility
-    drawShape(ctx) {
-        MirrorRenderer.drawShape(this, ctx);
-    }
-
-    drawSquare(ctx) {
-        MirrorRenderer.drawSquare(this, ctx);
-    }
-
-    drawRectangle(ctx) {
-        MirrorRenderer.drawRectangle(this, ctx);
-    }
-
-    drawRightTriangle(ctx) {
-        MirrorRenderer.drawRightTriangle(this, ctx);
-    }
-
-    drawIsoscelesTriangle(ctx) {
-        MirrorRenderer.drawIsoscelesTriangle(this, ctx);
-    }
-
-    drawTrapezoid(ctx) {
-        MirrorRenderer.drawTrapezoid(this, ctx);
-    }
-
-    drawParallelogram(ctx) {
-        MirrorRenderer.drawParallelogram(this, ctx);
-    }
-
-    reflectRectangle(laser) {
-        MirrorReflection.reflectRectangle(this, laser);
-    }
-
-    reflectTriangle(laser, triangleType) {
-        MirrorReflection.reflectTriangle(this, laser, triangleType);
-    }
-
-    reflectTrapezoid(laser) {
-        MirrorReflection.reflectTrapezoid(this, laser);
-    }
-
-    reflectParallelogram(laser) {
-        MirrorReflection.reflectParallelogram(this, laser);
-    }
-
-    getRightTriangleEdges() {
-        return MirrorReflection.getRightTriangleEdges(this);
-    }
-
-    getIsoscelesTriangleEdges() {
-        return MirrorReflection.getIsoscelesTriangleEdges(this);
-    }
-
-    getRightTrianglePoints() {
-        return MirrorReflection.getRightTrianglePoints(this);
-    }
-
-    getIsoscelesTrianglePoints() {
-        return MirrorReflection.getIsoscelesTrianglePoints(this);
-    }
-
-    distanceToLineSegment(px, py, start, end) {
-        return MirrorReflection.distanceToLineSegment(px, py, start, end);
-    }
-
-    snapLaserAngle(laser) {
-        MirrorReflection.snapLaserAngle(laser);
+    // Static method for backward compatibility
+    static create(x, y, shapeType = null) {
+        return MirrorFactory.createMirror(x, y, shapeType);
     }
 }
