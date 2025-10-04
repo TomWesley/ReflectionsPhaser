@@ -9,6 +9,8 @@ import { MirrorPlacementValidation } from '../utils/MirrorPlacementValidation.js
 // New modular components
 import { InputHandler } from '../core/InputHandler.js';
 import { GameState } from '../core/GameState.js';
+import { CollisionSystem } from '../core/CollisionSystem.js';
+import { LaserCollisionHandler } from '../core/LaserCollisionHandler.js';
 
 export class Game {
     constructor() {
@@ -38,6 +40,10 @@ export class Game {
         // Initialize modular components (keeping original functionality)
         this.inputHandler = new InputHandler(this);
         this.gameState = new GameState(this);
+
+        // Initialize collision systems
+        this.collisionSystem = new CollisionSystem();
+        this.laserCollisionHandler = new LaserCollisionHandler(this.collisionSystem);
 
         this.init();
     }
@@ -717,21 +723,47 @@ export class Game {
             return;
         }
         
-        this.isPlaying = true;
-        this.gameOver = false;
-        this.startTime = Date.now();
-        this.gameTime = 0;
-        this.lasers = [];
-        
+        console.log('🚀 Launching lasers - initializing collision system...');
+
+        // Show brief loading message
+        const statusEl = document.getElementById('status');
+        if (statusEl) {
+            statusEl.textContent = 'Calculating collision boundaries...';
+            statusEl.className = 'status-modern';
+        }
+
+        // Allow UI to update before heavy computation
+        setTimeout(() => {
+            // Initialize collision boundaries for all mirrors (iron-clad system)
+            this.collisionSystem.initializeCollisionBoundaries(this.mirrors);
+            this.laserCollisionHandler.initialize(this.mirrors);
+
+            this.isPlaying = true;
+            this.gameOver = false;
+            this.startTime = Date.now();
+            this.gameTime = 0;
+            this.lasers = [];
+
+            console.log('✅ Collision system ready');
+
+            // Create lasers from spawners
+            this.createLasersFromSpawners();
+
+            // Update status
+            if (statusEl) {
+                statusEl.textContent = 'Defense systems active!';
+                statusEl.className = 'status-modern';
+            }
+        }, 50); // 50ms delay to show loading message
+    }
+
+    createLasersFromSpawners() {
         // Create lasers from spawners
         this.spawners.forEach(spawner => {
             this.lasers.push(new Laser(spawner.x, spawner.y, spawner.angle));
         });
-        
+
         document.getElementById('launchBtn').disabled = true;
-        const statusEl = document.getElementById('status');
-        statusEl.textContent = 'Lasers launched! Protect the center!';
-        statusEl.className = 'status-modern status-playing';
     }
     
     resetGame() {
@@ -1229,12 +1261,13 @@ export class Game {
     mirrorsOverlap(mirror1, mirror2) {
         const bounds1 = this.getMirrorBounds(mirror1);
         const bounds2 = this.getMirrorBounds(mirror2);
-        
-        // Check if bounding boxes overlap
-        return !(bounds1.right <= bounds2.left || 
-                bounds2.right <= bounds1.left || 
-                bounds1.bottom <= bounds2.top || 
-                bounds2.bottom <= bounds1.top);
+
+        // For mirror placement, exclude borders - mirrors can be placed snugly next to each other
+        // Use strict inequality to allow mirrors to share edges without "overlapping"
+        return !(bounds1.right < bounds2.left ||
+                bounds2.right < bounds1.left ||
+                bounds1.bottom < bounds2.top ||
+                bounds2.bottom < bounds1.top);
     }
     
     update() {
@@ -1249,28 +1282,22 @@ export class Game {
         this.gameTime = (Date.now() - this.startTime) / 1000;
         this.updateTimerDisplay();
         
-        // Update lasers
+        // Update lasers with new collision system
         for (let i = this.lasers.length - 1; i >= 0; i--) {
             const laser = this.lasers[i];
             laser.update();
-            
-            // Check continuous collision with mirrors (check path from previous to current position)
-            for (let mirror of this.mirrors) {
-                if (this.checkContinuousLaserMirrorCollision(laser, mirror)) {
-                    laser.reflect(mirror);
-                    break;
-                }
-            }
-            
+
+            // Use new collision system for mirror collisions
+            this.laserCollisionHandler.checkAndHandleCollisions(laser, this.mirrors);
+
             // Check collision with center target
-            if (this.checkLaserTargetCollision(laser)) {
+            if (this.laserCollisionHandler.checkTargetCollision(laser)) {
                 this.showGameOverModal();
                 return;
             }
-            
+
             // Remove laser if out of bounds
-            if (laser.x < 0 || laser.x > CONFIG.CANVAS_WIDTH || 
-                laser.y < 0 || laser.y > CONFIG.CANVAS_HEIGHT) {
+            if (this.laserCollisionHandler.isOutOfBounds(laser)) {
                 this.lasers.splice(i, 1);
             }
         }
@@ -1596,9 +1623,25 @@ export class Game {
     }
     
     checkContinuousLaserMirrorCollision(laser, mirror) {
+        // Skip collision if laser has exceeded max reflections
+        if (laser.totalReflections >= laser.maxReflections) {
+            return false;
+        }
+
         // Skip collision if laser is in cooldown with this specific mirror
         if (laser.reflectionCooldown > 0 && laser.lastReflectedMirror === mirror) {
             return false;
+        }
+
+        // Additional check: prevent rapid oscillations between very close mirrors
+        if (laser.reflectionCooldown > 0 && laser.totalReflections > 3) {
+            // If laser has bounced recently and multiple times, require larger movement
+            const distanceMoved = Math.sqrt(
+                (laser.x - laser.prevX) ** 2 + (laser.y - laser.prevY) ** 2
+            );
+            if (distanceMoved < 2) { // Minimum movement threshold
+                return false;
+            }
         }
         
         // If laser doesn't have previous position yet, fall back to point collision

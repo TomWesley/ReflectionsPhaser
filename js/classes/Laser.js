@@ -9,6 +9,8 @@ export class Laser {
         this.trail = [];
         this.lastReflectedMirror = null;
         this.reflectionCooldown = 0;
+        this.totalReflections = 0;
+        this.maxReflections = 50; // Prevent infinite bouncing
     }
     
     update() {
@@ -43,10 +45,19 @@ export class Laser {
     }
     
     reflect(mirror) {
+        // Check if laser has reflected too many times (infinite bouncing prevention)
+        if (this.totalReflections >= this.maxReflections) {
+            // Mark laser for removal by setting it out of bounds
+            this.x = -100;
+            this.y = -100;
+            return;
+        }
+
         // Set cooldown to prevent immediate re-reflection
-        this.reflectionCooldown = 3; // frames
+        this.reflectionCooldown = 5; // Increased from 3 to 5 frames for better stability
         this.lastReflectedMirror = mirror;
-        
+        this.totalReflections++;
+
         // Call the mirror's reflection logic
         mirror.reflect(this);
     }
@@ -140,9 +151,5 @@ export class Laser {
         ctx.lineTo(endX, endY);
         ctx.stroke();
         ctx.restore();
-    }
-    
-    reflect(mirror) {
-        mirror.reflect(this);
     }
 }

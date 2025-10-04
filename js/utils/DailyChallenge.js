@@ -248,11 +248,13 @@ export class DailyChallenge {
     static mirrorsOverlap(mirror1, mirror2) {
         const bounds1 = this.getMirrorBounds(mirror1);
         const bounds2 = this.getMirrorBounds(mirror2);
-        
-        return !(bounds1.right <= bounds2.left || 
-                bounds2.right <= bounds1.left || 
-                bounds1.bottom <= bounds2.top || 
-                bounds2.bottom <= bounds1.top);
+
+        // For mirror placement, exclude borders - mirrors can be placed snugly next to each other
+        // Use strict inequality to allow mirrors to share edges without "overlapping"
+        return !(bounds1.right < bounds2.left ||
+                bounds2.right < bounds1.left ||
+                bounds1.bottom < bounds2.top ||
+                bounds2.bottom < bounds1.top);
     }
     
     static calculateDifficulty(mirrors, spawners) {
