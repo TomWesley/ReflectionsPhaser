@@ -1,9 +1,11 @@
 import { CONFIG } from '../config.js';
-import { MirrorPlacementValidation } from '../utils/MirrorPlacementValidation.js';
 
 /**
  * Abstract base class for all mirror types
  * Contains shared properties and behavior that all mirrors inherit
+ *
+ * CANONICAL SOURCE OF TRUTH: this.vertices array
+ * All rendering, collision, and validation use this array
  */
 export class BaseMirror {
     constructor(x, y) {
@@ -11,8 +13,15 @@ export class BaseMirror {
         this.y = y;
         this.isDragging = false;
 
+        // CANONICAL SOURCE OF TRUTH: Array of vertex coordinates
+        // Format: [{x: number, y: number}, ...]
+        this.vertices = [];
+
         // Initialize shape-specific properties
         this.initializeProperties();
+
+        // Calculate and store vertices immediately after initialization
+        this.updateVertices();
     }
 
     /**
@@ -20,6 +29,30 @@ export class BaseMirror {
      */
     initializeProperties() {
         throw new Error('initializeProperties() must be implemented by subclass');
+    }
+
+    /**
+     * Abstract method - must be implemented by subclasses
+     * This calculates the vertices based on the mirror's position and properties
+     */
+    calculateVertices() {
+        throw new Error('calculateVertices() must be implemented by subclass');
+    }
+
+    /**
+     * Update the stored vertices (call this whenever position or rotation changes)
+     */
+    updateVertices() {
+        this.vertices = this.calculateVertices();
+    }
+
+    /**
+     * Get the canonical vertices (THE ONLY SOURCE OF TRUTH)
+     * Returns the stored vertices array directly
+     */
+    getVertices() {
+        // Simply return the stored vertices - no calculation, no external calls
+        return this.vertices;
     }
 
     /**
@@ -55,29 +88,16 @@ export class BaseMirror {
     }
 
     /**
-     * Shared drawing method - delegates to specific shape drawing
+     * Shared drawing method - uses canonical vertices
      */
     draw(ctx) {
         ctx.save();
 
-        // Apply rotation if the shape supports it
-        if (this.rotation) {
-            ctx.translate(this.x, this.y);
-            ctx.rotate(this.rotation * Math.PI / 180);
-            ctx.translate(-this.x, -this.y);
-        }
-
-        // Draw the specific shape
-        this.drawShape(ctx);
+        // Draw using the canonical vertices (no rotation transform needed - vertices are already rotated)
+        this.drawMirrorSurface(ctx, this.vertices);
+        this.drawMirrorBorder(ctx, this.vertices);
 
         ctx.restore();
-    }
-
-    /**
-     * Abstract method for drawing - implemented by subclasses
-     */
-    drawShape(ctx) {
-        throw new Error('drawShape() must be implemented by subclass');
     }
 
     /**
@@ -139,13 +159,6 @@ export class BaseMirror {
 
         // Reset shadow
         ctx.shadowBlur = 0;
-    }
-
-    /**
-     * Get vertices using validation system
-     */
-    getVertices() {
-        return MirrorPlacementValidation.getMirrorVertices(this);
     }
 
     /**

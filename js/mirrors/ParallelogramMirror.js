@@ -10,54 +10,22 @@ export class ParallelogramMirror extends BaseMirror {
         this.size = this.getRandomSize();
         this.width = this.size;  // Base
         this.height = this.getRandomSize();
-        this.skew = 20; // Default horizontal skew
+        this.skew = 20; // Default horizontal skew (equals grid size)
 
         // Parallelograms support rotation
         this.rotation = Math.floor(Math.random() * 4) * 90; // 0, 90, 180, or 270 degrees
     }
 
-    drawShape(ctx) {
-        const points = this.getParallelogramPoints();
-        this.drawMirrorSurface(ctx, points);
-        this.drawMirrorBorder(ctx, points);
-    }
-
-    reflectShape(laser) {
-        // For now, use rectangle reflection as baseline
-        const halfWidth = this.width / 2;
-        const halfHeight = this.height / 2;
-        const relX = laser.x - this.x;
-        const relY = laser.y - this.y;
-
-        // Determine which edge is closest
-        const distances = {
-            left: Math.abs(relX + halfWidth),
-            right: Math.abs(relX - halfWidth),
-            top: Math.abs(relY + halfHeight),
-            bottom: Math.abs(relY - halfHeight)
-        };
-
-        const closestEdge = Object.keys(distances).reduce((a, b) =>
-            distances[a] < distances[b] ? a : b
-        );
-
-        // Reflect based on edge
-        if (closestEdge === 'left' || closestEdge === 'right') {
-            laser.vx = -laser.vx; // Horizontal reflection
-        } else {
-            laser.vy = -laser.vy; // Vertical reflection
-        }
-
-        this.snapLaserAngle(laser);
-    }
-
-    getParallelogramPoints() {
+    /**
+     * Calculate vertices - CANONICAL SOURCE OF TRUTH
+     */
+    calculateVertices() {
         const halfHeight = this.height / 2;
         const halfWidth = this.width / 2;
         const skew = this.skew || 20;
 
-        // Create parallelogram points - same as validation system
-        let points = [
+        // Create parallelogram vertices in clockwise order
+        let vertices = [
             { x: this.x - halfWidth, y: this.y + halfHeight },        // bottom-left
             { x: this.x + halfWidth, y: this.y + halfHeight },        // bottom-right
             { x: this.x + halfWidth + skew, y: this.y - halfHeight }, // top-right (skewed)
@@ -70,12 +38,40 @@ export class ParallelogramMirror extends BaseMirror {
             const cos = Math.cos(angle);
             const sin = Math.sin(angle);
 
-            points = points.map(p => ({
-                x: this.x + (p.x - this.x) * cos - (p.y - this.y) * sin,
-                y: this.y + (p.x - this.x) * sin + (p.y - this.y) * cos
+            vertices = vertices.map(v => ({
+                x: this.x + (v.x - this.x) * cos - (v.y - this.y) * sin,
+                y: this.y + (v.x - this.x) * sin + (v.y - this.y) * cos
             }));
         }
 
-        return points;
+        return vertices;
+    }
+
+    reflectShape(laser) {
+        // Get edges from canonical vertices
+        const edges = [];
+        for (let i = 0; i < this.vertices.length; i++) {
+            const next = (i + 1) % this.vertices.length;
+            edges.push({
+                start: this.vertices[i],
+                end: this.vertices[next]
+            });
+        }
+
+        // Find closest edge
+        let closestEdge = edges[0];
+        let minDistance = Infinity;
+
+        for (let edge of edges) {
+            const dist = this.distanceToLineSegment(laser.x, laser.y, edge.start, edge.end);
+            if (dist < minDistance) {
+                minDistance = dist;
+                closestEdge = edge;
+            }
+        }
+
+        // Reflect across closest edge
+        this.reflectAcrossLine(laser, closestEdge.start.x, closestEdge.start.y, closestEdge.end.x, closestEdge.end.y);
+        this.snapLaserAngle(laser);
     }
 }

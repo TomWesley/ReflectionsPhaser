@@ -8,7 +8,9 @@
       "Bash(python3:*)",
       "Bash(open http://localhost:7000)",
       "Bash(node:*)",
-      "Bash(open http://localhost:7000/test_mirrors.html)"
+      "Bash(open http://localhost:7000/test_mirrors.html)",
+      "Bash(lsof:*)",
+      "Bash(kill:*)"
     ],
     "deny": [],
     "ask": []

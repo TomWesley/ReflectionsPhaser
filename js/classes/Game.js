@@ -1,11 +1,14 @@
 import { CONFIG } from '../config.js';
 import { Mirror } from './Mirror.js';
+import { MirrorFactory } from '../mirrors/MirrorFactory.js';
 import { Laser } from './Laser.js';
 import { Spawner } from './Spawner.js';
 import { DailyChallenge } from '../utils/DailyChallenge.js';
 import { SurfaceAreaManager } from '../utils/SurfaceAreaManager.js';
 import { PerformanceRating } from '../utils/PerformanceRating.js';
 import { MirrorPlacementValidation } from '../utils/MirrorPlacementValidation.js';
+import { IronCladValidator } from '../utils/IronCladValidator.js';
+import { GridAlignmentEnforcer } from '../utils/GridAlignmentEnforcer.js';
 // New modular components
 import { InputHandler } from '../core/InputHandler.js';
 import { GameState } from '../core/GameState.js';
@@ -202,51 +205,106 @@ export class Game {
     
     createValidatedMirror(config) {
         const center = { x: CONFIG.CANVAS_WIDTH / 2, y: CONFIG.CANVAS_HEIGHT / 2 };
-        const maxAttempts = 100;
-        
+        const maxAttempts = 200; // More attempts for better placement
+
         for (let attempt = 0; attempt < maxAttempts; attempt++) {
             // Generate position in ring around center
             const angle = Math.random() * Math.PI * 2;
             const distance = 140 + Math.random() * 180;
             let x = center.x + Math.cos(angle) * distance;
             let y = center.y + Math.sin(angle) * distance;
-            
-            // Snap to grid
-            x = this.snapToGrid(x);
-            y = this.snapToGrid(y);
-            
-            // Create mirror with config properties
-            const mirror = new Mirror(x, y);
-            mirror.shape = config.shape;
-            mirror.size = config.size;
-            mirror.width = config.width;
-            mirror.height = config.height;
-            mirror.rotation = config.rotation || 0;
-            
+
+            // Create mirror with the correct shape type using factory directly
+            const mirror = MirrorFactory.createMirror(x, y, config.shape);
+
+            // Check if mirror was created successfully
+            if (!mirror || typeof mirror.updateVertices !== 'function') {
+                console.error('Failed to create valid mirror:', config.shape, mirror);
+                continue;
+            }
+
+            // Override properties if they differ from defaults
+            let propertiesChanged = false;
+
+            if (config.size && config.size !== mirror.size) {
+                mirror.size = config.size;
+                mirror.width = config.width || config.size;
+                mirror.height = config.height || config.size;
+                propertiesChanged = true;
+            }
+            if (config.width && config.width !== mirror.width) {
+                mirror.width = config.width;
+                propertiesChanged = true;
+            }
+            if (config.height && config.height !== mirror.height) {
+                mirror.height = config.height;
+                propertiesChanged = true;
+            }
+            if (config.rotation !== undefined && config.rotation !== mirror.rotation) {
+                mirror.rotation = config.rotation;
+                propertiesChanged = true;
+            }
+
             // Copy special shape properties
-            if (config.topWidth) mirror.topWidth = config.topWidth;
-            if (config.skew) mirror.skew = config.skew;
-            
-            // Validate placement using new system
-            const validation = MirrorPlacementValidation.isValidPlacement(mirror, this.mirrors);
+            if (config.topWidth && config.topWidth !== mirror.topWidth) {
+                mirror.topWidth = config.topWidth;
+                propertiesChanged = true;
+            }
+            if (config.skew && config.skew !== mirror.skew) {
+                mirror.skew = config.skew;
+                propertiesChanged = true;
+            }
+
+            // If we modified any properties, recalculate vertices
+            if (propertiesChanged) {
+                mirror.updateVertices();
+            }
+
+            // IRON-CLAD STEP 1: Force grid alignment (but don't verify yet - vertices not set)
+            try {
+                GridAlignmentEnforcer.enforceGridAlignment(mirror);
+                // Update vertices after position/alignment change
+                mirror.updateVertices();
+                // Now verify alignment
+                const verification = GridAlignmentEnforcer.verifyAlignment(mirror);
+                if (!verification.aligned) {
+                    console.warn('Mirror alignment not perfect, but continuing');
+                }
+            } catch (error) {
+                console.error('Failed to align mirror:', error);
+                continue; // Try next position
+            }
+
+            // IRON-CLAD STEP 2: Validate all 3 rules
+            const validation = IronCladValidator.validateMirror(mirror, this.mirrors);
+
             if (validation.valid) {
+                // Triple-check before returning
+                const vertices = MirrorPlacementValidation.getMirrorVertices(mirror);
+                console.log(`✓ Created valid ${mirror.shape} mirror at (${mirror.x}, ${mirror.y}) with ${vertices.length} vertices`);
                 return mirror;
             }
-            
-            // Try to find a nearby valid position
-            const nearestValidPos = MirrorPlacementValidation.findNearestValidPosition(mirror, this.mirrors);
+
+            // If not valid, try to find a nearby valid position
+            const nearestValidPos = this.findNearestValidPositionIronClad(mirror);
             if (nearestValidPos) {
                 mirror.x = nearestValidPos.x;
                 mirror.y = nearestValidPos.y;
-                
-                // Re-validate the corrected position
-                const revalidation = MirrorPlacementValidation.isValidPlacement(mirror, this.mirrors);
+
+                // Force alignment again after position change
+                GridAlignmentEnforcer.enforceGridAlignment(mirror);
+                mirror.updateVertices();
+
+                // Re-validate
+                const revalidation = IronCladValidator.validateMirror(mirror, this.mirrors);
                 if (revalidation.valid) {
+                    console.log(`✓ Created valid ${mirror.shape} mirror at adjusted position (${mirror.x}, ${mirror.y})`);
                     return mirror;
                 }
             }
         }
-        
+
+        console.warn(`✗ Failed to place ${config.shape} mirror after ${maxAttempts} attempts`);
         return null; // Could not place this mirror
     }
     
@@ -271,40 +329,110 @@ export class Game {
     }
     
     enforceValidationDuringPlacement() {
-        // Check every mirror every frame during placement stage
+        // IRON-CLAD ENFORCEMENT: Check every mirror every frame during placement stage
         for (let mirror of this.mirrors) {
             // Skip the mirror being dragged - allow temporary violations during drag
             if (mirror.isDragging) continue;
-            
-            // Get other mirrors (excluding this one)
-            const otherMirrors = this.mirrors.filter(m => m !== mirror);
-            
-            // Validate this mirror's placement
-            const validation = MirrorPlacementValidation.isValidPlacement(mirror, otherMirrors);
-            
+
+            // Validate this mirror against all 3 rules
+            const validation = IronCladValidator.validateMirror(mirror, this.mirrors);
+
             if (!validation.valid) {
-                console.warn(`Mirror violation detected: ${validation.reason}`, mirror);
-                
-                // Find the nearest valid position
-                const nearestValidPos = MirrorPlacementValidation.findNearestValidPosition(mirror, otherMirrors);
-                
-                if (nearestValidPos) {
-                    console.log(`Moving mirror from (${mirror.x}, ${mirror.y}) to (${nearestValidPos.x}, ${nearestValidPos.y})`);
-                    mirror.x = nearestValidPos.x;
-                    mirror.y = nearestValidPos.y;
+                console.warn(`🚨 VIOLATION DETECTED on ${mirror.shape} mirror:`, validation.allViolations);
+
+                // Try to fix the mirror position
+                const fixedPosition = this.findNearestValidPositionIronClad(mirror);
+
+                if (fixedPosition) {
+                    console.log(`🔧 Fixing mirror: moving from (${mirror.x}, ${mirror.y}) to (${fixedPosition.x}, ${fixedPosition.y})`);
+                    mirror.x = fixedPosition.x;
+                    mirror.y = fixedPosition.y;
+
+                    // Force grid alignment after move
+                    GridAlignmentEnforcer.enforceGridAlignment(mirror);
+                    mirror.updateVertices();
+
+                    // Verify fix worked
+                    const revalidation = IronCladValidator.validateMirror(mirror, this.mirrors);
+                    if (!revalidation.valid) {
+                        console.error(`❌ Fix FAILED for mirror at (${mirror.x}, ${mirror.y})`);
+                    } else {
+                        console.log(`✅ Fix SUCCEEDED for mirror`);
+                    }
                 } else {
                     // Emergency fallback: move to a safe area
+                    console.error(`❌ Cannot find valid position - emergency relocation`);
                     const center = { x: CONFIG.CANVAS_WIDTH / 2, y: CONFIG.CANVAS_HEIGHT / 2 };
                     const safeDistance = 200;
                     const angle = Math.random() * Math.PI * 2;
-                    
-                    mirror.x = this.snapToGrid(center.x + Math.cos(angle) * safeDistance);
-                    mirror.y = this.snapToGrid(center.y + Math.sin(angle) * safeDistance);
-                    
-                    console.warn('Emergency relocation for mirror:', mirror);
+
+                    mirror.x = center.x + Math.cos(angle) * safeDistance;
+                    mirror.y = center.y + Math.sin(angle) * safeDistance;
+                    GridAlignmentEnforcer.enforceGridAlignment(mirror);
+                    mirror.updateVertices();
                 }
             }
         }
+    }
+
+    findNearestValidPositionIronClad(mirror) {
+        const searchRadius = CONFIG.GRID_SIZE * 15; // Search within 15 grid units
+        const step = CONFIG.GRID_SIZE; // Move by grid increments
+
+        let bestPosition = null;
+        let bestDistance = Infinity;
+
+        // Search in expanding circles
+        for (let radius = 0; radius <= searchRadius; radius += step) {
+            const positions = [];
+
+            if (radius === 0) {
+                positions.push({ x: mirror.x, y: mirror.y });
+            } else {
+                // Generate positions on perimeter
+                const circumference = 2 * Math.PI * radius;
+                const numPoints = Math.max(8, Math.floor(circumference / step));
+
+                for (let i = 0; i < numPoints; i++) {
+                    const angle = (i / numPoints) * 2 * Math.PI;
+                    const x = mirror.x + radius * Math.cos(angle);
+                    const y = mirror.y + radius * Math.sin(angle);
+
+                    // Snap to grid
+                    positions.push({
+                        x: Math.round(x / step) * step,
+                        y: Math.round(y / step) * step
+                    });
+                }
+            }
+
+            // Test each position
+            for (let pos of positions) {
+                const testMirror = { ...mirror, x: pos.x, y: pos.y };
+
+                // Force grid alignment
+                GridAlignmentEnforcer.enforceGridAlignment(testMirror);
+                testMirror.updateVertices();
+
+                // Validate with iron-clad system
+                const validation = IronCladValidator.validateMirror(testMirror, this.mirrors);
+
+                if (validation.valid) {
+                    const distance = Math.sqrt((pos.x - mirror.x) ** 2 + (pos.y - mirror.y) ** 2);
+                    if (distance < bestDistance) {
+                        bestDistance = distance;
+                        bestPosition = { x: testMirror.x, y: testMirror.y };
+                    }
+                }
+            }
+
+            // If we found a valid position at this radius, return the closest one
+            if (bestPosition) {
+                return bestPosition;
+            }
+        }
+
+        return null;
     }
     
     generateSpawners() {
@@ -717,12 +845,22 @@ export class Game {
     
     launchLasers() {
         if (this.isPlaying) return;
-        
+
         // Prevent launching in completed Daily Challenges
         if (this.gameMode === 'dailyChallenge' && DailyChallenge.hasCompletedToday()) {
             return;
         }
-        
+
+        // IRON-CLAD PRE-LAUNCH VALIDATION: Run full validation report
+        console.log('🔍 Running pre-launch validation...');
+        const validationReport = IronCladValidator.generateReport(this.mirrors);
+
+        if (!validationReport.allValid) {
+            console.error('❌ CANNOT LAUNCH: Validation violations detected!');
+            console.error('Fix all violations before launching lasers');
+            return;
+        }
+
         console.log('🚀 Launching lasers - initializing collision system...');
 
         // Show brief loading message
@@ -905,48 +1043,54 @@ export class Game {
                 this.draggedMirror = null;
                 return;
             }
-            
+
             // Get the final mouse position
             const rect = this.canvas.getBoundingClientRect();
             const mouseX = e.clientX - rect.left;
             const mouseY = e.clientY - rect.top;
-            
+
             // Calculate exact drop position (accounting for drag offset)
             const dropX = mouseX - this.dragOffset.x;
             const dropY = mouseY - this.dragOffset.y;
-            
+
             // Snap to nearest grid intersection
             const targetX = this.snapToGrid(dropX);
             const targetY = this.snapToGrid(dropY);
-            
-            // Try to place mirror at target position
+
+            // Set target position
             this.draggedMirror.x = targetX;
             this.draggedMirror.y = targetY;
-            
-            // Get other mirrors (excluding the one being dragged)
-            const otherMirrors = this.mirrors.filter(m => m !== this.draggedMirror);
-            
-            // Validate placement using new system
-            const validation = MirrorPlacementValidation.isValidPlacement(this.draggedMirror, otherMirrors);
-            
+
+            // IRON-CLAD STEP 1: Force grid alignment
+            GridAlignmentEnforcer.enforceGridAlignment(this.draggedMirror);
+            this.draggedMirror.updateVertices();
+
+            // IRON-CLAD STEP 2: Validate with all 3 rules
+            const validation = IronCladValidator.validateMirror(this.draggedMirror, this.mirrors);
+
             if (!validation.valid) {
-                // Find the nearest valid position
-                const nearestValidPos = MirrorPlacementValidation.findNearestValidPosition(this.draggedMirror, otherMirrors);
-                
+                console.warn(`🚨 Invalid placement detected:`, validation.allViolations);
+
+                // Try to find a nearby valid position
+                const nearestValidPos = this.findNearestValidPositionIronClad(this.draggedMirror);
+
                 if (nearestValidPos) {
                     this.draggedMirror.x = nearestValidPos.x;
                     this.draggedMirror.y = nearestValidPos.y;
-                    console.log(`Mirror moved to nearest valid position: (${nearestValidPos.x}, ${nearestValidPos.y}). Reason: ${validation.reason}`);
+                    console.log(`🔧 Mirror moved to nearest valid position: (${nearestValidPos.x}, ${nearestValidPos.y})`);
                 } else {
-                    // Final fallback: move to original position
-                    console.warn('Could not find valid position, reverting to original');
+                    // Final fallback: revert to original position
+                    console.warn('⚠️ Could not find valid position, reverting to original');
                     this.draggedMirror.x = this.draggedMirror.originalX || targetX;
                     this.draggedMirror.y = this.draggedMirror.originalY || targetY;
+                    GridAlignmentEnforcer.enforceGridAlignment(this.draggedMirror);
+                    this.draggedMirror.updateVertices();
                 }
+            } else {
+                console.log(`✅ Mirror placed at valid position (${this.draggedMirror.x}, ${this.draggedMirror.y})`);
             }
-            
+
             this.draggedMirror.isDragging = false;
-            console.log('Mirror placed at', this.draggedMirror.x, this.draggedMirror.y);
         }
         this.draggedMirror = null;
         this.canvas.style.cursor = 'crosshair';
@@ -1906,26 +2050,98 @@ export class Game {
     render() {
         // Clear canvas
         this.ctx.clearRect(0, 0, CONFIG.CANVAS_WIDTH, CONFIG.CANVAS_HEIGHT);
-        
+
         // Draw grid
         this.drawGrid();
-        
+
         // Draw center target
         this.drawTarget();
-        
+
         // Draw spawners
         this.spawners.forEach(spawner => spawner.draw(this.ctx));
-        
+
         // Draw mirrors
         this.mirrors.forEach(mirror => mirror.draw(this.ctx));
-        
+
         // Draw lasers
         this.lasers.forEach(laser => laser.draw(this.ctx));
-        
+
         // Draw forbidden zones
         if (!this.isPlaying) {
             this.drawForbiddenZones();
+            // Draw validation violations
+            this.drawValidationViolations();
         }
+    }
+
+    drawValidationViolations() {
+        // Only show violations when not playing
+        if (this.isPlaying) return;
+
+        this.ctx.save();
+
+        for (let mirror of this.mirrors) {
+            // Skip mirrors being dragged
+            if (mirror.isDragging) continue;
+
+            const validation = IronCladValidator.validateMirror(mirror, this.mirrors);
+
+            if (!validation.valid) {
+                // Draw violations
+                const vertices = MirrorPlacementValidation.getMirrorVertices(mirror);
+
+                // Highlight the invalid mirror with red outline
+                this.ctx.strokeStyle = '#ff0000';
+                this.ctx.lineWidth = 4;
+                this.ctx.setLineDash([5, 5]);
+                this.ctx.beginPath();
+                vertices.forEach((vertex, i) => {
+                    if (i === 0) this.ctx.moveTo(vertex.x, vertex.y);
+                    else this.ctx.lineTo(vertex.x, vertex.y);
+                });
+                this.ctx.closePath();
+                this.ctx.stroke();
+                this.ctx.setLineDash([]);
+
+                // Draw violation markers on vertices that are not on grid
+                validation.rule1.violations.forEach(violation => {
+                    this.ctx.fillStyle = '#ff0000';
+                    this.ctx.beginPath();
+                    this.ctx.arc(violation.vertex.x, violation.vertex.y, 5, 0, Math.PI * 2);
+                    this.ctx.fill();
+
+                    // Draw X marker
+                    this.ctx.strokeStyle = '#ffffff';
+                    this.ctx.lineWidth = 2;
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(violation.vertex.x - 3, violation.vertex.y - 3);
+                    this.ctx.lineTo(violation.vertex.x + 3, violation.vertex.y + 3);
+                    this.ctx.moveTo(violation.vertex.x + 3, violation.vertex.y - 3);
+                    this.ctx.lineTo(violation.vertex.x - 3, violation.vertex.y + 3);
+                    this.ctx.stroke();
+                });
+
+                // Draw warning icon near mirror center
+                this.ctx.fillStyle = '#ff0000';
+                this.ctx.font = 'bold 20px Arial';
+                this.ctx.textAlign = 'center';
+                this.ctx.textBaseline = 'middle';
+                this.ctx.fillText('⚠', mirror.x, mirror.y - 40);
+            } else {
+                // Draw green checkmark for valid mirrors
+                const vertices = MirrorPlacementValidation.getMirrorVertices(mirror);
+
+                // Draw green dots on vertices to show they're correctly aligned
+                this.ctx.fillStyle = '#00ff00';
+                vertices.forEach(vertex => {
+                    this.ctx.beginPath();
+                    this.ctx.arc(vertex.x, vertex.y, 2, 0, Math.PI * 2);
+                    this.ctx.fill();
+                });
+            }
+        }
+
+        this.ctx.restore();
     }
     
     drawGrid() {

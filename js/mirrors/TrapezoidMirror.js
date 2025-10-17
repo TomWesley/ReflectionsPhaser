@@ -25,53 +25,20 @@ export class TrapezoidMirror extends BaseMirror {
         this.rotation = Math.floor(Math.random() * 4) * 90; // 0, 90, 180, or 270 degrees
     }
 
-    drawShape(ctx) {
-        const points = this.getTrapezoidPoints();
-        this.drawMirrorSurface(ctx, points);
-        this.drawMirrorBorder(ctx, points);
-    }
+    /**
+     * Calculate vertices - CANONICAL SOURCE OF TRUTH
+     */
+    calculateVertices() {
+        const halfHeight = this.height / 2;
+        const bottomHalfWidth = this.width / 2;
+        const topHalfWidth = this.topWidth / 2;
 
-    reflectShape(laser) {
-        // Get trapezoid vertices for accurate edge detection
-        const vertices = this.getTrapezoidPoints();
-
-        // Define the four edges of the trapezoid
-        const edges = [
-            { x1: vertices[0].x, y1: vertices[0].y, x2: vertices[1].x, y2: vertices[1].y }, // bottom edge
-            { x1: vertices[1].x, y1: vertices[1].y, x2: vertices[2].x, y2: vertices[2].y }, // right edge
-            { x1: vertices[2].x, y1: vertices[2].y, x2: vertices[3].x, y2: vertices[3].y }, // top edge
-            { x1: vertices[3].x, y1: vertices[3].y, x2: vertices[0].x, y2: vertices[0].y }  // left edge
-        ];
-
-        // Find the closest edge to the laser position
-        let closestEdge = null;
-        let minDistance = Infinity;
-
-        edges.forEach(edge => {
-            const distance = this.distanceToLineSegmentCoords(laser.x, laser.y, edge.x1, edge.y1, edge.x2, edge.y2);
-            if (distance < minDistance) {
-                minDistance = distance;
-                closestEdge = edge;
-            }
-        });
-
-        // Reflect across the closest edge
-        if (closestEdge && minDistance < 5) {
-            this.reflectAcrossLine(laser, closestEdge.x1, closestEdge.y1, closestEdge.x2, closestEdge.y2);
-        }
-    }
-
-    getTrapezoidPoints() {
-        const trapHeight = this.height / 2;
-        const trapBottomHalf = this.width / 2;
-        const trapTopHalf = this.topWidth / 2;
-
-        // Create trapezoid points - symmetric trapezoid with top base centered under bottom base
-        let points = [
-            { x: this.x - trapBottomHalf, y: this.y + trapHeight },   // bottom-left
-            { x: this.x + trapBottomHalf, y: this.y + trapHeight },   // bottom-right
-            { x: this.x + trapTopHalf, y: this.y - trapHeight },      // top-right
-            { x: this.x - trapTopHalf, y: this.y - trapHeight }       // top-left
+        // Create trapezoid vertices in clockwise order
+        let vertices = [
+            { x: this.x - bottomHalfWidth, y: this.y + halfHeight },  // bottom-left
+            { x: this.x + bottomHalfWidth, y: this.y + halfHeight },  // bottom-right
+            { x: this.x + topHalfWidth, y: this.y - halfHeight },     // top-right
+            { x: this.x - topHalfWidth, y: this.y - halfHeight }      // top-left
         ];
 
         // Apply rotation if needed
@@ -80,43 +47,42 @@ export class TrapezoidMirror extends BaseMirror {
             const cos = Math.cos(angle);
             const sin = Math.sin(angle);
 
-            points = points.map(p => ({
-                x: this.x + (p.x - this.x) * cos - (p.y - this.y) * sin,
-                y: this.y + (p.x - this.x) * sin + (p.y - this.y) * cos
+            vertices = vertices.map(v => ({
+                x: this.x + (v.x - this.x) * cos - (v.y - this.y) * sin,
+                y: this.y + (v.x - this.x) * sin + (v.y - this.y) * cos
             }));
         }
 
-        return points;
+        return vertices;
     }
 
-    distanceToLineSegmentCoords(px, py, x1, y1, x2, y2) {
-        const A = px - x1;
-        const B = py - y1;
-        const C = x2 - x1;
-        const D = y2 - y1;
-
-        const dot = A * C + B * D;
-        const lenSq = C * C + D * D;
-        let param = -1;
-        if (lenSq !== 0) {
-            param = dot / lenSq;
+    reflectShape(laser) {
+        // Get edges from canonical vertices
+        const edges = [];
+        for (let i = 0; i < this.vertices.length; i++) {
+            const next = (i + 1) % this.vertices.length;
+            edges.push({
+                start: this.vertices[i],
+                end: this.vertices[next]
+            });
         }
 
-        let xx, yy;
+        // Find closest edge
+        let closestEdge = edges[0];
+        let minDistance = Infinity;
 
-        if (param < 0) {
-            xx = x1;
-            yy = y1;
-        } else if (param > 1) {
-            xx = x2;
-            yy = y2;
-        } else {
-            xx = x1 + param * C;
-            yy = y1 + param * D;
+        for (let edge of edges) {
+            const dist = this.distanceToLineSegment(laser.x, laser.y, edge.start, edge.end);
+            if (dist < minDistance) {
+                minDistance = dist;
+                closestEdge = edge;
+            }
         }
 
-        const dx = px - xx;
-        const dy = py - yy;
-        return Math.sqrt(dx * dx + dy * dy);
+        // Reflect across closest edge
+        if (closestEdge && minDistance < 5) {
+            this.reflectAcrossLine(laser, closestEdge.start.x, closestEdge.start.y, closestEdge.end.x, closestEdge.end.y);
+            this.snapLaserAngle(laser);
+        }
     }
 }
