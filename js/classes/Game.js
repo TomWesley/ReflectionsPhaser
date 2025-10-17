@@ -202,7 +202,18 @@ export class Game {
         const totalSurfaceArea = SurfaceAreaManager.calculateTotalSurfaceArea(this.mirrors);
         console.log(`Free play mirrors generated: ${this.mirrors.length} mirrors, total surface area: ${totalSurfaceArea} (target: ${SurfaceAreaManager.TARGET_SURFACE_AREA})`);
     }
-    
+
+    // Helper method to safely update mirror vertices
+    safeUpdateVertices(mirror) {
+        if (typeof mirror.updateVertices === 'function') {
+            mirror.updateVertices();
+        } else if (typeof mirror.calculateVertices === 'function') {
+            mirror.vertices = mirror.calculateVertices();
+        } else {
+            console.error('Mirror has no way to calculate vertices!', mirror);
+        }
+    }
+
     createValidatedMirror(config) {
         const center = { x: CONFIG.CANVAS_WIDTH / 2, y: CONFIG.CANVAS_HEIGHT / 2 };
         const maxAttempts = 200; // More attempts for better placement
@@ -218,8 +229,8 @@ export class Game {
             const mirror = MirrorFactory.createMirror(x, y, config.shape);
 
             // Check if mirror was created successfully
-            if (!mirror || typeof mirror.updateVertices !== 'function') {
-                console.error('Failed to create valid mirror:', config.shape, mirror);
+            if (!mirror) {
+                console.error('Failed to create mirror - null:', config.shape);
                 continue;
             }
 
@@ -257,14 +268,14 @@ export class Game {
 
             // If we modified any properties, recalculate vertices
             if (propertiesChanged) {
-                mirror.updateVertices();
+                this.safeUpdateVertices(mirror);
             }
 
             // IRON-CLAD STEP 1: Force grid alignment (but don't verify yet - vertices not set)
             try {
                 GridAlignmentEnforcer.enforceGridAlignment(mirror);
                 // Update vertices after position/alignment change
-                mirror.updateVertices();
+                this.safeUpdateVertices(mirror);
                 // Now verify alignment
                 const verification = GridAlignmentEnforcer.verifyAlignment(mirror);
                 if (!verification.aligned) {
@@ -293,7 +304,7 @@ export class Game {
 
                 // Force alignment again after position change
                 GridAlignmentEnforcer.enforceGridAlignment(mirror);
-                mirror.updateVertices();
+                this.safeUpdateVertices(mirror);
 
                 // Re-validate
                 const revalidation = IronCladValidator.validateMirror(mirror, this.mirrors);
@@ -350,7 +361,7 @@ export class Game {
 
                     // Force grid alignment after move
                     GridAlignmentEnforcer.enforceGridAlignment(mirror);
-                    mirror.updateVertices();
+                    this.safeUpdateVertices(mirror);
 
                     // Verify fix worked
                     const revalidation = IronCladValidator.validateMirror(mirror, this.mirrors);
@@ -369,7 +380,7 @@ export class Game {
                     mirror.x = center.x + Math.cos(angle) * safeDistance;
                     mirror.y = center.y + Math.sin(angle) * safeDistance;
                     GridAlignmentEnforcer.enforceGridAlignment(mirror);
-                    mirror.updateVertices();
+                    this.safeUpdateVertices(mirror);
                 }
             }
         }
@@ -408,11 +419,15 @@ export class Game {
 
             // Test each position
             for (let pos of positions) {
-                const testMirror = { ...mirror, x: pos.x, y: pos.y };
+                // Create a proper clone that preserves prototype chain
+                const testMirror = Object.create(Object.getPrototypeOf(mirror));
+                Object.assign(testMirror, mirror);
+                testMirror.x = pos.x;
+                testMirror.y = pos.y;
 
                 // Force grid alignment
                 GridAlignmentEnforcer.enforceGridAlignment(testMirror);
-                testMirror.updateVertices();
+                this.safeUpdateVertices(testMirror);
 
                 // Validate with iron-clad system
                 const validation = IronCladValidator.validateMirror(testMirror, this.mirrors);
@@ -1063,7 +1078,7 @@ export class Game {
 
             // IRON-CLAD STEP 1: Force grid alignment
             GridAlignmentEnforcer.enforceGridAlignment(this.draggedMirror);
-            this.draggedMirror.updateVertices();
+            this.safeUpdateVertices(this.draggedMirror);
 
             // IRON-CLAD STEP 2: Validate with all 3 rules
             const validation = IronCladValidator.validateMirror(this.draggedMirror, this.mirrors);
@@ -1084,7 +1099,7 @@ export class Game {
                     this.draggedMirror.x = this.draggedMirror.originalX || targetX;
                     this.draggedMirror.y = this.draggedMirror.originalY || targetY;
                     GridAlignmentEnforcer.enforceGridAlignment(this.draggedMirror);
-                    this.draggedMirror.updateVertices();
+                    this.safeUpdateVertices(this.draggedMirror);
                 }
             } else {
                 console.log(`✅ Mirror placed at valid position (${this.draggedMirror.x}, ${this.draggedMirror.y})`);

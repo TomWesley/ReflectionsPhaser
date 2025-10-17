@@ -52,6 +52,11 @@ export class BaseMirror {
      */
     getVertices() {
         // Simply return the stored vertices - no calculation, no external calls
+        // DEBUG: This should NEVER call any other function
+        if (!this.vertices) {
+            console.error('getVertices called but vertices is', this.vertices, 'for mirror', this.shape);
+            return [];
+        }
         return this.vertices;
     }
 
