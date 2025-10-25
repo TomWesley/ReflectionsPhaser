@@ -10,7 +10,11 @@
       "Bash(node:*)",
       "Bash(open http://localhost:7000/test_mirrors.html)",
       "Bash(lsof:*)",
-      "Bash(kill:*)"
+      "Bash(kill:*)",
+      "Bash(awk:*)",
+      "Bash(sort:*)",
+      "Read(///**)",
+      "Bash(open http://localhost:8000/index.html)"
     ],
     "deny": [],
     "ask": []

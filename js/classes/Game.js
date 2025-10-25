@@ -14,6 +14,9 @@ import { InputHandler } from '../core/InputHandler.js';
 import { GameState } from '../core/GameState.js';
 import { CollisionSystem } from '../core/CollisionSystem.js';
 import { LaserCollisionHandler } from '../core/LaserCollisionHandler.js';
+import { ShapeGeometry } from '../geometry/ShapeGeometry.js';
+import { GameRenderer } from '../rendering/GameRenderer.js';
+import { GameModeManager } from '../managers/GameModeManager.js';
 
 export class Game {
     constructor() {
@@ -23,12 +26,7 @@ export class Game {
         this.gameOver = false;
         this.startTime = 0;
         this.gameTime = 0;
-        
-        // Game mode
-        this.gameMode = 'freePlay'; // 'freePlay' or 'dailyChallenge'
-        this.dailyPuzzle = null;
-        this.challengeCompleted = false;
-        
+
         // Game objects
         this.mirrors = [];
         this.lasers = [];
@@ -48,16 +46,22 @@ export class Game {
         this.collisionSystem = new CollisionSystem();
         this.laserCollisionHandler = new LaserCollisionHandler(this.collisionSystem);
 
+        // Initialize renderer
+        this.renderer = new GameRenderer(this.ctx, this);
+
+        // Initialize mode manager
+        this.modeManager = new GameModeManager(this);
+
         this.init();
     }
     
     init() {
         // Initialize the validation system first
         MirrorPlacementValidation.initialize();
-        
+
         this.setupEventListeners();
-        this.setupModeButtons();
-        this.updateDailyInfo();
+        this.modeManager.setupModeButtons();
+        this.modeManager.updateDailyInfo();
         this.generateMirrors();
         this.generateSpawners();
         this.gameLoop();
@@ -79,100 +83,16 @@ export class Game {
         document.getElementById('resetBtn').addEventListener('click', () => this.resetGame());
     }
     
-    setupModeButtons() {
-        const freePlayBtn = document.getElementById('freePlayBtn');
-        const dailyChallengeBtn = document.getElementById('dailyChallengeBtn');
-        
-        freePlayBtn.addEventListener('click', () => this.switchToFreePlay());
-        dailyChallengeBtn.addEventListener('click', () => this.switchToDailyChallenge());
-        
-        // Update button states
-        this.updateModeButtons();
-    }
-    
-    switchToFreePlay() {
-        if (this.isPlaying) return; // Don't allow mode switch during gameplay
-        
-        this.gameMode = 'freePlay';
-        this.dailyPuzzle = null;
-        this.challengeCompleted = false;
-        this.updateModeButtons();
-        this.updateDailyInfo();
-        this.resetGame();
-    }
-    
-    switchToDailyChallenge() {
-        if (this.isPlaying) return; // Don't allow mode switch during gameplay
-        
-        this.gameMode = 'dailyChallenge';
-        this.challengeCompleted = DailyChallenge.hasCompletedToday();
-        this.updateModeButtons();
-        this.updateDailyInfo();
-        this.resetGame();
-    }
-    
-    updateModeButtons() {
-        const freePlayBtn = document.getElementById('freePlayBtn');
-        const dailyChallengeBtn = document.getElementById('dailyChallengeBtn');
-        const resetBtn = document.getElementById('resetBtn');
-        
-        // Update active states
-        freePlayBtn.classList.toggle('active', this.gameMode === 'freePlay');
-        dailyChallengeBtn.classList.toggle('active', this.gameMode === 'dailyChallenge');
-        
-        // Update completed state for daily challenge
-        const isCompleted = DailyChallenge.hasCompletedToday();
-        dailyChallengeBtn.classList.toggle('completed', isCompleted);
-        
-        // Hide reset button during daily challenge mode
-        if (resetBtn) {
-            resetBtn.style.display = this.gameMode === 'dailyChallenge' ? 'none' : '';
-        }
-        
-        // Button text is handled by CSS for completed state
-        dailyChallengeBtn.textContent = 'Daily Challenge';
-    }
-    
-    updateDailyInfo() {
-        const dailyInfo = document.getElementById('dailyInfo');
-        const dailyDate = dailyInfo.querySelector('.daily-date');
-        const dailyStatus = dailyInfo.querySelector('.daily-status');
-        
-        if (this.gameMode === 'dailyChallenge') {
-            dailyInfo.classList.remove('hidden');
-            
-            // Show today's date
-            const today = DailyChallenge.getTodayString();
-            const formattedDate = new Date(today).toLocaleDateString('en-US', {
-                weekday: 'long',
-                month: 'short',
-                day: 'numeric'
-            });
-            dailyDate.textContent = formattedDate;
-            
-            // Show completion status
-            if (DailyChallenge.hasCompletedToday()) {
-                const score = DailyChallenge.getTodayScore();
-                dailyStatus.textContent = `Completed in ${score.time}s`;
-                dailyStatus.classList.add('completed');
-            } else {
-                dailyStatus.textContent = 'Not completed yet';
-                dailyStatus.classList.remove('completed');
-            }
-        } else {
-            dailyInfo.classList.add('hidden');
-        }
-    }
     
     generateMirrors() {
         this.mirrors = [];
-        
-        if (this.gameMode === 'dailyChallenge') {
+
+        if (this.modeManager.isDailyChallenge()) {
             // Generate daily challenge puzzle
-            this.dailyPuzzle = DailyChallenge.generatePuzzle();
-            
+            const dailyPuzzle = this.modeManager.generateDailyPuzzle();
+
             // Create mirrors from daily puzzle data and validate them
-            for (let mirrorData of this.dailyPuzzle.mirrors) {
+            for (let mirrorData of dailyPuzzle.mirrors) {
                 let mirror = this.createValidatedMirror(mirrorData);
                 if (mirror) {
                     this.mirrors.push(mirror);
@@ -340,50 +260,8 @@ export class Game {
     }
     
     enforceValidationDuringPlacement() {
-        // IRON-CLAD ENFORCEMENT: Check every mirror every frame during placement stage
-        for (let mirror of this.mirrors) {
-            // Skip the mirror being dragged - allow temporary violations during drag
-            if (mirror.isDragging) continue;
-
-            // Validate this mirror against all 3 rules
-            const validation = IronCladValidator.validateMirror(mirror, this.mirrors);
-
-            if (!validation.valid) {
-                console.warn(`🚨 VIOLATION DETECTED on ${mirror.shape} mirror:`, validation.allViolations);
-
-                // Try to fix the mirror position
-                const fixedPosition = this.findNearestValidPositionIronClad(mirror);
-
-                if (fixedPosition) {
-                    console.log(`🔧 Fixing mirror: moving from (${mirror.x}, ${mirror.y}) to (${fixedPosition.x}, ${fixedPosition.y})`);
-                    mirror.x = fixedPosition.x;
-                    mirror.y = fixedPosition.y;
-
-                    // Force grid alignment after move
-                    GridAlignmentEnforcer.enforceGridAlignment(mirror);
-                    this.safeUpdateVertices(mirror);
-
-                    // Verify fix worked
-                    const revalidation = IronCladValidator.validateMirror(mirror, this.mirrors);
-                    if (!revalidation.valid) {
-                        console.error(`❌ Fix FAILED for mirror at (${mirror.x}, ${mirror.y})`);
-                    } else {
-                        console.log(`✅ Fix SUCCEEDED for mirror`);
-                    }
-                } else {
-                    // Emergency fallback: move to a safe area
-                    console.error(`❌ Cannot find valid position - emergency relocation`);
-                    const center = { x: CONFIG.CANVAS_WIDTH / 2, y: CONFIG.CANVAS_HEIGHT / 2 };
-                    const safeDistance = 200;
-                    const angle = Math.random() * Math.PI * 2;
-
-                    mirror.x = center.x + Math.cos(angle) * safeDistance;
-                    mirror.y = center.y + Math.sin(angle) * safeDistance;
-                    GridAlignmentEnforcer.enforceGridAlignment(mirror);
-                    this.safeUpdateVertices(mirror);
-                }
-            }
-        }
+        // Validation is now only enforced on drop, not during placement
+        // This method is kept for backward compatibility but does nothing
     }
 
     findNearestValidPositionIronClad(mirror) {
@@ -452,13 +330,16 @@ export class Game {
     
     generateSpawners() {
         this.spawners = [];
-        
-        if (this.gameMode === 'dailyChallenge' && this.dailyPuzzle) {
-            // Create spawners from daily puzzle data
-            this.dailyPuzzle.spawners.forEach(spawnerData => {
-                this.spawners.push(new Spawner(spawnerData.x, spawnerData.y, spawnerData.angle));
-            });
-            return;
+
+        if (this.modeManager.isDailyChallenge()) {
+            const dailyPuzzle = this.modeManager.getDailyPuzzle();
+            if (dailyPuzzle) {
+                // Create spawners from daily puzzle data
+                dailyPuzzle.spawners.forEach(spawnerData => {
+                    this.spawners.push(new Spawner(spawnerData.x, spawnerData.y, spawnerData.angle));
+                });
+                return;
+            }
         }
         
         // Generate random positions along each edge
@@ -862,7 +743,7 @@ export class Game {
         if (this.isPlaying) return;
 
         // Prevent launching in completed Daily Challenges
-        if (this.gameMode === 'dailyChallenge' && DailyChallenge.hasCompletedToday()) {
+        if (this.modeManager.isDailyChallenge() && this.modeManager.isDailyChallengeCompleted()) {
             return;
         }
 
@@ -921,28 +802,27 @@ export class Game {
     
     resetGame() {
         // In Daily Challenge mode, don't allow reset if already completed
-        if (this.gameMode === 'dailyChallenge' && DailyChallenge.hasCompletedToday()) {
+        if (this.modeManager.isDailyChallenge() && this.modeManager.isDailyChallengeCompleted()) {
             return;
         }
-        
+
         this.isPlaying = false;
         this.gameOver = false;
         this.startTime = 0;
         this.gameTime = 0;
         this.lasers = [];
-        this.challengeCompleted = false;
         document.getElementById('timer').textContent = '0:00';
         this.generateMirrors();
         this.generateSpawners();
-        
+
         document.getElementById('launchBtn').disabled = false;
         const statusEl = document.getElementById('status');
-        
-        if (this.gameMode === 'dailyChallenge') {
+
+        if (this.modeManager.isDailyChallenge()) {
             statusEl.textContent = 'Daily Challenge: Position mirrors to protect the center!';
-            
+
             // Disable launch button if already completed
-            if (DailyChallenge.hasCompletedToday()) {
+            if (this.modeManager.isDailyChallengeCompleted()) {
                 document.getElementById('launchBtn').disabled = true;
                 statusEl.textContent = 'Daily Challenge Complete! Come back tomorrow for a new puzzle.';
                 statusEl.className = 'status-modern status-success';
@@ -956,9 +836,9 @@ export class Game {
     
     onMouseDown(e) {
         if (this.isPlaying) return;
-        
+
         // Prevent interaction in completed Daily Challenges
-        if (this.gameMode === 'dailyChallenge' && DailyChallenge.hasCompletedToday()) {
+        if (this.modeManager.isDailyChallenge() && this.modeManager.isDailyChallengeCompleted()) {
             return;
         }
         
@@ -1047,6 +927,9 @@ export class Game {
         this.draggedMirror.x = newX;
         this.draggedMirror.y = newY;
         this.draggedMirror.isDragging = true;
+
+        // IMPORTANT: Update vertices so the mirror renders correctly at the new position
+        this.safeUpdateVertices(this.draggedMirror);
     }
     
     onMouseUp(e) {
@@ -1579,72 +1462,11 @@ export class Game {
     }
     
     getTrapezoidVertices(mirror) {
-        const halfHeight = mirror.height / 2;
-        const bottomHalfWidth = mirror.width / 2;
-
-        // Ensure topWidth is grid-aligned for symmetrical trapezoids
-        let topWidth = mirror.topWidth;
-        if (!topWidth) {
-            // Use same logic as Mirror.js to ensure grid alignment
-            const gridSize = CONFIG.GRID_SIZE;
-            const minTopWidth = gridSize;
-            const maxReduction = Math.floor(mirror.width / gridSize) * gridSize / 2;
-            const reductions = [gridSize, gridSize * 2, gridSize * 3];
-            const validReductions = reductions.filter(r => r <= maxReduction && mirror.width - r >= minTopWidth);
-            const reduction = validReductions[0] || gridSize; // Use first valid reduction for consistency
-            topWidth = mirror.width - reduction;
-        }
-        const topHalfWidth = topWidth / 2;
-        const rotation = mirror.rotation || 0;
-        
-        // Calculate vertices based on rotation
-        if (rotation === 0 || rotation === 180) {
-            // Standard orientation: bases are horizontal
-            return [
-                { x: mirror.x - bottomHalfWidth, y: mirror.y + halfHeight },  // bottom-left
-                { x: mirror.x + bottomHalfWidth, y: mirror.y + halfHeight },  // bottom-right
-                { x: mirror.x + topHalfWidth, y: mirror.y - halfHeight },     // top-right
-                { x: mirror.x - topHalfWidth, y: mirror.y - halfHeight }      // top-left
-            ];
-        } else if (rotation === 90 || rotation === 270) {
-            // Rotated 90/270: bases become vertical, height/width swap meanings
-            return [
-                { x: mirror.x - halfHeight, y: mirror.y + bottomHalfWidth },  // bottom-left (now wider base)
-                { x: mirror.x - halfHeight, y: mirror.y - bottomHalfWidth },  // top-left  
-                { x: mirror.x + halfHeight, y: mirror.y - topHalfWidth },     // top-right (now narrower base)
-                { x: mirror.x + halfHeight, y: mirror.y + topHalfWidth }      // bottom-right
-            ];
-        }
-        
-        return [];
+        return ShapeGeometry.getTrapezoidVertices(mirror);
     }
     
     getParallelogramVertices(mirror) {
-        const halfHeight = mirror.height / 2;
-        const halfWidth = mirror.width / 2;
-        const skew = mirror.skew || 20;
-        const rotation = mirror.rotation || 0;
-        
-        // Calculate vertices based on rotation
-        if (rotation === 0 || rotation === 180) {
-            // Standard orientation: skew is horizontal
-            return [
-                { x: mirror.x - halfWidth, y: mirror.y + halfHeight },        // bottom-left
-                { x: mirror.x + halfWidth, y: mirror.y + halfHeight },        // bottom-right
-                { x: mirror.x + halfWidth + skew, y: mirror.y - halfHeight }, // top-right (skewed)
-                { x: mirror.x - halfWidth + skew, y: mirror.y - halfHeight }  // top-left (skewed)
-            ];
-        } else if (rotation === 90 || rotation === 270) {
-            // Rotated 90/270: skew becomes vertical, dimensions swap
-            return [
-                { x: mirror.x - halfHeight, y: mirror.y - halfWidth },        // top-left
-                { x: mirror.x - halfHeight, y: mirror.y + halfWidth },        // bottom-left  
-                { x: mirror.x + halfHeight, y: mirror.y + halfWidth + skew }, // bottom-right (skewed)
-                { x: mirror.x + halfHeight, y: mirror.y - halfWidth + skew }  // top-right (skewed)
-            ];
-        }
-        
-        return [];
+        return ShapeGeometry.getParallelogramVertices(mirror);
     }
     
     isInForbiddenZone(mirror) {
@@ -1949,110 +1771,39 @@ export class Game {
     }
     
     pointInRightTriangle(px, py, mirror) {
-        const halfSize = mirror.size / 2;
-        
-        // Get triangle points with rotation applied
-        const points = this.getRightTrianglePoints(mirror);
-        
-        // Use barycentric coordinates to test if point is inside triangle
-        return this.pointInTriangle(px, py, points[0], points[1], points[2]);
+        return ShapeGeometry.pointInRightTriangle(px, py, mirror);
     }
     
     pointInIsoscelesTriangle(px, py, mirror) {
-        const halfSize = mirror.size / 2;
-        
-        // Get triangle points with rotation applied
-        const points = this.getIsoscelesTrianglePoints(mirror);
-        
-        // Use barycentric coordinates to test if point is inside triangle
-        return this.pointInTriangle(px, py, points[0], points[1], points[2]);
+        return ShapeGeometry.pointInIsoscelesTriangle(px, py, mirror);
     }
     
     getRightTrianglePoints(mirror) {
-        const halfSize = mirror.size / 2;
-        let points = [
-            { x: mirror.x - halfSize, y: mirror.y + halfSize }, // bottom-left (right angle)
-            { x: mirror.x + halfSize, y: mirror.y + halfSize }, // bottom-right
-            { x: mirror.x - halfSize, y: mirror.y - halfSize }  // top-left
-        ];
-        
-        // Apply rotation if needed
-        if (mirror.rotation) {
-            points = points.map(p => this.rotatePoint(p.x, p.y, mirror.x, mirror.y, mirror.rotation));
-        }
-        
-        return points;
+        return ShapeGeometry.getRightTrianglePoints(mirror);
     }
     
     getIsoscelesTrianglePoints(mirror) {
-        const halfWidth = (mirror.width || mirror.size) / 2;  // Base half-width
-        const halfHeight = (mirror.height || mirror.size) / 2; // Height from center to top/bottom
-        
-        let points = [
-            { x: mirror.x, y: mirror.y - halfHeight },           // top apex
-            { x: mirror.x - halfWidth, y: mirror.y + halfHeight }, // bottom-left
-            { x: mirror.x + halfWidth, y: mirror.y + halfHeight }  // bottom-right
-        ];
-        
-        // Apply rotation if needed
-        if (mirror.rotation) {
-            points = points.map(p => this.rotatePoint(p.x, p.y, mirror.x, mirror.y, mirror.rotation));
-        }
-        
-        return points;
+        return ShapeGeometry.getIsoscelesTrianglePoints(mirror);
     }
     
     rotatePoint(px, py, centerX, centerY, angleDegrees) {
-        const angle = angleDegrees * Math.PI / 180;
-        const cos = Math.cos(angle);
-        const sin = Math.sin(angle);
-        
-        // Translate to origin
-        const x = px - centerX;
-        const y = py - centerY;
-        
-        // Rotate
-        const rotatedX = x * cos - y * sin;
-        const rotatedY = x * sin + y * cos;
-        
-        // Translate back
-        return {
-            x: rotatedX + centerX,
-            y: rotatedY + centerY
-        };
+        return ShapeGeometry.rotatePoint(px, py, centerX, centerY, angleDegrees);
     }
     
     pointInTriangle(px, py, p1, p2, p3) {
-        // Using barycentric coordinates
-        const denom = (p2.y - p3.y) * (p1.x - p3.x) + (p3.x - p2.x) * (p1.y - p3.y);
-        const a = ((p2.y - p3.y) * (px - p3.x) + (p3.x - p2.x) * (py - p3.y)) / denom;
-        const b = ((p3.y - p1.y) * (px - p3.x) + (p1.x - p3.x) * (py - p3.y)) / denom;
-        const c = 1 - a - b;
-        
-        return a >= 0 && b >= 0 && c >= 0;
+        return ShapeGeometry.pointInTriangle(px, py, p1, p2, p3);
     }
     
     pointInTrapezoid(px, py, mirror) {
-        const vertices = this.getTrapezoidVertices(mirror);
-        return this.pointInPolygon(px, py, vertices);
+        return ShapeGeometry.pointInTrapezoid(px, py, mirror);
     }
     
     pointInParallelogram(px, py, mirror) {
-        const vertices = this.getParallelogramVertices(mirror);
-        return this.pointInPolygon(px, py, vertices);
+        return ShapeGeometry.pointInParallelogram(px, py, mirror);
     }
     
     pointInPolygon(px, py, vertices) {
-        let inside = false;
-        for (let i = 0, j = vertices.length - 1; i < vertices.length; j = i++) {
-            const xi = vertices[i].x, yi = vertices[i].y;
-            const xj = vertices[j].x, yj = vertices[j].y;
-            
-            if (((yi > py) !== (yj > py)) && (px < (xj - xi) * (py - yi) / (yj - yi) + xi)) {
-                inside = !inside;
-            }
-        }
-        return inside;
+        return ShapeGeometry.pointInPolygon(px, py, vertices);
     }
     
     checkLaserTargetCollision(laser) {
@@ -2063,255 +1814,8 @@ export class Game {
     }
     
     render() {
-        // Clear canvas
-        this.ctx.clearRect(0, 0, CONFIG.CANVAS_WIDTH, CONFIG.CANVAS_HEIGHT);
-
-        // Draw grid
-        this.drawGrid();
-
-        // Draw center target
-        this.drawTarget();
-
-        // Draw spawners
-        this.spawners.forEach(spawner => spawner.draw(this.ctx));
-
-        // Draw mirrors
-        this.mirrors.forEach(mirror => mirror.draw(this.ctx));
-
-        // Draw lasers
-        this.lasers.forEach(laser => laser.draw(this.ctx));
-
-        // Draw forbidden zones
-        if (!this.isPlaying) {
-            this.drawForbiddenZones();
-            // Draw validation violations
-            this.drawValidationViolations();
-        }
-    }
-
-    drawValidationViolations() {
-        // Only show violations when not playing
-        if (this.isPlaying) return;
-
-        this.ctx.save();
-
-        for (let mirror of this.mirrors) {
-            // Skip mirrors being dragged
-            if (mirror.isDragging) continue;
-
-            const validation = IronCladValidator.validateMirror(mirror, this.mirrors);
-
-            if (!validation.valid) {
-                // Draw violations
-                const vertices = MirrorPlacementValidation.getMirrorVertices(mirror);
-
-                // Highlight the invalid mirror with red outline
-                this.ctx.strokeStyle = '#ff0000';
-                this.ctx.lineWidth = 4;
-                this.ctx.setLineDash([5, 5]);
-                this.ctx.beginPath();
-                vertices.forEach((vertex, i) => {
-                    if (i === 0) this.ctx.moveTo(vertex.x, vertex.y);
-                    else this.ctx.lineTo(vertex.x, vertex.y);
-                });
-                this.ctx.closePath();
-                this.ctx.stroke();
-                this.ctx.setLineDash([]);
-
-                // Draw violation markers on vertices that are not on grid
-                validation.rule1.violations.forEach(violation => {
-                    this.ctx.fillStyle = '#ff0000';
-                    this.ctx.beginPath();
-                    this.ctx.arc(violation.vertex.x, violation.vertex.y, 5, 0, Math.PI * 2);
-                    this.ctx.fill();
-
-                    // Draw X marker
-                    this.ctx.strokeStyle = '#ffffff';
-                    this.ctx.lineWidth = 2;
-                    this.ctx.beginPath();
-                    this.ctx.moveTo(violation.vertex.x - 3, violation.vertex.y - 3);
-                    this.ctx.lineTo(violation.vertex.x + 3, violation.vertex.y + 3);
-                    this.ctx.moveTo(violation.vertex.x + 3, violation.vertex.y - 3);
-                    this.ctx.lineTo(violation.vertex.x - 3, violation.vertex.y + 3);
-                    this.ctx.stroke();
-                });
-
-                // Draw warning icon near mirror center
-                this.ctx.fillStyle = '#ff0000';
-                this.ctx.font = 'bold 20px Arial';
-                this.ctx.textAlign = 'center';
-                this.ctx.textBaseline = 'middle';
-                this.ctx.fillText('⚠', mirror.x, mirror.y - 40);
-            } else {
-                // Draw green checkmark for valid mirrors
-                const vertices = MirrorPlacementValidation.getMirrorVertices(mirror);
-
-                // Draw green dots on vertices to show they're correctly aligned
-                this.ctx.fillStyle = '#00ff00';
-                vertices.forEach(vertex => {
-                    this.ctx.beginPath();
-                    this.ctx.arc(vertex.x, vertex.y, 2, 0, Math.PI * 2);
-                    this.ctx.fill();
-                });
-            }
-        }
-
-        this.ctx.restore();
-    }
-    
-    drawGrid() {
-        this.ctx.strokeStyle = '#ddd';
-        this.ctx.lineWidth = 1;
-        
-        // Vertical lines
-        for (let x = 0; x <= CONFIG.CANVAS_WIDTH; x += CONFIG.GRID_SIZE) {
-            this.ctx.beginPath();
-            this.ctx.moveTo(x, 0);
-            this.ctx.lineTo(x, CONFIG.CANVAS_HEIGHT);
-            this.ctx.stroke();
-        }
-        
-        // Horizontal lines
-        for (let y = 0; y <= CONFIG.CANVAS_HEIGHT; y += CONFIG.GRID_SIZE) {
-            this.ctx.beginPath();
-            this.ctx.moveTo(0, y);
-            this.ctx.lineTo(CONFIG.CANVAS_WIDTH, y);
-            this.ctx.stroke();
-        }
-    }
-    
-    drawTarget() {
-        const centerX = CONFIG.CANVAS_WIDTH / 2;
-        const centerY = CONFIG.CANVAS_HEIGHT / 2;
-        const radius = CONFIG.TARGET_RADIUS;
-        
-        this.ctx.save();
-        
-        // Outer protective aura - pulsing effect
-        const pulseIntensity = 0.8 + 0.2 * Math.sin(Date.now() / 300);
-        this.ctx.globalAlpha = pulseIntensity * 0.3;
-        this.ctx.shadowColor = this.gameOver ? '#ff0000' : '#00ff88';
-        this.ctx.shadowBlur = 40;
-        this.ctx.fillStyle = this.gameOver ? 'rgba(255, 0, 0, 0.1)' : 'rgba(0, 255, 136, 0.1)';
-        this.ctx.beginPath();
-        this.ctx.arc(centerX, centerY, radius * 2.5, 0, Math.PI * 2);
-        this.ctx.fill();
-        
-        // Middle aura ring
-        this.ctx.globalAlpha = pulseIntensity * 0.5;
-        this.ctx.shadowBlur = 25;
-        this.ctx.fillStyle = this.gameOver ? 'rgba(255, 0, 0, 0.2)' : 'rgba(0, 255, 136, 0.2)';
-        this.ctx.beginPath();
-        this.ctx.arc(centerX, centerY, radius * 1.8, 0, Math.PI * 2);
-        this.ctx.fill();
-        
-        // Inner aura
-        this.ctx.globalAlpha = pulseIntensity * 0.7;
-        this.ctx.shadowBlur = 15;
-        this.ctx.fillStyle = this.gameOver ? 'rgba(255, 0, 0, 0.3)' : 'rgba(0, 255, 136, 0.3)';
-        this.ctx.beginPath();
-        this.ctx.arc(centerX, centerY, radius * 1.3, 0, Math.PI * 2);
-        this.ctx.fill();
-        
-        this.ctx.globalAlpha = 1;
-        this.ctx.shadowBlur = 0;
-        
-        // Main computer chip body - hexagonal with rounded corners
-        const chipSize = radius * 0.9;
-        this.ctx.fillStyle = this.gameOver ? '#660000' : '#003322';
-        this.ctx.strokeStyle = this.gameOver ? '#ff3366' : '#00ff88';
-        this.ctx.lineWidth = 3;
-        
-        // Draw hexagonal chip outline
-        this.ctx.beginPath();
-        for (let i = 0; i < 6; i++) {
-            const angle = (i * Math.PI * 2) / 6;
-            const x = centerX + Math.cos(angle) * chipSize;
-            const y = centerY + Math.sin(angle) * chipSize;
-            if (i === 0) this.ctx.moveTo(x, y);
-            else this.ctx.lineTo(x, y);
-        }
-        this.ctx.closePath();
-        this.ctx.fill();
-        this.ctx.stroke();
-        
-        // Inner chip core - smaller circle with glow
-        this.ctx.shadowColor = this.gameOver ? '#ff3366' : '#00ff88';
-        this.ctx.shadowBlur = 10;
-        this.ctx.fillStyle = this.gameOver ? '#ff1144' : '#00ff66';
-        this.ctx.beginPath();
-        this.ctx.arc(centerX, centerY, chipSize * 0.4, 0, Math.PI * 2);
-        this.ctx.fill();
-        
-        // Circuit pattern lines radiating from center
-        this.ctx.shadowBlur = 5;
-        this.ctx.strokeStyle = this.gameOver ? '#ff6699' : '#66ffaa';
-        this.ctx.lineWidth = 2;
-        this.ctx.lineCap = 'round';
-        
-        for (let i = 0; i < 8; i++) {
-            const angle = (i * Math.PI * 2) / 8;
-            const innerRadius = chipSize * 0.5;
-            const outerRadius = chipSize * 0.8;
-            
-            this.ctx.beginPath();
-            this.ctx.moveTo(
-                centerX + Math.cos(angle) * innerRadius,
-                centerY + Math.sin(angle) * innerRadius
-            );
-            this.ctx.lineTo(
-                centerX + Math.cos(angle) * outerRadius,
-                centerY + Math.sin(angle) * outerRadius
-            );
-            this.ctx.stroke();
-        }
-        
-        // Corner connection points (like chip pins)
-        this.ctx.shadowBlur = 3;
-        this.ctx.fillStyle = this.gameOver ? '#ff4477' : '#44ff77';
-        for (let i = 0; i < 6; i++) {
-            const angle = (i * Math.PI * 2) / 6;
-            const x = centerX + Math.cos(angle) * chipSize * 0.9;
-            const y = centerY + Math.sin(angle) * chipSize * 0.9;
-            
-            this.ctx.beginPath();
-            this.ctx.arc(x, y, 2, 0, Math.PI * 2);
-            this.ctx.fill();
-        }
-        
-        // Central processing indicator - pulsing dot
-        this.ctx.shadowBlur = 8;
-        this.ctx.fillStyle = this.gameOver ? '#ffffff' : '#ffffff';
-        const centralPulse = 0.5 + 0.5 * Math.sin(Date.now() / 150);
-        this.ctx.globalAlpha = centralPulse;
-        this.ctx.beginPath();
-        this.ctx.arc(centerX, centerY, 3, 0, Math.PI * 2);
-        this.ctx.fill();
-        
-        this.ctx.restore();
-    }
-    
-    drawForbiddenZones() {
-        this.ctx.fillStyle = 'rgba(255, 0, 0, 0.3)'; // Much brighter - was 0.1, now 0.3
-        
-        // Center forbidden zone (8x8 grid square)
-        const centerX = CONFIG.CANVAS_WIDTH / 2;
-        const centerY = CONFIG.CANVAS_HEIGHT / 2;
-        const forbiddenSquareSize = 8 * CONFIG.GRID_SIZE; // 8x8 grid tiles = 160px
-        const halfForbiddenSize = forbiddenSquareSize / 2;
-        
-        this.ctx.fillRect(
-            centerX - halfForbiddenSize,
-            centerY - halfForbiddenSize,
-            forbiddenSquareSize,
-            forbiddenSquareSize
-        );
-        
-        // Edge forbidden zones
-        this.ctx.fillRect(0, 0, CONFIG.CANVAS_WIDTH, CONFIG.EDGE_MARGIN);
-        this.ctx.fillRect(0, CONFIG.CANVAS_HEIGHT - CONFIG.EDGE_MARGIN, CONFIG.CANVAS_WIDTH, CONFIG.EDGE_MARGIN);
-        this.ctx.fillRect(0, 0, CONFIG.EDGE_MARGIN, CONFIG.CANVAS_HEIGHT);
-        this.ctx.fillRect(CONFIG.CANVAS_WIDTH - CONFIG.EDGE_MARGIN, 0, CONFIG.EDGE_MARGIN, CONFIG.CANVAS_HEIGHT);
+        // Delegate all rendering to the GameRenderer
+        this.renderer.render();
     }
     
     updateTimerDisplay() {
