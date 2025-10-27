@@ -14,7 +14,8 @@
       "Bash(awk:*)",
       "Bash(sort:*)",
       "Read(///**)",
-      "Bash(open http://localhost:8000/index.html)"
+      "Bash(open http://localhost:8000/index.html)",
+      "Bash(open -a \"Google Chrome\" http://localhost:8000/index.html)"
     ],
     "deny": [],
     "ask": []

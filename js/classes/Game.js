@@ -17,6 +17,9 @@ import { LaserCollisionHandler } from '../core/LaserCollisionHandler.js';
 import { ShapeGeometry } from '../geometry/ShapeGeometry.js';
 import { GameRenderer } from '../rendering/GameRenderer.js';
 import { GameModeManager } from '../managers/GameModeManager.js';
+import { MirrorGenerator } from '../generators/MirrorGenerator.js';
+import { SpawnerGenerator } from '../generators/SpawnerGenerator.js';
+import { GridAlignmentSystem } from '../systems/GridAlignmentSystem.js';
 
 export class Game {
     constructor() {
@@ -52,6 +55,12 @@ export class Game {
         // Initialize mode manager
         this.modeManager = new GameModeManager(this);
 
+        // Initialize mirror generator
+        this.mirrorGenerator = new MirrorGenerator(this);
+
+        // Initialize spawner generator
+        this.spawnerGenerator = new SpawnerGenerator(this);
+
         this.init();
     }
     
@@ -85,42 +94,8 @@ export class Game {
     
     
     generateMirrors() {
-        this.mirrors = [];
-
-        if (this.modeManager.isDailyChallenge()) {
-            // Generate daily challenge puzzle
-            const dailyPuzzle = this.modeManager.generateDailyPuzzle();
-
-            // Create mirrors from daily puzzle data and validate them
-            for (let mirrorData of dailyPuzzle.mirrors) {
-                let mirror = this.createValidatedMirror(mirrorData);
-                if (mirror) {
-                    this.mirrors.push(mirror);
-                }
-            }
-            return;
-        }
-        
-        // Free play mode - use surface area management with validation
-        const mirrorConfigs = SurfaceAreaManager.generateMirrorsWithTargetSurfaceArea();
-        
-        for (let config of mirrorConfigs) {
-            let mirror = this.createValidatedMirror(config);
-            if (mirror) {
-                this.mirrors.push(mirror);
-            } else {
-                // If we can't place this specific mirror config, try generating a replacement
-                console.warn('Could not place mirror config, generating replacement:', config);
-                mirror = this.generateReplacementMirror(config);
-                if (mirror) {
-                    this.mirrors.push(mirror);
-                }
-            }
-        }
-        
-        // Debug: Log total surface area
-        const totalSurfaceArea = SurfaceAreaManager.calculateTotalSurfaceArea(this.mirrors);
-        console.log(`Free play mirrors generated: ${this.mirrors.length} mirrors, total surface area: ${totalSurfaceArea} (target: ${SurfaceAreaManager.TARGET_SURFACE_AREA})`);
+        // Delegate mirror generation to the MirrorGenerator
+        this.mirrors = this.mirrorGenerator.generateMirrors();
     }
 
     // Helper method to safely update mirror vertices
@@ -134,518 +109,53 @@ export class Game {
         }
     }
 
-    createValidatedMirror(config) {
-        const center = { x: CONFIG.CANVAS_WIDTH / 2, y: CONFIG.CANVAS_HEIGHT / 2 };
-        const maxAttempts = 200; // More attempts for better placement
-
-        for (let attempt = 0; attempt < maxAttempts; attempt++) {
-            // Generate position in ring around center
-            const angle = Math.random() * Math.PI * 2;
-            const distance = 140 + Math.random() * 180;
-            let x = center.x + Math.cos(angle) * distance;
-            let y = center.y + Math.sin(angle) * distance;
-
-            // Create mirror with the correct shape type using factory directly
-            const mirror = MirrorFactory.createMirror(x, y, config.shape);
-
-            // Check if mirror was created successfully
-            if (!mirror) {
-                console.error('Failed to create mirror - null:', config.shape);
-                continue;
-            }
-
-            // Override properties if they differ from defaults
-            let propertiesChanged = false;
-
-            if (config.size && config.size !== mirror.size) {
-                mirror.size = config.size;
-                mirror.width = config.width || config.size;
-                mirror.height = config.height || config.size;
-                propertiesChanged = true;
-            }
-            if (config.width && config.width !== mirror.width) {
-                mirror.width = config.width;
-                propertiesChanged = true;
-            }
-            if (config.height && config.height !== mirror.height) {
-                mirror.height = config.height;
-                propertiesChanged = true;
-            }
-            if (config.rotation !== undefined && config.rotation !== mirror.rotation) {
-                mirror.rotation = config.rotation;
-                propertiesChanged = true;
-            }
-
-            // Copy special shape properties
-            if (config.topWidth && config.topWidth !== mirror.topWidth) {
-                mirror.topWidth = config.topWidth;
-                propertiesChanged = true;
-            }
-            if (config.skew && config.skew !== mirror.skew) {
-                mirror.skew = config.skew;
-                propertiesChanged = true;
-            }
-
-            // If we modified any properties, recalculate vertices
-            if (propertiesChanged) {
-                this.safeUpdateVertices(mirror);
-            }
-
-            // IRON-CLAD STEP 1: Force grid alignment (but don't verify yet - vertices not set)
-            try {
-                GridAlignmentEnforcer.enforceGridAlignment(mirror);
-                // Update vertices after position/alignment change
-                this.safeUpdateVertices(mirror);
-                // Now verify alignment
-                const verification = GridAlignmentEnforcer.verifyAlignment(mirror);
-                if (!verification.aligned) {
-                    console.warn('Mirror alignment not perfect, but continuing');
-                }
-            } catch (error) {
-                console.error('Failed to align mirror:', error);
-                continue; // Try next position
-            }
-
-            // IRON-CLAD STEP 2: Validate all 3 rules
-            const validation = IronCladValidator.validateMirror(mirror, this.mirrors);
-
-            if (validation.valid) {
-                // Triple-check before returning
-                const vertices = MirrorPlacementValidation.getMirrorVertices(mirror);
-                console.log(`✓ Created valid ${mirror.shape} mirror at (${mirror.x}, ${mirror.y}) with ${vertices.length} vertices`);
-                return mirror;
-            }
-
-            // If not valid, try to find a nearby valid position
-            const nearestValidPos = this.findNearestValidPositionIronClad(mirror);
-            if (nearestValidPos) {
-                mirror.x = nearestValidPos.x;
-                mirror.y = nearestValidPos.y;
-
-                // Force alignment again after position change
-                GridAlignmentEnforcer.enforceGridAlignment(mirror);
-                this.safeUpdateVertices(mirror);
-
-                // Re-validate
-                const revalidation = IronCladValidator.validateMirror(mirror, this.mirrors);
-                if (revalidation.valid) {
-                    console.log(`✓ Created valid ${mirror.shape} mirror at adjusted position (${mirror.x}, ${mirror.y})`);
-                    return mirror;
-                }
-            }
-        }
-
-        console.warn(`✗ Failed to place ${config.shape} mirror after ${maxAttempts} attempts`);
-        return null; // Could not place this mirror
-    }
-    
-    generateReplacementMirror(originalConfig) {
-        // Generate a simpler mirror that's easier to place
-        const simpleMirrors = [
-            { shape: 'square', size: 40, width: 40, height: 40, rotation: 0 },
-            { shape: 'square', size: 60, width: 60, height: 60, rotation: 0 },
-            { shape: 'rectangle', size: 60, width: 60, height: 40, rotation: 0 },
-            { shape: 'rectangle', size: 60, width: 40, height: 60, rotation: 0 }
-        ];
-        
-        for (let simpleConfig of simpleMirrors) {
-            let mirror = this.createValidatedMirror(simpleConfig);
-            if (mirror) {
-                console.log('Generated replacement mirror:', simpleConfig.shape);
-                return mirror;
-            }
-        }
-        
-        return null;
-    }
-    
     enforceValidationDuringPlacement() {
         // Validation is now only enforced on drop, not during placement
         // This method is kept for backward compatibility but does nothing
     }
-
-    findNearestValidPositionIronClad(mirror) {
-        const searchRadius = CONFIG.GRID_SIZE * 15; // Search within 15 grid units
-        const step = CONFIG.GRID_SIZE; // Move by grid increments
-
-        let bestPosition = null;
-        let bestDistance = Infinity;
-
-        // Search in expanding circles
-        for (let radius = 0; radius <= searchRadius; radius += step) {
-            const positions = [];
-
-            if (radius === 0) {
-                positions.push({ x: mirror.x, y: mirror.y });
-            } else {
-                // Generate positions on perimeter
-                const circumference = 2 * Math.PI * radius;
-                const numPoints = Math.max(8, Math.floor(circumference / step));
-
-                for (let i = 0; i < numPoints; i++) {
-                    const angle = (i / numPoints) * 2 * Math.PI;
-                    const x = mirror.x + radius * Math.cos(angle);
-                    const y = mirror.y + radius * Math.sin(angle);
-
-                    // Snap to grid
-                    positions.push({
-                        x: Math.round(x / step) * step,
-                        y: Math.round(y / step) * step
-                    });
-                }
-            }
-
-            // Test each position
-            for (let pos of positions) {
-                // Create a proper clone that preserves prototype chain
-                const testMirror = Object.create(Object.getPrototypeOf(mirror));
-                Object.assign(testMirror, mirror);
-                testMirror.x = pos.x;
-                testMirror.y = pos.y;
-
-                // Force grid alignment
-                GridAlignmentEnforcer.enforceGridAlignment(testMirror);
-                this.safeUpdateVertices(testMirror);
-
-                // Validate with iron-clad system
-                const validation = IronCladValidator.validateMirror(testMirror, this.mirrors);
-
-                if (validation.valid) {
-                    const distance = Math.sqrt((pos.x - mirror.x) ** 2 + (pos.y - mirror.y) ** 2);
-                    if (distance < bestDistance) {
-                        bestDistance = distance;
-                        bestPosition = { x: testMirror.x, y: testMirror.y };
-                    }
-                }
-            }
-
-            // If we found a valid position at this radius, return the closest one
-            if (bestPosition) {
-                return bestPosition;
-            }
-        }
-
-        return null;
-    }
     
     generateSpawners() {
-        this.spawners = [];
-
-        if (this.modeManager.isDailyChallenge()) {
-            const dailyPuzzle = this.modeManager.getDailyPuzzle();
-            if (dailyPuzzle) {
-                // Create spawners from daily puzzle data
-                dailyPuzzle.spawners.forEach(spawnerData => {
-                    this.spawners.push(new Spawner(spawnerData.x, spawnerData.y, spawnerData.angle));
-                });
-                return;
-            }
-        }
-        
-        // Generate random positions along each edge
-        const generateRandomPositions = () => {
-            const positions = [];
-            const margin = 50; // Keep spawners away from corners
-            
-            // Left edge - random Y position
-            positions.push({ 
-                x: 0, 
-                y: margin + Math.random() * (CONFIG.CANVAS_HEIGHT - 2 * margin),
-                edge: 'left'
-            });
-            
-            // Right edge - random Y position  
-            positions.push({ 
-                x: CONFIG.CANVAS_WIDTH, 
-                y: margin + Math.random() * (CONFIG.CANVAS_HEIGHT - 2 * margin),
-                edge: 'right'
-            });
-            
-            // Top edge - random X position
-            positions.push({ 
-                x: margin + Math.random() * (CONFIG.CANVAS_WIDTH - 2 * margin), 
-                y: 0,
-                edge: 'top'
-            });
-            
-            // Bottom edge - random X position
-            positions.push({ 
-                x: margin + Math.random() * (CONFIG.CANVAS_WIDTH - 2 * margin), 
-                y: CONFIG.CANVAS_HEIGHT,
-                edge: 'bottom'
-            });
-            
-            return positions;
-        };
-        
-        // Pick 4-7 random spawners from random edge positions
-        const spawnerCount = 4 + Math.floor(Math.random() * 4); // 4, 5, 6, or 7
-        const allPositions = generateRandomPositions();
-        
-        // Generate more positions if needed to ensure we have enough variety
-        while (allPositions.length < spawnerCount) {
-            const additionalPositions = generateRandomPositions();
-            allPositions.push(...additionalPositions);
-        }
-        
-        const selectedPositions = this.shuffleArray([...allPositions]).slice(0, spawnerCount);
-        
-        selectedPositions.forEach(pos => {
-            const randomAngle = this.getRandomAngleInbound(pos.x, pos.y, pos.edge);
-            this.spawners.push(new Spawner(pos.x, pos.y, randomAngle));
-        });
+        // Delegate spawner generation to the SpawnerGenerator
+        this.spawners = this.spawnerGenerator.generateSpawners();
     }
     
     snapToGrid(value) {
-        return Math.round(value / CONFIG.GRID_SIZE) * CONFIG.GRID_SIZE;
+        return GridAlignmentSystem.snapToGrid(value);
     }
-    
-    adjustMirrorPositionForGrid(mirror) {
-        // Adjust position so that borders align with grid lines
-        switch (mirror.shape) {
-            case 'square':
-            case 'rectangle':
-                // For rectangles/squares, ensure all edges are on grid lines
-                // This means width and height must be multiples of grid size
-                // And center must be positioned so edges hit grid lines
-                const halfWidth = mirror.width / 2;
-                const halfHeight = mirror.height / 2;
-                
-                // Find nearest grid intersection where edges will align
-                mirror.x = this.snapToGrid(mirror.x - halfWidth) + halfWidth;
-                mirror.y = this.snapToGrid(mirror.y - halfHeight) + halfHeight;
-                break;
-                
-            case 'rightTriangle':
-            case 'isoscelesTriangle':
-                // For triangles, ensure all vertices are at grid intersections
-                // We need to position the center so all vertices hit grid intersections
-                this.alignTriangleToGrid(mirror);
-                break;
-        }
-    }
-    
-    alignTriangleToGrid(mirror) {
-        const halfSize = mirror.size / 2;
-        const gridSize = CONFIG.GRID_SIZE;
-        
-        if (mirror.shape === 'rightTriangle') {
-            if (halfSize % gridSize === 0) {
-                // For 2-tile and 3-tile triangles: halfSize = 20, 30 (multiples of gridSize)
-                // Center can be on grid intersection and vertices will align
-                mirror.x = this.snapToGrid(mirror.x);
-                mirror.y = this.snapToGrid(mirror.y);
-            } else {
-                // For 1-tile triangles: halfSize = 10 (not multiple of gridSize)
-                // Center needs to be offset by half grid to get vertices on intersections
-                const baseX = this.snapToGrid(mirror.x);
-                const baseY = this.snapToGrid(mirror.y);
-                mirror.x = baseX + gridSize / 2;
-                mirror.y = baseY + gridSize / 2;
-            }
-        } else if (mirror.shape === 'isoscelesTriangle') {
-            // Isosceles triangles: Handle alignment based on rotation
-            const halfWidth = (mirror.width || mirror.size) / 2;
-            const halfHeight = (mirror.height || mirror.size) / 2;
-            const rotation = mirror.rotation || 0;
-            
-            if (rotation === 0 || rotation === 180) {
-                // Standard orientation: base is horizontal (top or bottom)
-                // Always snap X to grid (for even base width, center X should be on grid line)
-                mirror.x = this.snapToGrid(mirror.x);
-                
-                // For Y positioning: base vertices need to be on grid lines
-                if (rotation === 0) {
-                    // Base at bottom: center.y + halfHeight = grid line
-                    const desiredBaseY = this.snapToGrid(mirror.y + halfHeight);
-                    mirror.y = desiredBaseY - halfHeight;
-                } else {
-                    // Base at top: center.y - halfHeight = grid line  
-                    const desiredBaseY = this.snapToGrid(mirror.y - halfHeight);
-                    mirror.y = desiredBaseY + halfHeight;
-                }
-            } else if (rotation === 90 || rotation === 270) {
-                // Rotated orientation: base is vertical (left or right)
-                // Now width/height are swapped due to rotation
-                
-                // Always snap Y to grid (for even base width, center Y should be on grid line)
-                mirror.y = this.snapToGrid(mirror.y);
-                
-                // For X positioning: base vertices need to be on grid lines
-                if (rotation === 90) {
-                    // Base at right: center.x + halfHeight = grid line (height becomes horizontal extent)
-                    const desiredBaseX = this.snapToGrid(mirror.x + halfHeight);
-                    mirror.x = desiredBaseX - halfHeight;
-                } else {
-                    // Base at left: center.x - halfHeight = grid line
-                    const desiredBaseX = this.snapToGrid(mirror.x - halfHeight);
-                    mirror.x = desiredBaseX + halfHeight;
-                }
-            }
-        }
-    }
-    
-    alignTrapezoidToGrid(mirror) {
-        const halfHeight = mirror.height / 2;
-        const bottomHalfWidth = mirror.width / 2;
 
-        // Ensure topWidth is grid-aligned for symmetrical trapezoids
-        let topWidth = mirror.topWidth;
-        if (!topWidth) {
-            // Use same logic as Mirror.js to ensure grid alignment
-            const gridSize = CONFIG.GRID_SIZE;
-            const minTopWidth = gridSize;
-            const maxReduction = Math.floor(mirror.width / gridSize) * gridSize / 2;
-            const reductions = [gridSize, gridSize * 2, gridSize * 3];
-            const validReductions = reductions.filter(r => r <= maxReduction && mirror.width - r >= minTopWidth);
-            const reduction = validReductions[0] || gridSize; // Use first valid reduction for consistency
-            topWidth = mirror.width - reduction;
-            mirror.topWidth = topWidth; // Set the mirror's topWidth to ensure consistency
-        }
-        const topHalfWidth = topWidth / 2;
-        const rotation = mirror.rotation || 0;
-        
-        if (rotation === 0 || rotation === 180) {
-            // Standard orientation: horizontal bases
-            
-            // Step 1: Align both Y edges to grid lines
-            const bottomY = this.snapToGrid(mirror.y + halfHeight);
-            const topY = this.snapToGrid(mirror.y - halfHeight);
-            mirror.y = (bottomY + topY) / 2;
-            
-            // Step 2: Find X position where ALL vertices land on grid intersections
-            // We need both bottom corners AND top corners to be on grid intersections
-            
-            // Try different X positions to find one where all vertices align
-            const currentX = mirror.x;
-            let bestX = currentX;
-            let bestScore = Infinity;
-            
-            // Test X positions in a reasonable range around current position
-            for (let testX = currentX - CONFIG.GRID_SIZE; testX <= currentX + CONFIG.GRID_SIZE; testX += CONFIG.GRID_SIZE / 4) {
-                // Calculate all 4 vertex positions with this X
-                const bottomLeft = testX - bottomHalfWidth;
-                const bottomRight = testX + bottomHalfWidth;
-                const topLeft = testX - topHalfWidth;
-                const topRight = testX + topHalfWidth;
-                
-                // Calculate how far each vertex is from nearest grid intersection
-                const bottomLeftError = Math.abs(bottomLeft - this.snapToGrid(bottomLeft));
-                const bottomRightError = Math.abs(bottomRight - this.snapToGrid(bottomRight));
-                const topLeftError = Math.abs(topLeft - this.snapToGrid(topLeft));
-                const topRightError = Math.abs(topRight - this.snapToGrid(topRight));
-                
-                const totalError = bottomLeftError + bottomRightError + topLeftError + topRightError;
-                
-                if (totalError < bestScore) {
-                    bestScore = totalError;
-                    bestX = testX;
-                }
-            }
-            
-            mirror.x = bestX;
-            
-        } else if (rotation === 90 || rotation === 270) {
-            // Rotated orientation: vertical bases (dimensions swap)
-            // When rotated 90°: height becomes horizontal extent, width/topWidth become vertical extents
-            
-            // Step 1: Align both X edges to grid lines (using original height as horizontal extent)
-            const leftX = this.snapToGrid(mirror.x - halfHeight);
-            const rightX = this.snapToGrid(mirror.x + halfHeight);
-            mirror.x = (leftX + rightX) / 2;
-            
-            // Step 2: Find Y position where all vertices align
-            const currentY = mirror.y;
-            let bestY = currentY;
-            let bestScore = Infinity;
-            
-            for (let testY = currentY - CONFIG.GRID_SIZE; testY <= currentY + CONFIG.GRID_SIZE; testY += CONFIG.GRID_SIZE / 4) {
-                // For rotated trapezoid, width/topWidth become the vertical distances from center
-                // The "bottom" (wider) base is now vertical, extending bottomHalfWidth from center
-                // The "top" (narrower) base is now vertical, extending topHalfWidth from center
-                const bottomTop = testY - bottomHalfWidth;    // top of wider base
-                const bottomBottom = testY + bottomHalfWidth; // bottom of wider base  
-                const topTop = testY - topHalfWidth;          // top of narrower base
-                const topBottom = testY + topHalfWidth;       // bottom of narrower base
-                
-                const bottomTopError = Math.abs(bottomTop - this.snapToGrid(bottomTop));
-                const bottomBottomError = Math.abs(bottomBottom - this.snapToGrid(bottomBottom));
-                const topTopError = Math.abs(topTop - this.snapToGrid(topTop));
-                const topBottomError = Math.abs(topBottom - this.snapToGrid(topBottom));
-                
-                const totalError = bottomTopError + bottomBottomError + topTopError + topBottomError;
-                
-                if (totalError < bestScore) {
-                    bestScore = totalError;
-                    bestY = testY;
-                }
-            }
-            
-            mirror.y = bestY;
-        }
+    adjustMirrorPositionForGrid(mirror) {
+        GridAlignmentSystem.adjustMirrorPositionForGrid(mirror, this);
     }
-    
+
+    alignTriangleToGrid(mirror) {
+        GridAlignmentSystem.alignTriangleToGrid(mirror);
+    }
+
+    alignTrapezoidToGrid(mirror) {
+        GridAlignmentSystem.alignTrapezoidToGrid(mirror, this);
+    }
+
     alignParallelogramToGrid(mirror) {
-        const halfHeight = mirror.height / 2;
-        const halfWidth = mirror.width / 2;
-        const skew = mirror.skew || 20;
-        const rotation = mirror.rotation || 0;
-        
-        if (rotation === 0 || rotation === 180) {
-            // Standard orientation
-            // Bottom vertices: (x-halfWidth, y+halfHeight), (x+halfWidth, y+halfHeight)
-            // Top vertices: (x-halfWidth+skew, y-halfHeight), (x+halfWidth+skew, y-halfHeight)
-            
-            // Ensure bottom edge is on grid line
-            const bottomY = this.snapToGrid(mirror.y + halfHeight);
-            mirror.y = bottomY - halfHeight;
-            
-            // Ensure top edge is on grid line  
-            const topY = this.snapToGrid(mirror.y - halfHeight);
-            mirror.y = topY + halfHeight;
-            
-            // Ensure bottom-left vertex is on grid intersection
-            const bottomLeftX = this.snapToGrid(mirror.x - halfWidth);
-            mirror.x = bottomLeftX + halfWidth;
-            
-            // Since skew is already a multiple of grid size (20px), and we've aligned
-            // the bottom-left to grid, all other vertices should automatically align
-            
-        } else if (rotation === 90 || rotation === 270) {
-            // Rotated 90/270 degrees
-            // After rotation, width becomes height and vice versa
-            
-            // Ensure left edge is on grid line (was bottom before rotation)
-            const leftX = this.snapToGrid(mirror.x - halfHeight);
-            mirror.x = leftX + halfHeight;
-            
-            // Ensure right edge is on grid line (was top before rotation)
-            const rightX = this.snapToGrid(mirror.x + halfHeight);  
-            mirror.x = rightX - halfHeight;
-            
-            // Ensure one vertex is on grid intersection
-            const bottomY = this.snapToGrid(mirror.y - halfWidth);
-            mirror.y = bottomY + halfWidth;
-        }
+        GridAlignmentSystem.alignParallelogramToGrid(mirror);
     }
     
     isValidMirrorPosition(testMirror) {
         // Get mirror bounds first
         const bounds = this.getMirrorBounds(testMirror);
-        
+
         // Check edge bounds - ensure no part of the mirror extends into forbidden edge zones
         const edgeMargin = CONFIG.EDGE_MARGIN;
         if (bounds.left < edgeMargin || bounds.right > CONFIG.CANVAS_WIDTH - edgeMargin ||
             bounds.top < edgeMargin || bounds.bottom > CONFIG.CANVAS_HEIGHT - edgeMargin) {
             return false;
         }
-        
+
         // Check center forbidden zone - two tiles (40px) from target edge
         const centerX = CONFIG.CANVAS_WIDTH / 2;
         const centerY = CONFIG.CANVAS_HEIGHT / 2;
         const targetRadius = CONFIG.TARGET_RADIUS;
         const forbiddenRadius = targetRadius + 40; // Two tiles (2 * 20px)
-        
+
         // For more accurate center forbidden zone checking, test if mirror bounds intersect the forbidden circle
         const mirrorCenterX = (bounds.left + bounds.right) / 2;
         const mirrorCenterY = (bounds.top + bounds.bottom) / 2;
@@ -653,17 +163,17 @@ export class Game {
             Math.abs(bounds.right - bounds.left) / 2,
             Math.abs(bounds.bottom - bounds.top) / 2
         );
-        
+
         // Distance from mirror center to center target
         const distBetweenCenters = Math.sqrt(
             (mirrorCenterX - centerX) ** 2 + (mirrorCenterY - centerY) ** 2
         );
-        
+
         // Check if mirror's bounding circle intersects with forbidden circle
         if (distBetweenCenters < forbiddenRadius + mirrorRadius) {
             return false;
         }
-        
+
         // Check overlap with existing mirrors (but skip the mirror we're currently dragging)
         for (let existingMirror of this.mirrors) {
             if (existingMirror === testMirror) continue; // Skip self
@@ -671,72 +181,8 @@ export class Game {
                 return false;
             }
         }
-        
+
         return true;
-    }
-    
-    getRandomAngleInbound(x, y, edge) {
-        let baseAngleDegrees;
-        let allowedRange = 120; // ±60 degrees from base direction
-        
-        // Determine base inbound direction based on edge
-        switch(edge) {
-            case 'left':
-                baseAngleDegrees = 0; // Point right into the play area
-                break;
-            case 'right': 
-                baseAngleDegrees = 180; // Point left into the play area
-                break;
-            case 'top':
-                baseAngleDegrees = 90; // Point down into the play area
-                break;
-            case 'bottom':
-                baseAngleDegrees = 270; // Point up into the play area
-                break;
-            default:
-                // Fallback to center-pointing logic
-                const centerX = CONFIG.CANVAS_WIDTH / 2;
-                const centerY = CONFIG.CANVAS_HEIGHT / 2;
-                const directAngle = Math.atan2(centerY - y, centerX - x);
-                baseAngleDegrees = directAngle * 180 / Math.PI;
-                break;
-        }
-        
-        // Add random variation within allowed range
-        const variation = (Math.random() - 0.5) * allowedRange;
-        const randomDegrees = baseAngleDegrees + variation;
-        
-        // Snap to 15-degree increments
-        const snappedDegrees = Math.round(randomDegrees / CONFIG.ANGLE_INCREMENT) * CONFIG.ANGLE_INCREMENT;
-        
-        // Convert to radians
-        return (snappedDegrees % 360) * Math.PI / 180;
-    }
-    
-    // Keep the old method for backwards compatibility if needed
-    getRandomAngleTowardsCenter(x, y) {
-        const centerX = CONFIG.CANVAS_WIDTH / 2;
-        const centerY = CONFIG.CANVAS_HEIGHT / 2;
-        
-        // Get the direct angle to center
-        const directAngle = Math.atan2(centerY - y, centerX - x);
-        const directDegrees = directAngle * 180 / Math.PI;
-        
-        // Add random variation (±60 degrees for good gameplay)
-        const variation = (Math.random() - 0.5) * 120; // ±60 degrees
-        const randomDegrees = directDegrees + variation;
-        
-        // Snap to 15-degree increments
-        const snappedDegrees = Math.round(randomDegrees / CONFIG.ANGLE_INCREMENT) * CONFIG.ANGLE_INCREMENT;
-        return snappedDegrees * Math.PI / 180;
-    }
-    
-    shuffleArray(array) {
-        for (let i = array.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [array[i], array[j]] = [array[j], array[i]];
-        }
-        return array;
     }
     
     launchLasers() {
@@ -1040,52 +486,7 @@ export class Game {
     }
     
     ensureMirrorShapeAlignment(mirror) {
-        // Apply proper alignment based on shape, but only if it doesn't cause major position changes
-        const originalX = mirror.x;
-        const originalY = mirror.y;
-        
-        switch (mirror.shape) {
-            case 'square':
-            case 'rectangle':
-                // For rectangles/squares, ensure all edges are on grid lines
-                const halfWidth = mirror.width / 2;
-                const halfHeight = mirror.height / 2;
-                
-                // Find nearest grid intersection where edges will align
-                const targetX = this.snapToGrid(originalX - halfWidth) + halfWidth;
-                const targetY = this.snapToGrid(originalY - halfHeight) + halfHeight;
-                
-                // Only adjust if the change is small (within one grid cell)
-                if (Math.abs(targetX - originalX) <= CONFIG.GRID_SIZE && 
-                    Math.abs(targetY - originalY) <= CONFIG.GRID_SIZE) {
-                    mirror.x = targetX;
-                    mirror.y = targetY;
-                }
-                break;
-                
-            case 'rightTriangle':
-            case 'isoscelesTriangle':
-                // For triangles, ensure center aligns to grid (vertices will follow)
-                const targetTriangleX = this.snapToGrid(originalX);
-                const targetTriangleY = this.snapToGrid(originalY);
-                
-                // Only adjust if the change is small
-                if (Math.abs(targetTriangleX - originalX) <= CONFIG.GRID_SIZE && 
-                    Math.abs(targetTriangleY - originalY) <= CONFIG.GRID_SIZE) {
-                    mirror.x = targetTriangleX;
-                    mirror.y = targetTriangleY;
-                }
-                break;
-                
-            case 'trapezoid':
-                this.alignTrapezoidToGrid(mirror);
-                break;
-                
-            case 'parallelogram':
-                this.alignParallelogramToGrid(mirror);
-                break;
-        }
-        
+        GridAlignmentSystem.ensureMirrorShapeAlignment(mirror, this);
         // After alignment, enforce forbidden zones
         this.enforceForbiddenZones(mirror);
     }
@@ -1167,30 +568,7 @@ export class Game {
     }
     
     snapMirrorToGrid(mirror) {
-        // Apply appropriate snapping based on mirror shape
-        switch (mirror.shape) {
-            case 'square':
-            case 'rectangle':
-                // For rectangles/squares, snap center then adjust for edge alignment
-                const snappedX = this.snapToGrid(mirror.x);
-                const snappedY = this.snapToGrid(mirror.y);
-                mirror.x = snappedX;
-                mirror.y = snappedY;
-                this.adjustMirrorPositionForGrid(mirror);
-                break;
-                
-            case 'rightTriangle':
-            case 'isoscelesTriangle':
-                // For triangles, use the triangle-specific alignment
-                this.alignTriangleToGrid(mirror);
-                break;
-            case 'trapezoid':
-                this.alignTrapezoidToGrid(mirror);
-                break;
-            case 'parallelogram':
-                this.alignParallelogramToGrid(mirror);
-                break;
-        }
+        GridAlignmentSystem.snapMirrorToGrid(mirror, this);
     }
     
     findNearestValidPosition(mirror, maxRadiusInGridCells = 10) {
@@ -1416,9 +794,7 @@ export class Game {
     }
     
     isOnGridLine(value) {
-        // Check if value is exactly on a grid line (within 0.1px tolerance for floating point)
-        const remainder = Math.abs(value % CONFIG.GRID_SIZE);
-        return remainder < 0.1 || remainder > (CONFIG.GRID_SIZE - 0.1);
+        return GridAlignmentSystem.isOnGridLine(value);
     }
     
     areTriangleVerticesAligned(mirror) {
@@ -1533,33 +909,7 @@ export class Game {
     }
     
     forceGridAlignment(mirror) {
-        switch (mirror.shape) {
-            case 'square':
-            case 'rectangle':
-                // For rectangles/squares, ensure all edges are exactly on grid lines
-                const halfWidth = mirror.width / 2;
-                const halfHeight = mirror.height / 2;
-                
-                // Force edges to grid lines
-                const leftGridLine = this.snapToGrid(mirror.x - halfWidth);
-                const topGridLine = this.snapToGrid(mirror.y - halfHeight);
-                
-                mirror.x = leftGridLine + halfWidth;
-                mirror.y = topGridLine + halfHeight;
-                break;
-                
-            case 'rightTriangle':
-            case 'isoscelesTriangle':
-                // Use the same alignment logic as alignTriangleToGrid
-                this.alignTriangleToGrid(mirror);
-                break;
-            case 'trapezoid':
-                this.alignTrapezoidToGrid(mirror);
-                break;
-            case 'parallelogram':
-                this.alignParallelogramToGrid(mirror);
-                break;
-        }
+        GridAlignmentSystem.forceGridAlignment(mirror, this);
     }
     
     findNearestValidPosition(mirror) {
