@@ -1,4 +1,4 @@
-import { DailyChallenge } from '../utils/DailyChallenge.js';
+import { DailyChallenge } from '../validation/DailyChallenge.js';
 import { CONFIG } from '../config.js';
 
 /**

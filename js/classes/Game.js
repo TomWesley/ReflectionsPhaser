@@ -3,12 +3,12 @@ import { Mirror } from './Mirror.js';
 import { MirrorFactory } from '../mirrors/MirrorFactory.js';
 import { Laser } from './Laser.js';
 import { Spawner } from './Spawner.js';
-import { DailyChallenge } from '../utils/DailyChallenge.js';
-import { SurfaceAreaManager } from '../utils/SurfaceAreaManager.js';
-import { PerformanceRating } from '../utils/PerformanceRating.js';
-import { MirrorPlacementValidation } from '../utils/MirrorPlacementValidation.js';
-import { IronCladValidator } from '../utils/IronCladValidator.js';
-import { GridAlignmentEnforcer } from '../utils/GridAlignmentEnforcer.js';
+import { DailyChallenge } from '../validation/DailyChallenge.js';
+import { SurfaceAreaManager } from '../validation/SurfaceAreaManager.js';
+import { PerformanceRating } from '../validation/PerformanceRating.js';
+import { MirrorPlacementValidation } from '../validation/MirrorPlacementValidation.js';
+import { IronCladValidator } from '../validation/IronCladValidator.js';
+import { GridAlignmentEnforcer } from '../validation/GridAlignmentEnforcer.js';
 // New modular components
 import { InputHandler } from '../core/InputHandler.js';
 import { GameState } from '../core/GameState.js';
@@ -20,6 +20,7 @@ import { GameModeManager } from '../managers/GameModeManager.js';
 import { MirrorGenerator } from '../generators/MirrorGenerator.js';
 import { SpawnerGenerator } from '../generators/SpawnerGenerator.js';
 import { GridAlignmentSystem } from '../systems/GridAlignmentSystem.js';
+import { MirrorPlacementHelper } from '../generators/MirrorPlacementHelper.js';
 
 export class Game {
     constructor() {
@@ -415,21 +416,12 @@ export class Game {
             if (!validation.valid) {
                 console.warn(`🚨 Invalid placement detected:`, validation.allViolations);
 
-                // Try to find a nearby valid position
-                const nearestValidPos = this.findNearestValidPositionIronClad(this.draggedMirror);
-
-                if (nearestValidPos) {
-                    this.draggedMirror.x = nearestValidPos.x;
-                    this.draggedMirror.y = nearestValidPos.y;
-                    console.log(`🔧 Mirror moved to nearest valid position: (${nearestValidPos.x}, ${nearestValidPos.y})`);
-                } else {
-                    // Final fallback: revert to original position
-                    console.warn('⚠️ Could not find valid position, reverting to original');
-                    this.draggedMirror.x = this.draggedMirror.originalX || targetX;
-                    this.draggedMirror.y = this.draggedMirror.originalY || targetY;
-                    GridAlignmentEnforcer.enforceGridAlignment(this.draggedMirror);
-                    this.safeUpdateVertices(this.draggedMirror);
-                }
+                // ALWAYS revert to original position - do NOT allow invalid placements
+                console.warn('⚠️ Invalid placement, reverting to original position');
+                this.draggedMirror.x = this.draggedMirror.originalX;
+                this.draggedMirror.y = this.draggedMirror.originalY;
+                GridAlignmentEnforcer.enforceGridAlignment(this.draggedMirror);
+                this.safeUpdateVertices(this.draggedMirror);
             } else {
                 console.log(`✅ Mirror placed at valid position (${this.draggedMirror.x}, ${this.draggedMirror.y})`);
             }

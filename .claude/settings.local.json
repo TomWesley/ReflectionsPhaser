@@ -15,7 +15,15 @@
       "Bash(sort:*)",
       "Read(///**)",
       "Bash(open http://localhost:8000/index.html)",
-      "Bash(open -a \"Google Chrome\" http://localhost:8000/index.html)"
+      "Bash(open -a \"Google Chrome\" http://localhost:8000/index.html)",
+      "Bash(curl:*)",
+      "Bash(tree:*)",
+      "Bash(for file in js/geometry/ShapeGeometry.js js/rendering/GameRenderer.js js/managers/GameModeManager.js js/generators/MirrorGenerator.js js/generators/SpawnerGenerator.js js/systems/GridAlignmentSystem.js)",
+      "Bash(do echo \"=== $file ===\")",
+      "Bash(wc:*)",
+      "Bash(done)",
+      "Bash(for file in js/geometry/*.js js/rendering/*.js js/managers/*.js js/generators/*.js js/systems/*.js)",
+      "Bash(do [ -f \"$file\" ])"
     ],
     "deny": [],
     "ask": []

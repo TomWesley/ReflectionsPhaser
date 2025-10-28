@@ -1,4 +1,4 @@
-import { DailyChallenge } from '../utils/DailyChallenge.js';
+import { DailyChallenge } from '../validation/DailyChallenge.js';
 
 /**
  * Manages game state and mode switching

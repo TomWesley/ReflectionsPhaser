@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
         // Import modules with error handling
         const { Game } = await import('./classes/Game.js');
-        const { DailyChallenge } = await import('./utils/DailyChallenge.js');
+        const { DailyChallenge } = await import('./validation/DailyChallenge.js');
         
         const game = new Game();
         
