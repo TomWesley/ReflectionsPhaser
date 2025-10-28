@@ -10,8 +10,6 @@ import { MirrorPlacementValidation } from '../validation/MirrorPlacementValidati
 import { IronCladValidator } from '../validation/IronCladValidator.js';
 import { GridAlignmentEnforcer } from '../validation/GridAlignmentEnforcer.js';
 // New modular components
-import { InputHandler } from '../core/InputHandler.js';
-import { GameState } from '../core/GameState.js';
 import { CollisionSystem } from '../core/CollisionSystem.js';
 import { LaserCollisionHandler } from '../core/LaserCollisionHandler.js';
 import { ShapeGeometry } from '../geometry/ShapeGeometry.js';
@@ -41,10 +39,6 @@ export class Game {
         this.dragOffset = { x: 0, y: 0 };
         this.dragStartPos = { x: 0, y: 0 };
         this.mouseHasMoved = false;
-
-        // Initialize modular components (keeping original functionality)
-        this.inputHandler = new InputHandler(this);
-        this.gameState = new GameState(this);
 
         // Initialize collision systems
         this.collisionSystem = new CollisionSystem();
@@ -110,10 +104,6 @@ export class Game {
         }
     }
 
-    enforceValidationDuringPlacement() {
-        // Validation is now only enforced on drop, not during placement
-        // This method is kept for backward compatibility but does nothing
-    }
     
     generateSpawners() {
         // Delegate spawner generation to the SpawnerGenerator
@@ -141,49 +131,10 @@ export class Game {
     }
     
     isValidMirrorPosition(testMirror) {
-        // Get mirror bounds first
-        const bounds = this.getMirrorBounds(testMirror);
-
-        // Check edge bounds - ensure no part of the mirror extends into forbidden edge zones
-        const edgeMargin = CONFIG.EDGE_MARGIN;
-        if (bounds.left < edgeMargin || bounds.right > CONFIG.CANVAS_WIDTH - edgeMargin ||
-            bounds.top < edgeMargin || bounds.bottom > CONFIG.CANVAS_HEIGHT - edgeMargin) {
-            return false;
-        }
-
-        // Check center forbidden zone - two tiles (40px) from target edge
-        const centerX = CONFIG.CANVAS_WIDTH / 2;
-        const centerY = CONFIG.CANVAS_HEIGHT / 2;
-        const targetRadius = CONFIG.TARGET_RADIUS;
-        const forbiddenRadius = targetRadius + 40; // Two tiles (2 * 20px)
-
-        // For more accurate center forbidden zone checking, test if mirror bounds intersect the forbidden circle
-        const mirrorCenterX = (bounds.left + bounds.right) / 2;
-        const mirrorCenterY = (bounds.top + bounds.bottom) / 2;
-        const mirrorRadius = Math.max(
-            Math.abs(bounds.right - bounds.left) / 2,
-            Math.abs(bounds.bottom - bounds.top) / 2
-        );
-
-        // Distance from mirror center to center target
-        const distBetweenCenters = Math.sqrt(
-            (mirrorCenterX - centerX) ** 2 + (mirrorCenterY - centerY) ** 2
-        );
-
-        // Check if mirror's bounding circle intersects with forbidden circle
-        if (distBetweenCenters < forbiddenRadius + mirrorRadius) {
-            return false;
-        }
-
-        // Check overlap with existing mirrors (but skip the mirror we're currently dragging)
-        for (let existingMirror of this.mirrors) {
-            if (existingMirror === testMirror) continue; // Skip self
-            if (this.mirrorsOverlap(testMirror, existingMirror)) {
-                return false;
-            }
-        }
-
-        return true;
+        // Use IronCladValidator for consistency
+        // This ensures all validation uses the same rules
+        const validation = IronCladValidator.validateMirror(testMirror, this.mirrors);
+        return validation.valid;
     }
     
     launchLasers() {
@@ -410,6 +361,9 @@ export class Game {
             GridAlignmentEnforcer.enforceGridAlignment(this.draggedMirror);
             this.safeUpdateVertices(this.draggedMirror);
 
+            // CRITICAL: Clear isDragging flag BEFORE validation so overlap detection works properly
+            this.draggedMirror.isDragging = false;
+
             // IRON-CLAD STEP 2: Validate with all 3 rules
             const validation = IronCladValidator.validateMirror(this.draggedMirror, this.mirrors);
 
@@ -425,8 +379,6 @@ export class Game {
             } else {
                 console.log(`✅ Mirror placed at valid position (${this.draggedMirror.x}, ${this.draggedMirror.y})`);
             }
-
-            this.draggedMirror.isDragging = false;
         }
         this.draggedMirror = null;
         this.canvas.style.cursor = 'crosshair';
@@ -479,84 +431,6 @@ export class Game {
     
     ensureMirrorShapeAlignment(mirror) {
         GridAlignmentSystem.ensureMirrorShapeAlignment(mirror, this);
-        // After alignment, enforce forbidden zones
-        this.enforceForbiddenZones(mirror);
-    }
-    
-    enforceForbiddenZones(mirror) {
-        const bounds = this.getMirrorBounds(mirror);
-        const forbiddenDistance = 2 * CONFIG.GRID_SIZE; // 2 grid lengths = 40px
-        
-        let adjustedX = mirror.x;
-        let adjustedY = mirror.y;
-        
-        // Check and fix edge violations
-        // Left edge
-        if (bounds.left < forbiddenDistance) {
-            adjustedX = forbiddenDistance + (mirror.x - bounds.left);
-        }
-        // Right edge  
-        if (bounds.right > CONFIG.CANVAS_WIDTH - forbiddenDistance) {
-            adjustedX = (CONFIG.CANVAS_WIDTH - forbiddenDistance) - (bounds.right - mirror.x);
-        }
-        // Top edge
-        if (bounds.top < forbiddenDistance) {
-            adjustedY = forbiddenDistance + (mirror.y - bounds.top);
-        }
-        // Bottom edge
-        if (bounds.bottom > CONFIG.CANVAS_HEIGHT - forbiddenDistance) {
-            adjustedY = (CONFIG.CANVAS_HEIGHT - forbiddenDistance) - (bounds.bottom - mirror.y);
-        }
-        
-        // Check and fix center target violation (8x8 grid square)
-        const centerX = CONFIG.CANVAS_WIDTH / 2;
-        const centerY = CONFIG.CANVAS_HEIGHT / 2;
-        const forbiddenSquareSize = 8 * CONFIG.GRID_SIZE; // 8x8 grid tiles = 160px
-        const halfForbiddenSize = forbiddenSquareSize / 2;
-        
-        // Define center forbidden square bounds
-        const forbiddenLeft = centerX - halfForbiddenSize;
-        const forbiddenRight = centerX + halfForbiddenSize;
-        const forbiddenTop = centerY - halfForbiddenSize;
-        const forbiddenBottom = centerY + halfForbiddenSize;
-        
-        // Update bounds after edge adjustments
-        mirror.x = adjustedX;
-        mirror.y = adjustedY;
-        const updatedBounds = this.getMirrorBounds(mirror);
-        
-        // Check if mirror overlaps with center forbidden square
-        const overlapsX = updatedBounds.right > forbiddenLeft && updatedBounds.left < forbiddenRight;
-        const overlapsY = updatedBounds.bottom > forbiddenTop && updatedBounds.top < forbiddenBottom;
-        
-        if (overlapsX && overlapsY) {
-            // Calculate which direction to push the mirror (shortest distance out)
-            const pushLeft = forbiddenLeft - updatedBounds.right;
-            const pushRight = updatedBounds.left - forbiddenRight;
-            const pushUp = forbiddenTop - updatedBounds.bottom;
-            const pushDown = updatedBounds.top - forbiddenBottom;
-            
-            // Find the smallest push needed (closest exit)
-            const minPushX = Math.abs(pushLeft) < Math.abs(pushRight) ? pushLeft : pushRight;
-            const minPushY = Math.abs(pushUp) < Math.abs(pushDown) ? pushUp : pushDown;
-            
-            // Choose the direction that requires less movement
-            if (Math.abs(minPushX) < Math.abs(minPushY)) {
-                // Push horizontally
-                adjustedX += minPushX;
-            } else {
-                // Push vertically
-                adjustedY += minPushY;
-            }
-            
-            // Snap to grid
-            adjustedX = this.snapToGrid(adjustedX);
-            adjustedY = this.snapToGrid(adjustedY);
-        }
-        
-        // Apply the adjustments
-        mirror.x = adjustedX;
-        mirror.y = adjustedY;
     }
     
     snapMirrorToGrid(mirror) {
@@ -683,11 +557,6 @@ export class Game {
     }
     
     update() {
-        // Only validate if no drag operation is active
-        if (!this.isPlaying && !this.draggedMirror) {
-            this.enforceValidationDuringPlacement();
-        }
-        
         if (!this.isPlaying || this.gameOver) return;
         
         // Update game time
@@ -715,235 +584,6 @@ export class Game {
         }
     }
     
-    enforceIronCladValidation() {
-        // Check every mirror every frame during placement stage
-        for (let mirror of this.mirrors) {
-            // Skip the mirror being dragged - allow temporary overlaps during drag
-            if (mirror.isDragging) continue;
-            
-            let needsFix = false;
-            
-            // RULE 1: Check if shape edges are aligned to grid lines
-            if (!this.isShapeProperlyAligned(mirror)) {
-                needsFix = true;
-            }
-            
-            // RULE 2: Check if any part is in forbidden zones
-            if (this.isInForbiddenZone(mirror)) {
-                needsFix = true;
-            }
-            
-            // RULE 3: Check if overlapping with other mirrors (except during drag)
-            if (this.isOverlappingWithOthers(mirror)) {
-                needsFix = true;
-            }
-            
-            // Fix any violations immediately
-            if (needsFix) {
-                this.forceCorrectPlacement(mirror);
-            }
-        }
-    }
-    
-    isShapeProperlyAligned(mirror) {
-        switch (mirror.shape) {
-            case 'square':
-                const halfSize = mirror.size / 2;
-                const leftEdge = mirror.x - halfSize;
-                const rightEdge = mirror.x + halfSize;
-                const topEdge = mirror.y - halfSize;
-                const bottomEdge = mirror.y + halfSize;
-                
-                // All edges must be exactly on grid lines
-                return this.isOnGridLine(leftEdge) && this.isOnGridLine(rightEdge) &&
-                       this.isOnGridLine(topEdge) && this.isOnGridLine(bottomEdge);
-                
-            case 'rectangle':
-                const halfWidth = mirror.width / 2;
-                const halfHeight = mirror.height / 2;
-                const rectLeft = mirror.x - halfWidth;
-                const rectRight = mirror.x + halfWidth;
-                const rectTop = mirror.y - halfHeight;
-                const rectBottom = mirror.y + halfHeight;
-                
-                // All edges must be exactly on grid lines
-                return this.isOnGridLine(rectLeft) && this.isOnGridLine(rectRight) &&
-                       this.isOnGridLine(rectTop) && this.isOnGridLine(rectBottom);
-                
-            case 'rightTriangle':
-            case 'isoscelesTriangle':
-                // For triangles, check if vertices are properly aligned to grid
-                return this.areTriangleVerticesAligned(mirror);
-                
-            case 'trapezoid':
-            case 'parallelogram':
-                // For trapezoids and parallelograms, check if flat sides are on grid lines
-                return this.areQuadrilateralSidesAligned(mirror);
-                
-            default:
-                return true;
-        }
-    }
-    
-    isOnGridLine(value) {
-        return GridAlignmentSystem.isOnGridLine(value);
-    }
-    
-    areTriangleVerticesAligned(mirror) {
-        // Get the actual triangle vertices and check if they're on grid intersections
-        let points;
-        if (mirror.shape === 'rightTriangle') {
-            points = this.getRightTrianglePoints(mirror);
-            // For right triangles, all vertices should be on grid intersections
-            return points.every(point => 
-                this.isOnGridLine(point.x) && this.isOnGridLine(point.y)
-            );
-        } else if (mirror.shape === 'isoscelesTriangle') {
-            points = this.getIsoscelesTrianglePoints(mirror);
-            // For isosceles triangles, only require base vertices to be on grid lines
-            // Base vertices are the last two points (bottom-left and bottom-right)
-            const baseVertices = points.slice(1, 3); // Skip apex (index 0)
-            return baseVertices.every(point => 
-                this.isOnGridLine(point.x) && this.isOnGridLine(point.y)
-            );
-        } else {
-            return false;
-        }
-    }
-    
-    areQuadrilateralSidesAligned(mirror) {
-        // Check if all vertices are on grid intersections
-        let vertices;
-        
-        if (mirror.shape === 'trapezoid') {
-            vertices = this.getTrapezoidVertices(mirror);
-        } else if (mirror.shape === 'parallelogram') {
-            vertices = this.getParallelogramVertices(mirror);
-        } else {
-            return true;
-        }
-        
-        // All vertices must be on grid intersections
-        return vertices.every(vertex => 
-            this.isOnGridLine(vertex.x) && this.isOnGridLine(vertex.y)
-        );
-    }
-    
-    getTrapezoidVertices(mirror) {
-        return ShapeGeometry.getTrapezoidVertices(mirror);
-    }
-    
-    getParallelogramVertices(mirror) {
-        return ShapeGeometry.getParallelogramVertices(mirror);
-    }
-    
-    isInForbiddenZone(mirror) {
-        const bounds = this.getMirrorBounds(mirror);
-        const forbiddenDistance = 2 * CONFIG.GRID_SIZE; // 40px from edges
-        
-        // Check edge violations
-        if (bounds.left < forbiddenDistance || 
-            bounds.right > CONFIG.CANVAS_WIDTH - forbiddenDistance ||
-            bounds.top < forbiddenDistance || 
-            bounds.bottom > CONFIG.CANVAS_HEIGHT - forbiddenDistance) {
-            return true;
-        }
-        
-        // Check center forbidden square (8x8 grid)
-        const centerX = CONFIG.CANVAS_WIDTH / 2;
-        const centerY = CONFIG.CANVAS_HEIGHT / 2;
-        const forbiddenSquareSize = 8 * CONFIG.GRID_SIZE;
-        const halfForbiddenSize = forbiddenSquareSize / 2;
-        
-        const forbiddenLeft = centerX - halfForbiddenSize;
-        const forbiddenRight = centerX + halfForbiddenSize;
-        const forbiddenTop = centerY - halfForbiddenSize;
-        const forbiddenBottom = centerY + halfForbiddenSize;
-        
-        // Check if mirror overlaps with center forbidden square
-        const overlapsX = bounds.right > forbiddenLeft && bounds.left < forbiddenRight;
-        const overlapsY = bounds.bottom > forbiddenTop && bounds.top < forbiddenBottom;
-        
-        return overlapsX && overlapsY;
-    }
-    
-    isOverlappingWithOthers(mirror) {
-        // Check if this mirror overlaps with any other mirror
-        for (let otherMirror of this.mirrors) {
-            if (otherMirror === mirror) continue; // Skip self
-            if (otherMirror.isDragging) continue; // Skip mirrors being dragged
-            
-            if (this.mirrorsOverlap(mirror, otherMirror)) {
-                return true;
-            }
-        }
-        return false;
-    }
-    
-    forceCorrectPlacement(mirror) {
-        // First: Force proper grid alignment
-        this.forceGridAlignment(mirror);
-        
-        // Then: Force out of forbidden zones
-        this.enforceForbiddenZones(mirror);
-        
-        // Double-check and fix again if still invalid
-        if (!this.isShapeProperlyAligned(mirror) || 
-            this.isInForbiddenZone(mirror) || 
-            this.isOverlappingWithOthers(mirror)) {
-            // Find the nearest valid position
-            const validPosition = this.findNearestValidPosition(mirror);
-            if (validPosition) {
-                mirror.x = validPosition.x;
-                mirror.y = validPosition.y;
-            }
-        }
-    }
-    
-    forceGridAlignment(mirror) {
-        GridAlignmentSystem.forceGridAlignment(mirror, this);
-    }
-    
-    findNearestValidPosition(mirror) {
-        // Try positions in expanding grid around current position
-        const startX = this.snapToGrid(mirror.x);
-        const startY = this.snapToGrid(mirror.y);
-        
-        for (let radius = 0; radius <= 10; radius++) {
-            for (let dx = -radius; dx <= radius; dx++) {
-                for (let dy = -radius; dy <= radius; dy++) {
-                    // Skip inner positions already checked
-                    if (radius > 0 && Math.abs(dx) < radius && Math.abs(dy) < radius) continue;
-                    
-                    const testX = startX + dx * CONFIG.GRID_SIZE;
-                    const testY = startY + dy * CONFIG.GRID_SIZE;
-                    
-                    // Create test mirror
-                    const testMirror = { ...mirror, x: testX, y: testY };
-                    this.forceGridAlignment(testMirror);
-                    
-                    // Check if this position is valid
-                    if (this.isShapeProperlyAligned(testMirror) && 
-                        !this.isInForbiddenZone(testMirror) &&
-                        !this.overlapsWithOtherMirrors(testMirror, mirror)) {
-                        return { x: testMirror.x, y: testMirror.y };
-                    }
-                }
-            }
-        }
-        
-        return null; // No valid position found
-    }
-    
-    overlapsWithOtherMirrors(testMirror, excludeMirror) {
-        for (let existingMirror of this.mirrors) {
-            if (existingMirror === excludeMirror) continue;
-            if (this.mirrorsOverlap(testMirror, existingMirror)) {
-                return true;
-            }
-        }
-        return false;
-    }
     
     checkContinuousLaserMirrorCollision(laser, mirror) {
         // Skip collision if laser has exceeded max reflections

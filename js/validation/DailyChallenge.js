@@ -1,5 +1,6 @@
 import { CONFIG } from '../config.js';
 import { SeededRandom } from './SeededRandom.js';
+import { IronCladValidator } from './IronCladValidator.js';
 
 export class DailyChallenge {
     static getTodayString() {
@@ -174,87 +175,9 @@ export class DailyChallenge {
     }
     
     static isValidMirrorPosition(testMirror, existingMirrors) {
-        // Check bounds
-        const bounds = this.getMirrorBounds(testMirror);
-        const margin = CONFIG.EDGE_MARGIN;
-        
-        if (bounds.left < margin || bounds.right > CONFIG.CANVAS_WIDTH - margin ||
-            bounds.top < margin || bounds.bottom > CONFIG.CANVAS_HEIGHT - margin) {
-            return false;
-        }
-        
-        // Check center forbidden zone
-        const centerX = CONFIG.CANVAS_WIDTH / 2;
-        const centerY = CONFIG.CANVAS_HEIGHT / 2;
-        const forbiddenRadius = CONFIG.TARGET_RADIUS + 40;
-        
-        const closestPoint = this.getClosestPointToCenter(testMirror, centerX, centerY);
-        const distFromCenter = Math.sqrt((closestPoint.x - centerX) ** 2 + (closestPoint.y - centerY) ** 2);
-        if (distFromCenter < forbiddenRadius) {
-            return false;
-        }
-        
-        // Check overlap with existing mirrors
-        for (let existingMirror of existingMirrors) {
-            if (this.mirrorsOverlap(testMirror, existingMirror)) {
-                return false;
-            }
-        }
-        
-        return true;
-    }
-    
-    static getMirrorBounds(mirror) {
-        switch (mirror.shape) {
-            case 'square':
-                const halfSize = mirror.size / 2;
-                return {
-                    left: mirror.x - halfSize,
-                    right: mirror.x + halfSize,
-                    top: mirror.y - halfSize,
-                    bottom: mirror.y + halfSize
-                };
-            case 'rectangle':
-                const halfWidth = mirror.width / 2;
-                const halfHeight = mirror.height / 2;
-                return {
-                    left: mirror.x - halfWidth,
-                    right: mirror.x + halfWidth,
-                    top: mirror.y - halfHeight,
-                    bottom: mirror.y + halfHeight
-                };
-            case 'rightTriangle':
-            case 'isoscelesTriangle':
-                // Simple bounding box for triangles
-                const triangleHalfSize = mirror.size / 2;
-                return {
-                    left: mirror.x - triangleHalfSize,
-                    right: mirror.x + triangleHalfSize,
-                    top: mirror.y - triangleHalfSize,
-                    bottom: mirror.y + triangleHalfSize
-                };
-            default:
-                return { left: mirror.x, right: mirror.x, top: mirror.y, bottom: mirror.y };
-        }
-    }
-    
-    static getClosestPointToCenter(mirror, centerX, centerY) {
-        const bounds = this.getMirrorBounds(mirror);
-        const closestX = Math.max(bounds.left, Math.min(centerX, bounds.right));
-        const closestY = Math.max(bounds.top, Math.min(centerY, bounds.bottom));
-        return { x: closestX, y: closestY };
-    }
-    
-    static mirrorsOverlap(mirror1, mirror2) {
-        const bounds1 = this.getMirrorBounds(mirror1);
-        const bounds2 = this.getMirrorBounds(mirror2);
-
-        // For mirror placement, exclude borders - mirrors can be placed snugly next to each other
-        // Use strict inequality to allow mirrors to share edges without "overlapping"
-        return !(bounds1.right < bounds2.left ||
-                bounds2.right < bounds1.left ||
-                bounds1.bottom < bounds2.top ||
-                bounds2.bottom < bounds1.top);
+        // Use IronCladValidator for consistency - same validation everywhere
+        const validation = IronCladValidator.validateMirror(testMirror, existingMirrors);
+        return validation.valid;
     }
     
     static calculateDifficulty(mirrors, spawners) {
