@@ -31,11 +31,11 @@ export class TargetRenderer {
     }
 
     static drawAuras(ctx, centerX, centerY, radius, pulseIntensity, gameOver) {
-        // Outer aura
+        // Outer aura - sunset gold when safe, danger red when hit
         ctx.globalAlpha = pulseIntensity * 0.3;
-        ctx.shadowColor = gameOver ? '#ff0000' : '#00ff88';
+        ctx.shadowColor = gameOver ? '#E63946' : '#FFB627';
         ctx.shadowBlur = 40;
-        ctx.fillStyle = gameOver ? 'rgba(255, 0, 0, 0.1)' : 'rgba(0, 255, 136, 0.1)';
+        ctx.fillStyle = gameOver ? 'rgba(230, 57, 70, 0.15)' : 'rgba(255, 182, 39, 0.15)';
         ctx.beginPath();
         ctx.arc(centerX, centerY, radius * 2.5, 0, Math.PI * 2);
         ctx.fill();
@@ -43,7 +43,7 @@ export class TargetRenderer {
         // Middle aura
         ctx.globalAlpha = pulseIntensity * 0.5;
         ctx.shadowBlur = 25;
-        ctx.fillStyle = gameOver ? 'rgba(255, 0, 0, 0.2)' : 'rgba(0, 255, 136, 0.2)';
+        ctx.fillStyle = gameOver ? 'rgba(230, 57, 70, 0.25)' : 'rgba(255, 182, 39, 0.25)';
         ctx.beginPath();
         ctx.arc(centerX, centerY, radius * 1.8, 0, Math.PI * 2);
         ctx.fill();
@@ -51,15 +51,16 @@ export class TargetRenderer {
         // Inner aura
         ctx.globalAlpha = pulseIntensity * 0.7;
         ctx.shadowBlur = 15;
-        ctx.fillStyle = gameOver ? 'rgba(255, 0, 0, 0.3)' : 'rgba(0, 255, 136, 0.3)';
+        ctx.fillStyle = gameOver ? 'rgba(230, 57, 70, 0.35)' : 'rgba(255, 182, 39, 0.35)';
         ctx.beginPath();
         ctx.arc(centerX, centerY, radius * 1.3, 0, Math.PI * 2);
         ctx.fill();
     }
 
     static drawChipBody(ctx, centerX, centerY, chipSize, gameOver) {
-        ctx.fillStyle = gameOver ? '#660000' : '#003322';
-        ctx.strokeStyle = gameOver ? '#ff3366' : '#00ff88';
+        // Dark base with sunset/danger colors
+        ctx.fillStyle = gameOver ? '#2a0a0a' : '#1a0a00';
+        ctx.strokeStyle = gameOver ? '#E63946' : '#FFB627';
         ctx.lineWidth = 3;
 
         // Hexagonal chip outline
@@ -75,18 +76,18 @@ export class TargetRenderer {
         ctx.fill();
         ctx.stroke();
 
-        // Inner chip core
-        ctx.shadowColor = gameOver ? '#ff3366' : '#00ff88';
-        ctx.shadowBlur = 10;
-        ctx.fillStyle = gameOver ? '#ff1144' : '#00ff66';
+        // Inner chip core - bright sunset colors
+        ctx.shadowColor = gameOver ? '#E63946' : '#FFB627';
+        ctx.shadowBlur = 15;
+        ctx.fillStyle = gameOver ? '#E63946' : '#FF6B35';
         ctx.beginPath();
         ctx.arc(centerX, centerY, chipSize * 0.4, 0, Math.PI * 2);
         ctx.fill();
     }
 
     static drawCircuitPattern(ctx, centerX, centerY, chipSize, gameOver) {
-        ctx.shadowBlur = 5;
-        ctx.strokeStyle = gameOver ? '#ff6699' : '#66ffaa';
+        ctx.shadowBlur = 8;
+        ctx.strokeStyle = gameOver ? '#FF8FA3' : '#FFB627';
         ctx.lineWidth = 2;
         ctx.lineCap = 'round';
 
@@ -109,8 +110,8 @@ export class TargetRenderer {
     }
 
     static drawChipPins(ctx, centerX, centerY, chipSize, gameOver) {
-        ctx.shadowBlur = 3;
-        ctx.fillStyle = gameOver ? '#ff4477' : '#44ff77';
+        ctx.shadowBlur = 5;
+        ctx.fillStyle = gameOver ? '#FF006E' : '#FF6B35';
         for (let i = 0; i < 6; i++) {
             const angle = (i * Math.PI * 2) / 6;
             const x = centerX + Math.cos(angle) * chipSize * 0.9;

@@ -123,16 +123,24 @@ export class BaseMirror {
      * Shared drawing utilities
      */
     drawMirrorSurface(ctx, points) {
-        // Add powder blue glow if dragging
+        // Add sunset orange glow if dragging
         if (this.isDragging) {
-            ctx.shadowColor = '#87ceeb';
-            ctx.shadowBlur = 15;
+            ctx.shadowColor = '#FF6B35';
+            ctx.shadowBlur = 20;
         } else {
             ctx.shadowBlur = 0;
         }
 
-        // Surface - solid silver
-        ctx.fillStyle = '#c0c0c0';
+        // Surface - elegant dark glass with slight gradient
+        const gradient = ctx.createLinearGradient(
+            points[0].x, points[0].y,
+            points[points.length - 1].x, points[points.length - 1].y
+        );
+        gradient.addColorStop(0, '#2a2a2a');
+        gradient.addColorStop(0.5, '#404040');
+        gradient.addColorStop(1, '#2a2a2a');
+
+        ctx.fillStyle = gradient;
         ctx.beginPath();
         ctx.moveTo(points[0].x, points[0].y);
         for (let i = 1; i < points.length; i++) {
@@ -146,13 +154,15 @@ export class BaseMirror {
         // Reset shadow for border
         ctx.shadowBlur = 0;
 
-        // Border with glow if dragging
+        // Border with sunset glow if dragging
         if (this.isDragging) {
-            ctx.shadowColor = '#87ceeb';
-            ctx.shadowBlur = 10;
+            ctx.shadowColor = '#FF6B35';
+            ctx.shadowBlur = 15;
+            ctx.strokeStyle = '#FF6B35';
+        } else {
+            ctx.strokeStyle = '#FFB627'; // Sunset gold border when not dragging
         }
 
-        ctx.strokeStyle = '#000000';
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(points[0].x, points[0].y);

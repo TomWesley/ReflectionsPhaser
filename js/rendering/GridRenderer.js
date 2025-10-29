@@ -5,7 +5,7 @@ import { CONFIG } from '../config.js';
  */
 export class GridRenderer {
     static drawGrid(ctx) {
-        ctx.strokeStyle = '#ddd';
+        ctx.strokeStyle = 'rgba(255, 107, 53, 0.15)'; // Subtle sunset orange grid
         ctx.lineWidth = 1;
 
         // Vertical lines
