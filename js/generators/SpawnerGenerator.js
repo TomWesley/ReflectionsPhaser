@@ -30,8 +30,8 @@ export class SpawnerGenerator {
             }
         }
 
-        // Free play mode - generate random spawners
-        const spawnerCount = 4 + Math.floor(Math.random() * 4); // 4-7 spawners
+        // Free play mode - generate exactly 5 spawners for fair scoring
+        const spawnerCount = 5;
         const allPositions = this.generateRandomPositions();
 
         // Generate more positions if needed

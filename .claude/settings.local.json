@@ -24,7 +24,8 @@
       "Bash(done)",
       "Bash(for file in js/geometry/*.js js/rendering/*.js js/managers/*.js js/generators/*.js js/systems/*.js)",
       "Bash(do [ -f \"$file\" ])",
-      "Bash(osascript:*)"
+      "Bash(osascript:*)",
+      "Bash(open http://localhost:8000/test_surface_area.html)"
     ],
     "deny": [],
     "ask": []

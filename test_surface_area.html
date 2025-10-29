@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Surface Area Test</title>
+</head>
+<body>
+    <h1>Surface Area Generation Test</h1>
+    <button onclick="testGeneration()">Generate Configuration</button>
+    <button onclick="testMultiple()">Test 10 Configurations</button>
+    <pre id="output"></pre>
+
+    <script type="module">
+        import { SurfaceAreaManager } from './js/validation/SurfaceAreaManager.js';
+
+        window.testGeneration = function() {
+            const output = document.getElementById('output');
+            output.innerHTML = 'Generating...\n';
+
+            const mirrors = SurfaceAreaManager.generateMirrorsWithTargetSurfaceArea();
+            const totalArea = SurfaceAreaManager.calculateTotalSurfaceArea(mirrors);
+
+            output.innerHTML += `Generated ${mirrors.length} mirrors\n`;
+            output.innerHTML += `Total surface area: ${totalArea}\n`;
+            output.innerHTML += `Target: ${SurfaceAreaManager.TARGET_SURFACE_AREA}\n`;
+            output.innerHTML += `Match: ${totalArea === SurfaceAreaManager.TARGET_SURFACE_AREA ? '✅ YES' : '❌ NO'}\n\n`;
+
+            mirrors.forEach((m, i) => {
+                output.innerHTML += `${i+1}. ${m.shape} - surface area: ${SurfaceAreaManager.calculateMirrorSurfaceArea(m)}\n`;
+            });
+        };
+
+        window.testMultiple = function() {
+            const output = document.getElementById('output');
+            output.innerHTML = 'Testing 10 configurations...\n\n';
+
+            let allPassed = true;
+            for (let i = 0; i < 10; i++) {
+                const mirrors = SurfaceAreaManager.generateMirrorsWithTargetSurfaceArea();
+                const totalArea = SurfaceAreaManager.calculateTotalSurfaceArea(mirrors);
+                const passed = totalArea === SurfaceAreaManager.TARGET_SURFACE_AREA;
+
+                output.innerHTML += `Test ${i+1}: ${mirrors.length} mirrors, ${totalArea} area - ${passed ? '✅' : '❌'}\n`;
+
+                if (!passed) {
+                    allPassed = false;
+                }
+            }
+
+            output.innerHTML += `\n${allPassed ? '✅ ALL TESTS PASSED' : '❌ SOME TESTS FAILED'}`;
+        };
+    </script>
+</body>
+</html>

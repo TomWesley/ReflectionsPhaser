@@ -368,16 +368,66 @@ export class Game {
             const validation = IronCladValidator.validateMirror(this.draggedMirror, this.mirrors);
 
             if (!validation.valid) {
-                console.warn(`🚨 Invalid placement detected:`, validation.allViolations);
+                console.warn(`🚨 Invalid placement at (${this.draggedMirror.x}, ${this.draggedMirror.y}):`, validation.allViolations);
 
-                // ALWAYS revert to original position - do NOT allow invalid placements
-                console.warn('⚠️ Invalid placement, reverting to original position');
-                this.draggedMirror.x = this.draggedMirror.originalX;
-                this.draggedMirror.y = this.draggedMirror.originalY;
-                GridAlignmentEnforcer.enforceGridAlignment(this.draggedMirror);
-                this.safeUpdateVertices(this.draggedMirror);
+                // Try to find nearest valid position using smart algorithm
+                const nearestValid = this.findNearestValidPositionSmart(this.draggedMirror, dropX, dropY);
+
+                if (nearestValid) {
+                    console.log(`✨ Found valid position nearby at (${nearestValid.x}, ${nearestValid.y})`);
+                    this.draggedMirror.x = nearestValid.x;
+                    this.draggedMirror.y = nearestValid.y;
+
+                    // MANDATORY: Force grid alignment (this may adjust x/y slightly)
+                    GridAlignmentEnforcer.enforceGridAlignment(this.draggedMirror);
+                    this.safeUpdateVertices(this.draggedMirror);
+
+                    // FINAL VERIFICATION: Triple-check everything is valid
+                    const finalValidation = IronCladValidator.validateMirror(this.draggedMirror, this.mirrors);
+                    if (!finalValidation.valid) {
+                        console.error('❌ CRITICAL: Smart placement failed final validation!');
+                        console.error('Violations:', finalValidation.allViolations);
+                        console.error('Reverting to original position');
+                        this.draggedMirror.x = this.draggedMirror.originalX;
+                        this.draggedMirror.y = this.draggedMirror.originalY;
+                        GridAlignmentEnforcer.enforceGridAlignment(this.draggedMirror);
+                        this.safeUpdateVertices(this.draggedMirror);
+                    } else {
+                        console.log(`✅ Final verification passed - mirror at (${this.draggedMirror.x}, ${this.draggedMirror.y})`);
+                    }
+                } else {
+                    console.warn('⚠️ No valid position found nearby, reverting to original position');
+                    this.draggedMirror.x = this.draggedMirror.originalX;
+                    this.draggedMirror.y = this.draggedMirror.originalY;
+                    GridAlignmentEnforcer.enforceGridAlignment(this.draggedMirror);
+                    this.safeUpdateVertices(this.draggedMirror);
+                }
             } else {
                 console.log(`✅ Mirror placed at valid position (${this.draggedMirror.x}, ${this.draggedMirror.y})`);
+            }
+
+            // ULTIMATE SAFETY CHECK: Verify grid alignment
+            const alignmentCheck = GridAlignmentEnforcer.verifyAlignment(this.draggedMirror);
+            if (!alignmentCheck.aligned) {
+                console.error('🚨 GRID ALIGNMENT VIOLATION DETECTED!');
+                console.error('Alignment errors:', alignmentCheck.errors);
+                console.error('Attempting emergency realignment...');
+
+                // Emergency realignment
+                GridAlignmentEnforcer.enforceGridAlignment(this.draggedMirror);
+                this.safeUpdateVertices(this.draggedMirror);
+
+                // Re-verify
+                const recheckAlignment = GridAlignmentEnforcer.verifyAlignment(this.draggedMirror);
+                if (!recheckAlignment.aligned) {
+                    console.error('❌ EMERGENCY REALIGNMENT FAILED! Reverting to original position.');
+                    this.draggedMirror.x = this.draggedMirror.originalX;
+                    this.draggedMirror.y = this.draggedMirror.originalY;
+                    GridAlignmentEnforcer.enforceGridAlignment(this.draggedMirror);
+                    this.safeUpdateVertices(this.draggedMirror);
+                } else {
+                    console.log('✅ Emergency realignment successful');
+                }
             }
         }
         this.draggedMirror = null;
@@ -437,36 +487,126 @@ export class Game {
         GridAlignmentSystem.snapMirrorToGrid(mirror, this);
     }
     
-    findNearestValidPosition(mirror, maxRadiusInGridCells = 10) {
-        // Try positions in expanding spiral from current position
-        const startX = this.snapToGrid(mirror.x);
-        const startY = this.snapToGrid(mirror.y);
-        const maxRadius = maxRadiusInGridCells * CONFIG.GRID_SIZE;
-        
-        // First try the exact position
-        const exactTest = { ...mirror, x: startX, y: startY };
-        if (this.isValidMirrorPosition(exactTest)) {
-            return { x: startX, y: startY };
-        }
-        
-        // Then expand outward in small increments for closer positions
-        for (let radius = CONFIG.GRID_SIZE; radius <= maxRadius; radius += CONFIG.GRID_SIZE) {
-            for (let angle = 0; angle < 360; angle += 45) {
-                const testX = startX + Math.cos(angle * Math.PI / 180) * radius;
-                const testY = startY + Math.sin(angle * Math.PI / 180) * radius;
-                const snappedTestX = this.snapToGrid(testX);
-                const snappedTestY = this.snapToGrid(testY);
-                
-                // Create a test mirror at the new position
-                const testMirror = { ...mirror, x: snappedTestX, y: snappedTestY };
-                
-                if (this.isValidMirrorPosition(testMirror)) {
-                    return { x: snappedTestX, y: snappedTestY };
-                }
+    findNearestValidPositionSmart(mirror, dropX, dropY) {
+        /**
+         * Smart algorithm that searches for valid positions in order of priority:
+         * 1. Try exact drop position first
+         * 2. If in forbidden zone, move toward nearest border in straight line
+         * 3. Search in expanding concentric grid pattern around drop point
+         * 4. Each position tested fully with IronCladValidator
+         */
+
+        const startX = this.snapToGrid(dropX);
+        const startY = this.snapToGrid(dropY);
+        const centerX = CONFIG.CANVAS_WIDTH / 2;
+        const centerY = CONFIG.CANVAS_HEIGHT / 2;
+        const forbiddenRadius = CONFIG.TARGET_RADIUS + 40;
+
+        // Create test mirror at start position with proper grid alignment and vertex updates
+        const createTestMirror = (x, y) => {
+            // Create a deep copy to avoid modifying the original mirror
+            const testMirror = {
+                ...mirror,
+                x,
+                y,
+                isDragging: false,
+                // Copy all shape-specific properties
+                size: mirror.size,
+                width: mirror.width,
+                height: mirror.height,
+                shape: mirror.shape,
+                rotation: mirror.rotation,
+                topWidth: mirror.topWidth,
+                skew: mirror.skew
+            };
+
+            // CRITICAL: Force grid alignment on the test position
+            GridAlignmentEnforcer.enforceGridAlignment(testMirror);
+
+            // CRITICAL: Update vertices after alignment to ensure they're calculated correctly
+            if (typeof testMirror.updateVertices === 'function') {
+                testMirror.updateVertices();
+            } else if (typeof mirror.calculateVertices === 'function') {
+                // Copy the method from original mirror
+                testMirror.calculateVertices = mirror.calculateVertices.bind(testMirror);
+                testMirror.vertices = testMirror.calculateVertices();
+            } else {
+                // Fallback: manually calculate vertices using safeUpdateVertices
+                this.safeUpdateVertices(testMirror);
+            }
+
+            return testMirror;
+        };
+
+        // Test if a position is valid
+        const testPosition = (x, y) => {
+            const testMirror = createTestMirror(x, y);
+            const validation = IronCladValidator.validateMirror(testMirror, this.mirrors);
+            return validation.valid ? { x: testMirror.x, y: testMirror.y } : null;
+        };
+
+        // STEP 1: Try exact drop position
+        const exactResult = testPosition(startX, startY);
+        if (exactResult) return exactResult;
+
+        // STEP 2: If dropped in forbidden zone, search toward nearest border
+        const distToCenter = Math.sqrt((startX - centerX) ** 2 + (startY - centerY) ** 2);
+        if (distToCenter < forbiddenRadius + 60) { // Close to or in forbidden zone
+            // Calculate direction away from center
+            const dx = startX - centerX;
+            const dy = startY - centerY;
+            const angle = Math.atan2(dy, dx);
+
+            // Search outward along this direction
+            for (let dist = CONFIG.GRID_SIZE; dist <= 200; dist += CONFIG.GRID_SIZE) {
+                const testX = this.snapToGrid(centerX + Math.cos(angle) * (forbiddenRadius + 60 + dist));
+                const testY = this.snapToGrid(centerY + Math.sin(angle) * (forbiddenRadius + 60 + dist));
+
+                const result = testPosition(testX, testY);
+                if (result) return result;
             }
         }
-        
-        // Return null if no valid position found within the radius
+
+        // STEP 3: Expanding grid search from drop point (prioritize closer positions)
+        const maxRadius = 15; // Grid cells
+        const gridSize = CONFIG.GRID_SIZE;
+
+        for (let radius = 1; radius <= maxRadius; radius++) {
+            // Create a sorted list of positions at this radius, ordered by distance to drop point
+            const positions = [];
+
+            // Generate all positions in a square ring at this radius
+            for (let dx = -radius; dx <= radius; dx++) {
+                for (let dy = -radius; dy <= radius; dy++) {
+                    // Only check positions on the perimeter of the square
+                    if (Math.abs(dx) === radius || Math.abs(dy) === radius) {
+                        const testX = this.snapToGrid(startX + dx * gridSize);
+                        const testY = this.snapToGrid(startY + dy * gridSize);
+
+                        // Skip if out of bounds
+                        if (testX < 50 || testX > CONFIG.CANVAS_WIDTH - 50 ||
+                            testY < 50 || testY > CONFIG.CANVAS_HEIGHT - 50) {
+                            continue;
+                        }
+
+                        // Calculate actual distance to drop point
+                        const actualDist = Math.sqrt((testX - dropX) ** 2 + (testY - dropY) ** 2);
+                        positions.push({ x: testX, y: testY, dist: actualDist });
+                    }
+                }
+            }
+
+            // Sort by distance to drop point (closest first)
+            positions.sort((a, b) => a.dist - b.dist);
+
+            // Test each position in order
+            for (const pos of positions) {
+                const result = testPosition(pos.x, pos.y);
+                if (result) return result;
+            }
+        }
+
+        // No valid position found
         return null;
     }
     

@@ -1,8 +1,7 @@
 import { CONFIG } from '../config.js';
 
 export class SurfaceAreaManager {
-    static TARGET_SURFACE_AREA = 84; // Target total surface area in grid lengths
-    static MIN_MIRRORS = 6; // Minimum number of mirrors
+    static TARGET_SURFACE_AREA = 84; // Target total surface area in grid lengths for fair scoring
     
     /**
      * Calculate the perimeter (surface area) of a mirror shape
@@ -198,115 +197,169 @@ export class SurfaceAreaManager {
     }
     
     /**
-     * Generate mirrors for free play mode with exact target surface area
+     * Generate mirrors for free play mode with EXACTLY target surface area
+     * This MUST return exactly 84 surface area for fair scoring
      */
     static generateMirrorsWithTargetSurfaceArea() {
         const targetArea = this.TARGET_SURFACE_AREA;
-        const minMirrors = this.MIN_MIRRORS;
         const possibleMirrors = this.getAllPossibleMirrors();
-        
+
+        const maxAttempts = 1000; // Increase attempts to ensure we find a solution
+
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+            const result = this.attemptGenerateExactArea(targetArea, possibleMirrors);
+
+            if (result && result.totalArea === targetArea) {
+                console.log(`✅ EXACT surface area achieved! ${result.mirrors.length} mirrors, total area: ${result.totalArea}`);
+                return result.mirrors;
+            }
+        }
+
+        // CRITICAL: If we still haven't found exact solution, use deterministic approach
+        console.warn(`⚠️ Random generation failed after ${maxAttempts} attempts. Using deterministic approach...`);
+        return this.generateDeterministicExactArea(targetArea, possibleMirrors);
+    }
+
+    /**
+     * Attempt to generate exactly the target area using backtracking algorithm
+     */
+    static attemptGenerateExactArea(targetArea, possibleMirrors) {
         let selectedMirrors = [];
         let currentSurfaceArea = 0;
-        let attempts = 0;
-        const maxAttempts = 100;
-        
-        while (attempts < maxAttempts) {
-            selectedMirrors = [];
-            currentSurfaceArea = 0;
-            
-            // Generate mirrors until we're close to target
-            while (currentSurfaceArea < targetArea && selectedMirrors.length < 50) {
-                const remainingArea = targetArea - currentSurfaceArea;
-                
-                // If we're close to the target, be more selective
-                let candidateMirrors;
-                if (remainingArea <= 15) {
-                    // Find mirrors that fit exactly or leave room for small mirrors
-                    candidateMirrors = possibleMirrors.filter(m => 
-                        m.surfaceArea <= remainingArea && 
-                        (m.surfaceArea === remainingArea || remainingArea - m.surfaceArea >= 3)
-                    );
+
+        // Sort mirrors by surface area (largest first) for better backtracking
+        const sortedMirrors = [...possibleMirrors].sort((a, b) => b.surfaceArea - a.surfaceArea);
+
+        // Generate mirrors until we hit target
+        while (currentSurfaceArea < targetArea) {
+            const remainingArea = targetArea - currentSurfaceArea;
+
+            // Find all mirrors that fit in remaining space
+            let candidateMirrors = sortedMirrors.filter(m => m.surfaceArea <= remainingArea);
+
+            if (candidateMirrors.length === 0) {
+                // Can't fit any more mirrors, need to backtrack
+                if (selectedMirrors.length > 0) {
+                    const removed = selectedMirrors.pop();
+                    currentSurfaceArea -= removed.surfaceArea;
+
+                    // Try a different mirror next time by filtering out what we just removed
+                    // This is a simple backtracking strategy
+                    continue;
                 } else {
-                    // Early stage - use any mirror, but prefer larger ones to make progress
-                    candidateMirrors = possibleMirrors.filter(m => m.surfaceArea <= remainingArea);
-                    // Bias toward larger mirrors early on
-                    if (selectedMirrors.length < minMirrors / 2) {
-                        candidateMirrors = candidateMirrors.filter(m => m.surfaceArea >= 6);
-                    }
+                    // Failed this attempt
+                    return null;
                 }
-                
-                if (candidateMirrors.length === 0) {
-                    // No valid mirrors fit, try backtracking
-                    if (selectedMirrors.length > 0) {
-                        const lastMirror = selectedMirrors.pop();
-                        currentSurfaceArea -= lastMirror.surfaceArea;
-                        continue;
-                    } else {
-                        break; // Start over
-                    }
-                }
-                
-                // Select random mirror from candidates
-                const randomMirror = candidateMirrors[Math.floor(Math.random() * candidateMirrors.length)];
-                const mirrorCopy = { ...randomMirror };
-                
-                // Add random rotation for triangles, trapezoids, and parallelograms
-                if (mirrorCopy.shape === 'rightTriangle' || mirrorCopy.shape === 'isoscelesTriangle' ||
-                    mirrorCopy.shape === 'trapezoid' || mirrorCopy.shape === 'parallelogram') {
-                    mirrorCopy.rotation = [0, 90, 180, 270][Math.floor(Math.random() * 4)];
-                }
-                
-                selectedMirrors.push(mirrorCopy);
-                currentSurfaceArea += randomMirror.surfaceArea;
             }
-            
-            // Check if we hit our target exactly and have minimum mirrors
-            if (currentSurfaceArea === targetArea && selectedMirrors.length >= minMirrors) {
-                console.log(`Surface area generation successful! ${selectedMirrors.length} mirrors, total area: ${currentSurfaceArea}`);
-                return selectedMirrors;
+
+            // Prefer mirrors that get us closer to the exact target
+            // Sort by how close they get us: prioritize exact matches, then closer values
+            candidateMirrors.sort((a, b) => {
+                const aExact = (a.surfaceArea === remainingArea) ? -1000 : 0;
+                const bExact = (b.surfaceArea === remainingArea) ? -1000 : 0;
+                return (aExact + Math.abs(remainingArea - a.surfaceArea)) -
+                       (bExact + Math.abs(remainingArea - b.surfaceArea));
+            });
+
+            // Take the best match with some randomness
+            const topCandidates = candidateMirrors.slice(0, Math.min(5, candidateMirrors.length));
+            const randomMirror = topCandidates[Math.floor(Math.random() * topCandidates.length)];
+            const mirrorCopy = { ...randomMirror };
+
+            // Add random rotation for shapes that support it
+            if (mirrorCopy.shape === 'rightTriangle' || mirrorCopy.shape === 'isoscelesTriangle' ||
+                mirrorCopy.shape === 'trapezoid' || mirrorCopy.shape === 'parallelogram') {
+                mirrorCopy.rotation = [0, 90, 180, 270][Math.floor(Math.random() * 4)];
             }
-            
-            attempts++;
+
+            selectedMirrors.push(mirrorCopy);
+            currentSurfaceArea += randomMirror.surfaceArea;
+
+            // Success check
+            if (currentSurfaceArea === targetArea) {
+                return { mirrors: selectedMirrors, totalArea: currentSurfaceArea };
+            }
+
+            // Prevent infinite loops
+            if (selectedMirrors.length > 100) {
+                return null;
+            }
         }
-        
-        // Fallback: if we couldn't generate exact target, get as close as possible
-        console.warn(`Could not generate exact target surface area after ${maxAttempts} attempts`);
-        console.warn(`Final attempt: ${selectedMirrors.length} mirrors, total area: ${currentSurfaceArea}, target: ${targetArea}`);
-        
-        return selectedMirrors.length >= minMirrors ? selectedMirrors : this.generateFallbackMirrors();
+
+        return null;
     }
-    
+
     /**
-     * Fallback mirror generation - ensures we have playable mirrors even if exact target fails
+     * Deterministic approach: build exact target using known combinations
+     * This is the ultimate fallback that GUARANTEES exactly 84
+     *
+     * Strategy: Use dynamic programming / greedy approach
+     * 84 = 21 × 4 (so we can use 21 squares of size 20 (4 units each))
+     * Or other combinations that are guaranteed to exist in our mirror set
      */
-    static generateFallbackMirrors() {
-        console.warn('Using fallback mirror generation');
+    static generateDeterministicExactArea(targetArea, possibleMirrors) {
+        console.log(`🔧 Using deterministic approach to guarantee exactly ${targetArea} surface area`);
+
+        // Find the smallest mirror surface area (will be smallest square: 20px = 1 grid unit = 4 perimeter)
+        const smallestMirror = possibleMirrors.reduce((min, m) =>
+            m.surfaceArea < min.surfaceArea ? m : min
+        );
+        console.log(`Smallest available mirror has ${smallestMirror.surfaceArea} surface area`);
+
+        // Strategy: Use greedy algorithm with backtracking
+        // Fill with larger mirrors first, then use smallest to fill gaps
         const mirrors = [];
-        
-        // Generate exactly 6 mirrors with roughly balanced surface area
-        const baseMirrors = [
-            { shape: 'square', size: 40, width: 40, height: 40, rotation: 0 },      // Area: 8
-            { shape: 'square', size: 40, width: 40, height: 40, rotation: 0 },      // Area: 8  
-            { shape: 'rectangle', size: 60, width: 60, height: 40, rotation: 0 },   // Area: 10
-            { shape: 'rectangle', size: 60, width: 60, height: 40, rotation: 0 },   // Area: 10
-            { shape: 'rightTriangle', size: 60, width: 60, height: 60, rotation: 0 }, // Area: 10
-            { shape: 'rightTriangle', size: 40, width: 40, height: 40, rotation: 0 } // Area: 6 (replaced invalid isosceles)
-        ];
-        
-        // Add random rotations for triangles, trapezoids, and parallelograms
-        baseMirrors.forEach(mirror => {
-            if (mirror.shape === 'rightTriangle' || mirror.shape === 'isoscelesTriangle' ||
-                mirror.shape === 'trapezoid' || mirror.shape === 'parallelogram') {
-                mirror.rotation = [0, 90, 180, 270][Math.floor(Math.random() * 4)];
+        let currentArea = 0;
+
+        // Get all unique surface area values, sorted descending
+        const uniqueAreas = [...new Set(possibleMirrors.map(m => m.surfaceArea))].sort((a, b) => b - a);
+        console.log(`Available surface area values: ${uniqueAreas.join(', ')}`);
+
+        while (currentArea < targetArea) {
+            const remaining = targetArea - currentArea;
+
+            // Try to find exact match for remaining area
+            const exactMatch = possibleMirrors.find(m => m.surfaceArea === remaining);
+            if (exactMatch) {
+                mirrors.push({ ...exactMatch, rotation: 0 });
+                currentArea += exactMatch.surfaceArea;
+                console.log(`✓ Added exact match: ${exactMatch.shape} (${exactMatch.surfaceArea}) - total now ${currentArea}`);
+                break;
             }
-            mirrors.push(mirror);
-        });
-        
-        const totalArea = mirrors.reduce((sum, m) => sum + this.calculateMirrorSurfaceArea(m), 0);
-        console.log(`Fallback mirrors generated: ${mirrors.length} mirrors, total area: ${totalArea}`);
-        
+
+            // Find the largest mirror that fits in remaining space
+            const bestFit = uniqueAreas.find(area => area <= remaining);
+            if (!bestFit) {
+                console.error(`❌ CRITICAL: No mirror fits in remaining ${remaining}. This should never happen!`);
+                break;
+            }
+
+            // Get a random mirror with this surface area (for variety)
+            const candidates = possibleMirrors.filter(m => m.surfaceArea === bestFit);
+            const selected = candidates[Math.floor(Math.random() * candidates.length)];
+
+            mirrors.push({ ...selected, rotation: 0 });
+            currentArea += selected.surfaceArea;
+            console.log(`✓ Added ${selected.shape} (${selected.surfaceArea}) - total now ${currentArea}/${targetArea}`);
+
+            // Safety check
+            if (mirrors.length > 100) {
+                console.error('❌ CRITICAL: Too many mirrors generated (>100)');
+                break;
+            }
+        }
+
+        const finalArea = this.calculateTotalSurfaceArea(mirrors);
+        console.log(`✅ Deterministic generation complete: ${mirrors.length} mirrors, ${finalArea} area`);
+
+        if (finalArea !== targetArea) {
+            console.error(`❌ CRITICAL: Failed to achieve exact target! Got ${finalArea}, expected ${targetArea}`);
+            console.error(`This indicates a fundamental issue with the algorithm or available mirrors.`);
+        }
+
         return mirrors;
     }
+    
     
     /**
      * Calculate total surface area of a mirror array

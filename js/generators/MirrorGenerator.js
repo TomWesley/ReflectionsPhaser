@@ -48,25 +48,49 @@ export class MirrorGenerator {
 
     /**
      * Generate mirrors for free play mode
+     * CRITICAL: Must maintain exactly TARGET_SURFACE_AREA (84) for fair scoring
      */
     generateFreePlayMirrors(mirrors) {
-        const mirrorConfigs = SurfaceAreaManager.generateMirrorsWithTargetSurfaceArea();
+        const maxConfigAttempts = 10; // Try up to 10 different configurations if needed
 
-        for (let config of mirrorConfigs) {
-            let mirror = this.createValidatedMirror(config, mirrors);
-            if (mirror) {
-                mirrors.push(mirror);
-            } else {
-                mirror = this.generateReplacementMirror(config, mirrors);
+        for (let configAttempt = 0; configAttempt < maxConfigAttempts; configAttempt++) {
+            mirrors.length = 0; // Clear any previous failed attempt
+            const mirrorConfigs = SurfaceAreaManager.generateMirrorsWithTargetSurfaceArea();
+            let allPlacedSuccessfully = true;
+
+            for (let config of mirrorConfigs) {
+                let mirror = this.createValidatedMirror(config, mirrors);
                 if (mirror) {
                     mirrors.push(mirror);
+                } else {
+                    // Failed to place this mirror - need to try a new configuration
+                    console.warn(`⚠️ Failed to place ${config.shape} mirror (surface area: ${config.surfaceArea})`);
+                    allPlacedSuccessfully = false;
+                    break; // Stop trying this configuration
                 }
+            }
+
+            if (allPlacedSuccessfully) {
+                const totalSurfaceArea = SurfaceAreaManager.calculateTotalSurfaceArea(mirrors);
+                console.log(`✅ Free play mirrors: ${mirrors.length}, total surface area: ${totalSurfaceArea} (config attempt ${configAttempt + 1})`);
+
+                // CRITICAL: Verify we hit the target exactly
+                if (totalSurfaceArea === SurfaceAreaManager.TARGET_SURFACE_AREA) {
+                    console.log(`✅ Successfully placed all mirrors with exact target surface area!`);
+                    return mirrors;
+                } else {
+                    console.error(`❌ CRITICAL: Surface area mismatch! Got ${totalSurfaceArea}, expected ${SurfaceAreaManager.TARGET_SURFACE_AREA}`);
+                    // Try another configuration
+                    continue;
+                }
+            } else {
+                console.log(`⚠️ Configuration ${configAttempt + 1} failed, trying new configuration...`);
             }
         }
 
-        const totalSurfaceArea = SurfaceAreaManager.calculateTotalSurfaceArea(mirrors);
-        console.log(`Free play mirrors: ${mirrors.length}, surface area: ${totalSurfaceArea}`);
-
+        // If we get here, we failed to generate a valid configuration after all attempts
+        console.error(`❌ CRITICAL: Failed to generate valid mirror configuration after ${maxConfigAttempts} attempts`);
+        console.error(`❌ Returning partial configuration with ${mirrors.length} mirrors`);
         return mirrors;
     }
 
