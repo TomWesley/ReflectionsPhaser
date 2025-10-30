@@ -51,12 +51,22 @@ export class MirrorGenerator {
      * CRITICAL: Must maintain exactly TARGET_SURFACE_AREA (84) for fair scoring
      */
     generateFreePlayMirrors(mirrors) {
-        const maxConfigAttempts = 10; // Try up to 10 different configurations if needed
+        const maxConfigAttempts = 20; // Reasonable attempts to find a placeable configuration
+        const startTime = Date.now();
+        const maxTime = 5000; // 5 second timeout to prevent infinite loops
 
         for (let configAttempt = 0; configAttempt < maxConfigAttempts; configAttempt++) {
+            // Safety timeout check
+            if (Date.now() - startTime > maxTime) {
+                console.error(`⏱️ TIMEOUT: Exceeded ${maxTime}ms trying to generate mirrors`);
+                break;
+            }
+
             mirrors.length = 0; // Clear any previous failed attempt
             const mirrorConfigs = SurfaceAreaManager.generateMirrorsWithTargetSurfaceArea();
             let allPlacedSuccessfully = true;
+
+            console.log(`🔄 Config attempt ${configAttempt + 1}/${maxConfigAttempts}: Trying to place ${mirrorConfigs.length} mirrors...`);
 
             for (let config of mirrorConfigs) {
                 let mirror = this.createValidatedMirror(config, mirrors);
@@ -64,7 +74,7 @@ export class MirrorGenerator {
                     mirrors.push(mirror);
                 } else {
                     // Failed to place this mirror - need to try a new configuration
-                    console.warn(`⚠️ Failed to place ${config.shape} mirror (surface area: ${config.surfaceArea})`);
+                    console.warn(`⚠️ Failed to place ${config.shape} mirror (surface area: ${config.surfaceArea}) - ${mirrors.length}/${mirrorConfigs.length} placed`);
                     allPlacedSuccessfully = false;
                     break; // Stop trying this configuration
                 }
@@ -84,7 +94,7 @@ export class MirrorGenerator {
                     continue;
                 }
             } else {
-                console.log(`⚠️ Configuration ${configAttempt + 1} failed, trying new configuration...`);
+                console.log(`⚠️ Configuration ${configAttempt + 1} failed after placing ${mirrors.length}/${mirrorConfigs.length} mirrors`);
             }
         }
 
@@ -98,7 +108,7 @@ export class MirrorGenerator {
      * Create a validated mirror at a valid position
      */
     createValidatedMirror(config, existingMirrors) {
-        const maxAttempts = 200;
+        const maxAttempts = 100; // Reduced to prevent long loops
 
         for (let attempt = 0; attempt < maxAttempts; attempt++) {
             const pos = MirrorCreationHelper.generateRandomPosition();

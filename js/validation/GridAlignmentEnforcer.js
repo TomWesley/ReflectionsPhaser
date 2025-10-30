@@ -104,6 +104,10 @@ export class GridAlignmentEnforcer {
 
     /**
      * Align isosceles triangle: All 3 vertices must be on grid intersections
+     *
+     * CRITICAL: For perfect grid alignment:
+     * - width MUST be EVEN number of grid units (40, 80, 120) - NOT odd (20, 60, 100)
+     * - height can be any multiple of gridSize
      */
     static alignIsoscelesTriangle(mirror, gridSize) {
         const halfWidth = mirror.width / 2;
@@ -117,20 +121,45 @@ export class GridAlignmentEnforcer {
 
         if (rotation === 0 || rotation === 180) {
             // Horizontal base
-            // X must be on grid for apex
-            mirror.x = Math.round(mirror.x / gridSize) * gridSize;
 
-            // Bottom Y must be on grid line
-            const bottomGridLine = Math.round((mirror.y + halfHeight) / gridSize) * gridSize;
-            mirror.y = bottomGridLine - halfHeight;
+            // Step 1: Align base Y coordinate to grid
+            const baseY = Math.round((mirror.y + halfHeight) / gridSize) * gridSize;
+
+            // Step 2: Calculate apex Y from aligned base
+            const apexY = baseY - mirror.height;
+            mirror.y = (baseY + apexY) / 2;  // Center between base and apex
+
+            // Step 3: Align X so that BOTH base corners are on grid
+            // For base corners (x - halfWidth) and (x + halfWidth) to be on grid,
+            // x must be positioned such that halfWidth offsets land on grid intersections
+
+            if (halfWidth % gridSize === 0) {
+                // halfWidth is multiple of gridSize (20, 40, 60) - center on grid intersection
+                mirror.x = Math.round(mirror.x / gridSize) * gridSize;
+            } else {
+                // halfWidth is NOT multiple of gridSize - need offset center
+                const baseX = Math.round(mirror.x / gridSize) * gridSize;
+                mirror.x = baseX + gridSize / 2;
+            }
         } else if (rotation === 90 || rotation === 270) {
             // Vertical base
-            // Y must be on grid for apex
-            mirror.y = Math.round(mirror.y / gridSize) * gridSize;
 
-            // Base X must be on grid line
-            const baseGridLine = Math.round((mirror.x + halfHeight) / gridSize) * gridSize;
-            mirror.x = baseGridLine - halfHeight;
+            // Step 1: Align base X coordinate to grid
+            const baseX = Math.round((mirror.x + halfHeight) / gridSize) * gridSize;
+
+            // Step 2: Calculate apex X from aligned base
+            const apexX = baseX - mirror.height;
+            mirror.x = (baseX + apexX) / 2;
+
+            // Step 3: Align Y so that BOTH base corners are on grid
+            if (halfWidth % gridSize === 0) {
+                // halfWidth is multiple of gridSize - center on grid intersection
+                mirror.y = Math.round(mirror.y / gridSize) * gridSize;
+            } else {
+                // halfWidth is NOT multiple of gridSize - need offset center
+                const baseY = Math.round(mirror.y / gridSize) * gridSize;
+                mirror.y = baseY + gridSize / 2;
+            }
         }
     }
 

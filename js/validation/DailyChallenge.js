@@ -1,6 +1,7 @@
 import { CONFIG } from '../config.js';
 import { SeededRandom } from './SeededRandom.js';
 import { IronCladValidator } from './IronCladValidator.js';
+import { SurfaceAreaManager } from './SurfaceAreaManager.js';
 
 export class DailyChallenge {
     static getTodayString() {
@@ -27,31 +28,40 @@ export class DailyChallenge {
     
     static generateMirrors(rng) {
         const mirrors = [];
-        const mirrorCount = rng.nextInt(6, 10); // Slightly more mirrors for challenge
+        const MAX_SURFACE_AREA = 84; // Same as free play for fairness
+        let currentSurfaceArea = 0;
         const center = { x: CONFIG.CANVAS_WIDTH / 2, y: CONFIG.CANVAS_HEIGHT / 2 };
-        
+
         const shapes = ['square', 'rectangle', 'rightTriangle', 'isoscelesTriangle', 'trapezoid', 'parallelogram'];
-        
-        for (let i = 0; i < mirrorCount; i++) {
+
+        // Keep adding mirrors until we reach or get close to max surface area
+        let consecutiveFailures = 0;
+        const maxConsecutiveFailures = 5;
+
+        while (currentSurfaceArea < MAX_SURFACE_AREA && consecutiveFailures < maxConsecutiveFailures) {
+            const remainingSurfaceArea = MAX_SURFACE_AREA - currentSurfaceArea;
+
+            // Try to create a mirror that fits in remaining surface area
             let attempts = 0;
             let mirror;
-            
+            let mirrorSurfaceArea;
+
             do {
                 // Generate position in ring around center (similar to free play but more constrained)
                 const angle = rng.nextFloat(0, Math.PI * 2);
                 const distance = rng.nextFloat(140, 200); // Tighter ring for more strategic placement
-                
+
                 let x = center.x + Math.cos(angle) * distance;
                 let y = center.y + Math.sin(angle) * distance;
-                
+
                 // Snap to grid
                 x = Math.round(x / CONFIG.GRID_SIZE) * CONFIG.GRID_SIZE;
                 y = Math.round(y / CONFIG.GRID_SIZE) * CONFIG.GRID_SIZE;
-                
+
                 // Create mirror with predetermined properties
                 const shape = rng.choice(shapes);
-                const size = this.getMirrorSize(rng, shape);
-                
+                const size = this.getMirrorSize(rng, shape, remainingSurfaceArea);
+
                 mirror = {
                     shape,
                     size,
@@ -59,47 +69,66 @@ export class DailyChallenge {
                     y,
                     width: size,
                     height: size,
-                    rotation: (shape === 'rightTriangle' || shape === 'isoscelesTriangle' || 
-                              shape === 'trapezoid' || shape === 'parallelogram') 
+                    rotation: (shape === 'rightTriangle' || shape === 'isoscelesTriangle' ||
+                              shape === 'trapezoid' || shape === 'parallelogram')
                         ? rng.choice([0, 90, 180, 270]) : 0,
                     isDragging: false
                 };
-                
+
                 // Set specific properties based on shape
                 if (shape === 'rectangle') {
-                    mirror.height = this.getMirrorSize(rng, shape);
+                    mirror.height = this.getMirrorSize(rng, shape, remainingSurfaceArea);
                     // Ensure rectangle is actually rectangular
                     if (mirror.width === mirror.height) {
-                        mirror.height = this.getMirrorSize(rng, shape);
+                        mirror.height = this.getMirrorSize(rng, shape, remainingSurfaceArea);
                     }
                 } else if (shape === 'trapezoid') {
-                    mirror.height = this.getMirrorSize(rng, shape);
+                    mirror.height = this.getMirrorSize(rng, shape, remainingSurfaceArea);
                     mirror.topWidth = rng.choice([20, 40]); // Smaller top base
                     mirror.width = Math.max(mirror.topWidth + 20, size); // Ensure bottom > top
                 } else if (shape === 'parallelogram') {
-                    mirror.height = this.getMirrorSize(rng, shape);
+                    mirror.height = this.getMirrorSize(rng, shape, remainingSurfaceArea);
                     mirror.skew = rng.choice([20, 40]); // Horizontal skew amount
                 }
-                
+
+                // Calculate surface area of this mirror
+                mirrorSurfaceArea = SurfaceAreaManager.calculateMirrorSurfaceArea(mirror);
+
                 attempts++;
-            } while (!this.isValidMirrorPosition(mirror, mirrors) && attempts < 50);
-            
-            if (attempts < 50) {
+            } while ((!this.isValidMirrorPosition(mirror, mirrors) ||
+                      currentSurfaceArea + mirrorSurfaceArea > MAX_SURFACE_AREA) &&
+                     attempts < 50);
+
+            if (attempts < 50 && currentSurfaceArea + mirrorSurfaceArea <= MAX_SURFACE_AREA) {
                 mirrors.push(mirror);
+                currentSurfaceArea += mirrorSurfaceArea;
+                consecutiveFailures = 0;
+                console.log(`Daily Challenge: Added ${mirror.shape} (${mirrorSurfaceArea}) - total: ${currentSurfaceArea}/${MAX_SURFACE_AREA}`);
+            } else {
+                consecutiveFailures++;
             }
         }
-        
+
+        const finalSurfaceArea = SurfaceAreaManager.calculateTotalSurfaceArea(mirrors);
+        console.log(`✅ Daily Challenge mirrors: ${mirrors.length} mirrors, ${finalSurfaceArea} surface area (max: ${MAX_SURFACE_AREA})`);
+
         return mirrors;
     }
     
-    static getMirrorSize(rng, shape) {
+    static getMirrorSize(rng, shape, remainingSurfaceArea = Infinity) {
+        // Choose sizes that are likely to fit in remaining surface area
+        // This is a rough heuristic - actual surface area calculated later
+
         if (shape === 'rightTriangle' || shape === 'isoscelesTriangle') {
-            // Triangle sizes: 40px or 80px (ensures grid alignment)
-            return rng.choice([40, 80]);
+            // Triangle sizes: 20px, 40px, 60px, 80px (ensures grid alignment)
+            // Smaller triangles if running low on surface area
+            const sizes = remainingSurfaceArea < 15 ? [20, 40] : [20, 40, 60, 80];
+            return rng.choice(sizes);
         }
-        
+
         // Square/rectangle sizes in 20px increments
-        const sizes = [20, 40, 60];
+        // Prefer smaller sizes if running low on surface area
+        const sizes = remainingSurfaceArea < 12 ? [20, 40] : [20, 40, 60, 80];
         return rng.choice(sizes);
     }
     

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Test</title>
+</head>
+<body>
+    <h1>Testing Mirror Generation</h1>
+    <button onclick="testGeneration()">Test Generation</button>
+    <pre id="output"></pre>
+
+    <script type="module">
+        import { SurfaceAreaManager } from './js/validation/SurfaceAreaManager.js';
+
+        window.testGeneration = function() {
+            const output = document.getElementById('output');
+            output.innerHTML = 'Starting test...\n';
+
+            try {
+                console.log('Test 1: getAllPossibleMirrors');
+                const possible = SurfaceAreaManager.getAllPossibleMirrors();
+                output.innerHTML += `✓ Got ${possible.length} possible mirrors\n`;
+
+                console.log('Test 2: generateMirrorsWithTargetSurfaceArea');
+                const mirrors = SurfaceAreaManager.generateMirrorsWithTargetSurfaceArea();
+                output.innerHTML += `✓ Generated ${mirrors.length} mirrors\n`;
+
+                const totalArea = SurfaceAreaManager.calculateTotalSurfaceArea(mirrors);
+                output.innerHTML += `✓ Total surface area: ${totalArea}\n`;
+            } catch (error) {
+                output.innerHTML += `❌ Error: ${error.message}\n`;
+                console.error(error);
+            }
+        };
+    </script>
+</body>
+</html>
