@@ -199,7 +199,7 @@ export class SurfaceAreaManager {
     /**
      * Generate mirrors for free play mode with EXACTLY target surface area
      * This MUST return exactly 84 surface area for fair scoring
-     * Target: 6-10 mirrors (average around 8) for easier placement
+     * Target: 6-15 mirrors with variety (sometimes small, sometimes medium, sometimes large)
      *
      * SIMPLE APPROACH: Add mirrors one at a time, then pick final mirror to hit exact total
      */
@@ -213,16 +213,29 @@ export class SurfaceAreaManager {
         const selectedMirrors = [];
         let currentArea = 0;
 
-        // Get unique surface area values for variety
-        const uniqueAreas = [...new Set(possibleMirrors.map(m => m.surfaceArea))];
+        // Randomly choose a strategy for VARIETY
+        const strategies = [
+            { name: 'tiny', range: [4, 8], targetCount: 12 },      // Lots of tiny mirrors
+            { name: 'small', range: [6, 10], targetCount: 10 },    // Many small mirrors
+            { name: 'medium', range: [8, 14], targetCount: 8 },    // Medium mirrors (default)
+            { name: 'large', range: [12, 20], targetCount: 6 },    // Fewer large mirrors
+            { name: 'mixed', range: [4, 20], targetCount: 8 }      // Complete variety
+        ];
+
+        const strategy = strategies[Math.floor(Math.random() * strategies.length)];
+        console.log(`  Using strategy: ${strategy.name} (area ${strategy.range[0]}-${strategy.range[1]}, ~${strategy.targetCount} mirrors)`);
 
         // Step 1: Add random mirrors until we're close to target (leave room for final mirror)
-        // Target around 7-8 mirrors, so average ~10-12 per mirror
-        const mediumMirrors = possibleMirrors.filter(m => m.surfaceArea >= 8 && m.surfaceArea <= 14);
+        const mirrorPool = possibleMirrors.filter(m =>
+            m.surfaceArea >= strategy.range[0] && m.surfaceArea <= strategy.range[1]
+        );
 
-        while (selectedMirrors.length < minMirrors - 1 && currentArea < targetArea - 20) {
-            // Pick a random medium-sized mirror
-            const randomMirror = mediumMirrors[Math.floor(Math.random() * mediumMirrors.length)];
+        // If pool is too small, fall back to all mirrors
+        const selectedPool = mirrorPool.length > 10 ? mirrorPool : possibleMirrors;
+
+        while (selectedMirrors.length < strategy.targetCount - 2 && currentArea < targetArea - 20) {
+            // Pick a random mirror from our strategy pool
+            const randomMirror = selectedPool[Math.floor(Math.random() * selectedPool.length)];
             const mirrorCopy = { ...randomMirror };
 
             // Add random rotation for asymmetric shapes

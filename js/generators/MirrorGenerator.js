@@ -86,8 +86,25 @@ export class MirrorGenerator {
 
                 // CRITICAL: Verify we hit the target exactly
                 if (totalSurfaceArea === SurfaceAreaManager.TARGET_SURFACE_AREA) {
-                    console.log(`✅ Successfully placed all mirrors with exact target surface area!`);
-                    return mirrors;
+                    // FINAL IRON-CLAD CHECK: Validate EVERY mirror before accepting this configuration
+                    console.log(`🔍 Running final validation on all ${mirrors.length} mirrors...`);
+                    let allValid = true;
+                    for (let i = 0; i < mirrors.length; i++) {
+                        const validation = IronCladValidator.validateMirror(mirrors[i], mirrors);
+                        if (!validation.valid) {
+                            console.error(`❌ Mirror ${i} (${mirrors[i].shape}) failed validation:`, validation.allViolations);
+                            allValid = false;
+                            break;
+                        }
+                    }
+
+                    if (allValid) {
+                        console.log(`✅ All mirrors validated successfully! Configuration is iron-clad.`);
+                        return mirrors;
+                    } else {
+                        console.warn(`⚠️ Configuration had invalid mirrors, regenerating...`);
+                        continue;
+                    }
                 } else {
                     console.error(`❌ CRITICAL: Surface area mismatch! Got ${totalSurfaceArea}, expected ${SurfaceAreaManager.TARGET_SURFACE_AREA}`);
                     // Try another configuration

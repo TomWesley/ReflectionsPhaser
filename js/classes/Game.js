@@ -72,19 +72,56 @@ export class Game {
     }
     
     setupEventListeners() {
-        // Mouse events on canvas
+        // Store bound functions so we can add/remove them properly
+        this.boundMouseMove = this.onMouseMove.bind(this);
+        this.boundMouseUp = this.handleDragEnd.bind(this);
+
+        // Mouse down only on canvas
         this.canvas.addEventListener('mousedown', (e) => this.onMouseDown(e));
-        this.canvas.addEventListener('mousemove', (e) => this.onMouseMove(e));
-        this.canvas.addEventListener('mouseup', (e) => this.onMouseUp(e));
-        this.canvas.addEventListener('mouseleave', (e) => this.onMouseLeave(e));
-        
-        // Global mouse events to handle off-canvas dragging
-        document.addEventListener('mousemove', (e) => this.onGlobalMouseMove(e));
-        document.addEventListener('mouseup', (e) => this.onGlobalMouseUp(e));
-        
+
         // UI buttons
         document.getElementById('launchBtn').addEventListener('click', () => this.launchLasers());
         document.getElementById('resetBtn').addEventListener('click', () => this.resetGame());
+    }
+
+    startDragging(mirror, mouseX, mouseY) {
+        this.draggedMirror = mirror;
+        this.dragOffset.x = mouseX - mirror.x;
+        this.dragOffset.y = mouseY - mirror.y;
+        this.dragStartPos.x = mouseX;
+        this.dragStartPos.y = mouseY;
+        this.mouseHasMoved = false;
+        this.canvas.style.cursor = 'grabbing';
+        mirror.isDragging = true;
+
+        // Store original position for potential revert
+        mirror.originalX = mirror.x;
+        mirror.originalY = mirror.y;
+
+        // Add global event listeners for drag
+        // These will work anywhere on the page
+        document.addEventListener('mousemove', this.boundMouseMove);
+        document.addEventListener('mouseup', this.boundMouseUp);
+
+        console.log('Started dragging mirror at', mirror.x, mirror.y);
+    }
+
+    stopDragging() {
+        console.log('🛑 Stopping drag and removing event listeners...');
+
+        // Remove global event listeners
+        document.removeEventListener('mousemove', this.boundMouseMove);
+        document.removeEventListener('mouseup', this.boundMouseUp);
+
+        // Reset all drag state
+        if (this.draggedMirror) {
+            this.draggedMirror.isDragging = false;
+        }
+        this.draggedMirror = null;
+        this.mouseHasMoved = false;
+        this.canvas.style.cursor = 'crosshair';
+
+        console.log('✅ Drag stopped, event listeners removed');
     }
     
     
@@ -145,17 +182,20 @@ export class Game {
             return;
         }
 
-        // IRON-CLAD PRE-LAUNCH VALIDATION: Run full validation report
-        console.log('🔍 Running pre-launch validation...');
+        // All mirrors should already be valid (enforced during generation and drag)
+        // But run a quick safety check anyway
+        console.log('🔍 Running quick safety check...');
         const validationReport = IronCladValidator.generateReport(this.mirrors);
 
         if (!validationReport.allValid) {
-            console.error('❌ CANNOT LAUNCH: Validation violations detected!');
-            console.error('Fix all violations before launching lasers');
+            console.error('❌ CRITICAL BUG: Invalid mirrors detected at launch time!');
+            console.error('This should NEVER happen - mirrors should always be valid');
+            console.error('Attempting to fix by regenerating...');
+            this.resetGame();
             return;
         }
 
-        console.log('🚀 Launching lasers - initializing collision system...');
+        console.log('✅ All mirrors valid - launching lasers!');
 
         // Show brief loading message
         const statusEl = document.getElementById('status');
@@ -273,21 +313,7 @@ export class Game {
             }
             
             if (isMouseOverMirror) {
-                
-                this.draggedMirror = mirror;
-                this.dragOffset.x = mouseX - mirror.x;
-                this.dragOffset.y = mouseY - mirror.y;
-                this.dragStartPos.x = mouseX;
-                this.dragStartPos.y = mouseY;
-                this.mouseHasMoved = false;
-                this.canvas.style.cursor = 'grabbing';
-                mirror.isDragging = true;
-                
-                // Store original position for potential revert
-                mirror.originalX = mirror.x;
-                mirror.originalY = mirror.y;
-                
-                console.log('Started dragging mirror at', mirror.x, mirror.y);
+                this.startDragging(mirror, mouseX, mouseY);
                 break;
             }
         }
@@ -330,115 +356,98 @@ export class Game {
         this.safeUpdateVertices(this.draggedMirror);
     }
     
-    onMouseUp(e) {
-        if (this.draggedMirror) {
-            // If mouse didn't move, just restore original position and exit
+    handleDragEnd(e) {
+        if (!this.draggedMirror) return;
+
+        console.log('🎯 Mouse released - finalizing mirror placement...');
+
+        const mirror = this.draggedMirror;
+
+        // CRITICAL: Use try/finally to ensure stopDragging is ALWAYS called
+        try {
+            // Clear dragging flag immediately
+            mirror.isDragging = false;
+
+            // If mouse didn't move, just keep it where it was
             if (!this.mouseHasMoved) {
-                this.draggedMirror.isDragging = false;
-                this.canvas.style.cursor = 'default';
-                this.draggedMirror = null;
+                console.log('  No movement detected, keeping mirror at original position');
                 return;
             }
 
-            // Get the final mouse position
+            // Get the final drop position
             const rect = this.canvas.getBoundingClientRect();
             const mouseX = e.clientX - rect.left;
             const mouseY = e.clientY - rect.top;
-
-            // Calculate exact drop position (accounting for drag offset)
             const dropX = mouseX - this.dragOffset.x;
             const dropY = mouseY - this.dragOffset.y;
 
-            // Snap to nearest grid intersection
-            const targetX = this.snapToGrid(dropX);
-            const targetY = this.snapToGrid(dropY);
+            console.log(`  Attempting to place at (${Math.round(dropX)}, ${Math.round(dropY)})`);
 
-            // Set target position
-            this.draggedMirror.x = targetX;
-            this.draggedMirror.y = targetY;
+            // STEP 1: Try to place at exact drop position (snapped to grid)
+            mirror.x = this.snapToGrid(dropX);
+            mirror.y = this.snapToGrid(dropY);
+            GridAlignmentEnforcer.enforceGridAlignment(mirror);
+            this.safeUpdateVertices(mirror);
 
-            // IRON-CLAD STEP 1: Force grid alignment
-            GridAlignmentEnforcer.enforceGridAlignment(this.draggedMirror);
-            this.safeUpdateVertices(this.draggedMirror);
+            let validation = IronCladValidator.validateMirror(mirror, this.mirrors);
 
-            // CRITICAL: Clear isDragging flag BEFORE validation so overlap detection works properly
-            this.draggedMirror.isDragging = false;
+            if (validation.valid) {
+                console.log(`  ✅ Valid placement at (${mirror.x}, ${mirror.y})`);
+            } else {
+                // STEP 2: Find nearest valid position
+                console.log(`  ❌ Invalid at drop point:`, validation.allViolations);
+                console.log(`  🔍 Searching for nearest valid position...`);
 
-            // IRON-CLAD STEP 2: Validate with all 3 rules
-            const validation = IronCladValidator.validateMirror(this.draggedMirror, this.mirrors);
-
-            if (!validation.valid) {
-                console.warn(`🚨 Invalid placement at (${this.draggedMirror.x}, ${this.draggedMirror.y}):`, validation.allViolations);
-
-                // Try to find nearest valid position using smart algorithm
-                const nearestValid = this.findNearestValidPositionSmart(this.draggedMirror, dropX, dropY);
+                const nearestValid = this.findNearestValidPositionSmart(mirror, dropX, dropY);
 
                 if (nearestValid) {
-                    console.log(`✨ Found valid position nearby at (${nearestValid.x}, ${nearestValid.y})`);
-                    this.draggedMirror.x = nearestValid.x;
-                    this.draggedMirror.y = nearestValid.y;
+                    mirror.x = nearestValid.x;
+                    mirror.y = nearestValid.y;
+                    GridAlignmentEnforcer.enforceGridAlignment(mirror);
+                    this.safeUpdateVertices(mirror);
 
-                    // MANDATORY: Force grid alignment (this may adjust x/y slightly)
-                    GridAlignmentEnforcer.enforceGridAlignment(this.draggedMirror);
-                    this.safeUpdateVertices(this.draggedMirror);
-
-                    // FINAL VERIFICATION: Triple-check everything is valid
-                    const finalValidation = IronCladValidator.validateMirror(this.draggedMirror, this.mirrors);
-                    if (!finalValidation.valid) {
-                        console.error('❌ CRITICAL: Smart placement failed final validation!');
-                        console.error('Violations:', finalValidation.allViolations);
-                        console.error('Reverting to original position');
-                        this.draggedMirror.x = this.draggedMirror.originalX;
-                        this.draggedMirror.y = this.draggedMirror.originalY;
-                        GridAlignmentEnforcer.enforceGridAlignment(this.draggedMirror);
-                        this.safeUpdateVertices(this.draggedMirror);
+                    // Verify it's actually valid
+                    validation = IronCladValidator.validateMirror(mirror, this.mirrors);
+                    if (validation.valid) {
+                        console.log(`  ✅ Moved to valid position at (${mirror.x}, ${mirror.y})`);
                     } else {
-                        console.log(`✅ Final verification passed - mirror at (${this.draggedMirror.x}, ${this.draggedMirror.y})`);
+                        console.error(`  ❌ Nearest position still invalid! Reverting to original.`);
+                        mirror.x = mirror.originalX;
+                        mirror.y = mirror.originalY;
+                        GridAlignmentEnforcer.enforceGridAlignment(mirror);
+                        this.safeUpdateVertices(mirror);
                     }
                 } else {
-                    console.warn('⚠️ No valid position found nearby, reverting to original position');
-                    this.draggedMirror.x = this.draggedMirror.originalX;
-                    this.draggedMirror.y = this.draggedMirror.originalY;
-                    GridAlignmentEnforcer.enforceGridAlignment(this.draggedMirror);
-                    this.safeUpdateVertices(this.draggedMirror);
-                }
-            } else {
-                console.log(`✅ Mirror placed at valid position (${this.draggedMirror.x}, ${this.draggedMirror.y})`);
-            }
-
-            // ULTIMATE SAFETY CHECK: Verify grid alignment
-            const alignmentCheck = GridAlignmentEnforcer.verifyAlignment(this.draggedMirror);
-            if (!alignmentCheck.aligned) {
-                console.error('🚨 GRID ALIGNMENT VIOLATION DETECTED!');
-                console.error('Alignment errors:', alignmentCheck.errors);
-                console.error('Attempting emergency realignment...');
-
-                // Emergency realignment
-                GridAlignmentEnforcer.enforceGridAlignment(this.draggedMirror);
-                this.safeUpdateVertices(this.draggedMirror);
-
-                // Re-verify
-                const recheckAlignment = GridAlignmentEnforcer.verifyAlignment(this.draggedMirror);
-                if (!recheckAlignment.aligned) {
-                    console.error('❌ EMERGENCY REALIGNMENT FAILED! Reverting to original position.');
-                    this.draggedMirror.x = this.draggedMirror.originalX;
-                    this.draggedMirror.y = this.draggedMirror.originalY;
-                    GridAlignmentEnforcer.enforceGridAlignment(this.draggedMirror);
-                    this.safeUpdateVertices(this.draggedMirror);
-                } else {
-                    console.log('✅ Emergency realignment successful');
+                    console.warn(`  ⚠️ No valid position found anywhere, reverting to original`);
+                    mirror.x = mirror.originalX;
+                    mirror.y = mirror.originalY;
+                    GridAlignmentEnforcer.enforceGridAlignment(mirror);
+                    this.safeUpdateVertices(mirror);
                 }
             }
-        }
-        this.draggedMirror = null;
-        this.canvas.style.cursor = 'crosshair';
-    }
-    
-    onMouseLeave(e) {
-        // When mouse leaves canvas, continue tracking with global events
-        // Don't cancel drag here - let global mouseup handle it
-        if (this.draggedMirror) {
-            console.log('Mouse left canvas during drag - continuing with global tracking');
+
+            // FINAL SAFETY: One last validation check
+            const finalCheck = IronCladValidator.validateMirror(mirror, this.mirrors);
+            if (!finalCheck.valid) {
+                console.error(`  🚨 CRITICAL: Mirror still invalid after all attempts!`);
+                console.error(`  Forcing revert to original position`);
+                mirror.x = mirror.originalX;
+                mirror.y = mirror.originalY;
+                GridAlignmentEnforcer.enforceGridAlignment(mirror);
+                this.safeUpdateVertices(mirror);
+            }
+
+            console.log('✅ Drag complete\n');
+        } catch (error) {
+            console.error('❌ Error during drag end:', error);
+            // Revert to original position on any error
+            mirror.x = mirror.originalX;
+            mirror.y = mirror.originalY;
+            GridAlignmentEnforcer.enforceGridAlignment(mirror);
+            this.safeUpdateVertices(mirror);
+        } finally {
+            // CRITICAL: Clean up and remove event listeners NO MATTER WHAT
+            this.stopDragging();
         }
     }
     
@@ -471,14 +480,7 @@ export class Game {
             this.mouseHasMoved = true;
         }
     }
-    
-    onGlobalMouseUp(e) {
-        // Handle mouse up anywhere on the page
-        if (this.draggedMirror) {
-            this.onMouseUp(e);
-        }
-    }
-    
+
     ensureMirrorShapeAlignment(mirror) {
         GridAlignmentSystem.ensureMirrorShapeAlignment(mirror, this);
     }
