@@ -383,47 +383,21 @@ export class Game {
 
             console.log(`  Attempting to place at (${Math.round(dropX)}, ${Math.round(dropY)})`);
 
-            // STEP 1: Try to place at exact drop position (snapped to grid)
-            mirror.x = this.snapToGrid(dropX);
-            mirror.y = this.snapToGrid(dropY);
-            GridAlignmentEnforcer.enforceGridAlignment(mirror);
-            this.safeUpdateVertices(mirror);
+            // Find nearest valid position (includes drop point as first attempt)
+            const nearestValid = this.findNearestValidPositionSmart(mirror, dropX, dropY);
 
-            let validation = IronCladValidator.validateMirror(mirror, this.mirrors);
-
-            if (validation.valid) {
-                console.log(`  ✅ Valid placement at (${mirror.x}, ${mirror.y})`);
+            if (nearestValid) {
+                // nearestValid already has the correctly aligned position
+                mirror.x = nearestValid.x;
+                mirror.y = nearestValid.y;
+                this.safeUpdateVertices(mirror);
+                console.log(`  ✅ Placed at (${mirror.x}, ${mirror.y})`);
             } else {
-                // STEP 2: Find nearest valid position
-                console.log(`  ❌ Invalid at drop point:`, validation.allViolations);
-                console.log(`  🔍 Searching for nearest valid position...`);
-
-                const nearestValid = this.findNearestValidPositionSmart(mirror, dropX, dropY);
-
-                if (nearestValid) {
-                    mirror.x = nearestValid.x;
-                    mirror.y = nearestValid.y;
-                    GridAlignmentEnforcer.enforceGridAlignment(mirror);
-                    this.safeUpdateVertices(mirror);
-
-                    // Verify it's actually valid
-                    validation = IronCladValidator.validateMirror(mirror, this.mirrors);
-                    if (validation.valid) {
-                        console.log(`  ✅ Moved to valid position at (${mirror.x}, ${mirror.y})`);
-                    } else {
-                        console.error(`  ❌ Nearest position still invalid! Reverting to original.`);
-                        mirror.x = mirror.originalX;
-                        mirror.y = mirror.originalY;
-                        GridAlignmentEnforcer.enforceGridAlignment(mirror);
-                        this.safeUpdateVertices(mirror);
-                    }
-                } else {
-                    console.warn(`  ⚠️ No valid position found anywhere, reverting to original`);
-                    mirror.x = mirror.originalX;
-                    mirror.y = mirror.originalY;
-                    GridAlignmentEnforcer.enforceGridAlignment(mirror);
-                    this.safeUpdateVertices(mirror);
-                }
+                console.warn(`  ⚠️ No valid position found, reverting to original`);
+                mirror.x = mirror.originalX;
+                mirror.y = mirror.originalY;
+                GridAlignmentEnforcer.enforceGridAlignment(mirror);
+                this.safeUpdateVertices(mirror);
             }
 
             // FINAL SAFETY: One last validation check
@@ -537,6 +511,13 @@ export class Game {
                 this.safeUpdateVertices(testMirror);
             }
 
+            // CRITICAL: Add getVertices method that the validator expects
+            if (!testMirror.getVertices) {
+                testMirror.getVertices = function() {
+                    return this.vertices || [];
+                };
+            }
+
             return testMirror;
         };
 
@@ -570,7 +551,8 @@ export class Game {
         }
 
         // STEP 3: Expanding grid search from drop point (prioritize closer positions)
-        const maxRadius = 15; // Grid cells
+        // Search the ENTIRE board - with 800x600 canvas and 20px grid, that's 40x30 cells
+        const maxRadius = 50; // Grid cells - guaranteed to cover entire board
         const gridSize = CONFIG.GRID_SIZE;
 
         for (let radius = 1; radius <= maxRadius; radius++) {
@@ -585,9 +567,9 @@ export class Game {
                         const testX = this.snapToGrid(startX + dx * gridSize);
                         const testY = this.snapToGrid(startY + dy * gridSize);
 
-                        // Skip if out of bounds
-                        if (testX < 50 || testX > CONFIG.CANVAS_WIDTH - 50 ||
-                            testY < 50 || testY > CONFIG.CANVAS_HEIGHT - 50) {
+                        // Skip if out of bounds (with safety margin)
+                        if (testX < 60 || testX > CONFIG.CANVAS_WIDTH - 60 ||
+                            testY < 60 || testY > CONFIG.CANVAS_HEIGHT - 60) {
                             continue;
                         }
 
@@ -604,11 +586,26 @@ export class Game {
             // Test each position in order
             for (const pos of positions) {
                 const result = testPosition(pos.x, pos.y);
-                if (result) return result;
+                if (result) {
+                    console.log(`  ✅ Found valid position at radius ${radius} (${pos.x}, ${pos.y})`);
+                    return result;
+                }
             }
         }
 
-        // No valid position found
+        // STEP 4: LAST RESORT - If we still haven't found anything, try EVERY single grid position
+        console.warn('  ⚠️ Expanding to full board search...');
+        for (let testX = 60; testX < CONFIG.CANVAS_WIDTH - 60; testX += gridSize) {
+            for (let testY = 60; testY < CONFIG.CANVAS_HEIGHT - 60; testY += gridSize) {
+                const result = testPosition(testX, testY);
+                if (result) {
+                    console.log(`  ✅ Found valid position in full scan at (${testX}, ${testY})`);
+                    return result;
+                }
+            }
+        }
+
+        console.error('  ❌ CRITICAL: No valid position found on ENTIRE board!');
         return null;
     }
     

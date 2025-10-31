@@ -89,10 +89,23 @@ export class MirrorGenerator {
                     // FINAL IRON-CLAD CHECK: Validate EVERY mirror before accepting this configuration
                     console.log(`🔍 Running final validation on all ${mirrors.length} mirrors...`);
                     let allValid = true;
+
+                    // First, validate each mirror individually
                     for (let i = 0; i < mirrors.length; i++) {
-                        const validation = IronCladValidator.validateMirror(mirrors[i], mirrors);
+                        const mirror = mirrors[i];
+
+                        // Create array of OTHER mirrors (exclude the current one)
+                        const otherMirrors = mirrors.filter((m, idx) => idx !== i);
+
+                        const validation = IronCladValidator.validateMirror(mirror, otherMirrors);
                         if (!validation.valid) {
-                            console.error(`❌ Mirror ${i} (${mirrors[i].shape}) failed validation:`, validation.allViolations);
+                            console.error(`❌ Mirror ${i} (${mirror.shape}) at (${mirror.x}, ${mirror.y}) failed validation:`);
+                            console.error(`   Rule 1 (Grid): ${validation.rule1.valid ? '✓' : '✗'}`);
+                            console.error(`   Rule 2 (No overlap): ${validation.rule2.valid ? '✓' : '✗'}`);
+                            console.error(`   Rule 3 (No forbidden): ${validation.rule3.valid ? '✓' : '✗'}`);
+                            if (validation.rule2.violations.length > 0) {
+                                console.error(`   Overlap violations:`, validation.rule2.violations);
+                            }
                             allValid = false;
                             break;
                         }
@@ -151,8 +164,13 @@ export class MirrorGenerator {
             const validation = IronCladValidator.validateMirror(mirror, existingMirrors);
 
             if (validation.valid) {
-                console.log(`✓ Created valid ${mirror.shape} mirror at (${mirror.x}, ${mirror.y})`);
+                console.log(`✓ Created valid ${mirror.shape} mirror at (${mirror.x}, ${mirror.y}) [${existingMirrors.length} existing mirrors]`);
                 return mirror;
+            } else {
+                // Log why it's invalid (but only occasionally to avoid spam)
+                if (attempt % 20 === 0) {
+                    console.log(`  Attempt ${attempt}: ${mirror.shape} at (${mirror.x}, ${mirror.y}) invalid - R1:${validation.rule1.valid ? '✓' : '✗'} R2:${validation.rule2.valid ? '✓' : '✗'} R3:${validation.rule3.valid ? '✓' : '✗'}`);
+                }
             }
 
             // Try to find nearby valid position
