@@ -464,64 +464,76 @@ export class Game {
     }
     
     /**
-     * Get the primary vertex for a shape - this is the anchor point for snapping
+     * Get the theoretical offset from center to primary vertex for this shape
+     * This is FIXED for each shape type and doesn't change during drag
      */
-    getPrimaryVertex(mirror) {
-        // Use first vertex as primary anchor point
-        // Vertices are already calculated during drag
-        const vertices = mirror.vertices || mirror.getVertices();
-        if (vertices && vertices.length > 0) {
-            return { x: vertices[0].x, y: vertices[0].y };
-        }
-
-        // Fallback: use top-left corner based on shape
+    getPrimaryVertexOffset(mirror) {
         switch (mirror.shape) {
             case 'square':
+                const halfSize = mirror.size / 2;
+                return { x: -halfSize, y: -halfSize }; // Top-left corner
+
             case 'rectangle':
                 const halfWidth = mirror.width / 2;
                 const halfHeight = mirror.height / 2;
-                return { x: mirror.x - halfWidth, y: mirror.y - halfHeight };
+                return { x: -halfWidth, y: -halfHeight }; // Top-left corner
+
+            case 'rightTriangle':
+            case 'isoscelesTriangle':
+            case 'trapezoid':
+            case 'parallelogram':
+                // For complex shapes, use first vertex from a fresh calculation
+                const tempMirror = {
+                    ...mirror,
+                    isDragging: false
+                };
+                this.safeUpdateVertices(tempMirror);
+                const vertices = tempMirror.vertices || tempMirror.getVertices();
+                if (vertices && vertices.length > 0) {
+                    return {
+                        x: vertices[0].x - tempMirror.x,
+                        y: vertices[0].y - tempMirror.y
+                    };
+                }
+                return { x: 0, y: 0 };
+
             default:
-                return { x: mirror.x, y: mirror.y };
+                return { x: 0, y: 0 };
         }
     }
 
     findNearestValidPositionSmart(mirror, dropX, dropY) {
         /**
-         * VERTEX-BASED SNAPPING:
-         * 1. Find where the primary vertex currently is
-         * 2. Snap that vertex to nearest grid intersection
-         * 3. Calculate where mirror center should be
-         * 4. Test if valid, if not, try nearby grid intersections for the vertex
+         * GRID-COORDINATE-BASED SNAPPING - Simple and intuitive:
+         * 1. Convert current mirror position to grid coordinates
+         * 2. Test that exact grid cell
+         * 3. If invalid, try adjacent grid cells in order of distance
+         *
+         * Think in GRID CELLS, not pixels!
          */
 
-        const gridSize = CONFIG.GRID_SIZE;
+        const GRID = CONFIG.GRID_SIZE; // 20px per grid cell
 
-        // Get current primary vertex position
-        const primaryVertex = this.getPrimaryVertex(mirror);
-        console.log(`  📍 Mirror center at (${mirror.x.toFixed(1)}, ${mirror.y.toFixed(1)})`);
-        console.log(`  📍 Primary vertex at (${primaryVertex.x.toFixed(1)}, ${primaryVertex.y.toFixed(1)})`);
+        // Convert pixel position to grid coordinates
+        const toGridCoords = (px, py) => ({
+            gx: Math.round(px / GRID),
+            gy: Math.round(py / GRID)
+        });
 
-        // Calculate offset from mirror center to primary vertex
-        const vertexOffsetX = primaryVertex.x - mirror.x;
-        const vertexOffsetY = primaryVertex.y - mirror.y;
-        console.log(`  📐 Vertex offset from center: (${vertexOffsetX.toFixed(1)}, ${vertexOffsetY.toFixed(1)})`);
+        // Convert grid coordinates to pixel position
+        const toPixels = (gx, gy) => ({
+            px: gx * GRID,
+            py: gy * GRID
+        });
 
-        // Helper to test if placing primary vertex at a grid intersection is valid
-        const testVertexPosition = (vertexX, vertexY) => {
-            // Calculate where mirror center would be if vertex is at this position
-            const mirrorX = vertexX - vertexOffsetX;
-            const mirrorY = vertexY - vertexOffsetY;
+        console.log(`  📍 Mirror currently at (${mirror.x}, ${mirror.y} pixels)`);
 
-            console.log(`  🧪 Testing vertex at (${vertexX}, ${vertexY}) → mirror center would be (${mirrorX.toFixed(1)}, ${mirrorY.toFixed(1)})`);
-            const centerDist = Math.sqrt((mirrorX - mirror.x) ** 2 + (mirrorY - mirror.y) ** 2);
-            console.log(`      Mirror would move ${centerDist.toFixed(1)}px from current position`);
-
-            // Create test mirror
+        // Test if a position is valid (pixels, not grid coords)
+        const testPosition = (px, py) => {
             const testMirror = {
                 ...mirror,
-                x: mirrorX,
-                y: mirrorY,
+                x: px,
+                y: py,
                 isDragging: false,
                 size: mirror.size,
                 width: mirror.width,
@@ -532,7 +544,11 @@ export class Game {
                 skew: mirror.skew
             };
 
-            // Update vertices
+            // CRITICAL: Use GridAlignmentEnforcer to ensure vertices are on grid
+            // This may shift the position slightly to achieve perfect grid alignment
+            GridAlignmentEnforcer.enforceGridAlignment(testMirror);
+
+            // Update vertices AFTER alignment
             if (typeof testMirror.updateVertices === 'function') {
                 testMirror.updateVertices();
             } else if (typeof mirror.calculateVertices === 'function') {
@@ -542,7 +558,6 @@ export class Game {
                 this.safeUpdateVertices(testMirror);
             }
 
-            // Add getVertices method
             if (!testMirror.getVertices) {
                 testMirror.getVertices = function() {
                     return this.vertices || [];
@@ -550,7 +565,9 @@ export class Game {
             }
 
             // Validate
-            const validation = IronCladValidator.validateMirror(testMirror, this.mirrors);
+            // CRITICAL: Exclude the original mirror from validation
+            const otherMirrors = this.mirrors.filter(m => m !== mirror);
+            const validation = IronCladValidator.validateMirror(testMirror, otherMirrors);
 
             if (validation.valid) {
                 return { x: testMirror.x, y: testMirror.y };
@@ -558,53 +575,138 @@ export class Game {
             return null;
         };
 
-        // STEP 1: Snap primary vertex to nearest grid intersection
-        const snappedVertexX = this.snapToGrid(primaryVertex.x);
-        const snappedVertexY = this.snapToGrid(primaryVertex.y);
+        // Test with detailed logging
+        const testPositionWithLogging = (px, py, label) => {
+            const testMirror = {
+                ...mirror,
+                x: px,
+                y: py,
+                isDragging: false,
+                size: mirror.size,
+                width: mirror.width,
+                height: mirror.height,
+                shape: mirror.shape,
+                rotation: mirror.rotation,
+                topWidth: mirror.topWidth,
+                skew: mirror.skew
+            };
 
-        console.log(`  🎯 Snapping primary vertex to (${snappedVertexX}, ${snappedVertexY})`);
-        const exactResult = testVertexPosition(snappedVertexX, snappedVertexY);
+            // CRITICAL: Use GridAlignmentEnforcer FIRST to ensure vertices are on grid
+            const beforeX = testMirror.x;
+            const beforeY = testMirror.y;
+            GridAlignmentEnforcer.enforceGridAlignment(testMirror);
+            const shiftDist = Math.sqrt((testMirror.x - beforeX) ** 2 + (testMirror.y - beforeY) ** 2);
+
+            if (shiftDist > 1) {
+                console.log(`     Grid enforcer shifted from (${beforeX}, ${beforeY}) to (${testMirror.x}, ${testMirror.y}) - ${shiftDist.toFixed(1)}px`);
+            }
+
+            // Update vertices AFTER alignment
+            if (typeof testMirror.updateVertices === 'function') {
+                testMirror.updateVertices();
+            } else if (typeof mirror.calculateVertices === 'function') {
+                testMirror.calculateVertices = mirror.calculateVertices.bind(testMirror);
+                testMirror.vertices = testMirror.calculateVertices();
+            } else {
+                this.safeUpdateVertices(testMirror);
+            }
+
+            if (!testMirror.getVertices) {
+                testMirror.getVertices = function() {
+                    return this.vertices || [];
+                };
+            }
+
+            // Validate with detailed logging
+            // CRITICAL: Exclude the original mirror from validation to avoid self-overlap detection
+            const otherMirrors = this.mirrors.filter(m => m !== mirror);
+            const validation = IronCladValidator.validateMirror(testMirror, otherMirrors);
+
+            console.log(`  Testing ${label} at (${px}, ${py}):`);
+            console.log(`     Rule 1 (Grid aligned): ${validation.rule1.valid ? 'PASS' : 'FAIL'} ${!validation.rule1.valid ? `(${validation.rule1.violations.length} vertices off grid)` : ''}`);
+            console.log(`     Rule 2 (No overlap): ${validation.rule2.valid ? 'PASS' : 'FAIL'} ${!validation.rule2.valid ? `(${validation.rule2.violations.length} overlaps)` : ''}`);
+
+            // If Rule 2 fails, show which mirrors are overlapping
+            if (!validation.rule2.valid) {
+                console.log(`     OVERLAP DETAILS:`);
+                const overlappingMirrors = new Set();
+                validation.rule2.violations.forEach(v => {
+                    if (v.otherMirror) {
+                        overlappingMirrors.add(v.otherMirror);
+                    }
+                });
+                overlappingMirrors.forEach(om => {
+                    console.log(`       - ${om.shape} at (${om.x}, ${om.y}) ${om === mirror ? '<<< THIS IS THE SAME MIRROR!' : ''}`);
+                });
+            }
+
+            console.log(`     Rule 3 (No forbidden): ${validation.rule3.valid ? 'PASS' : 'FAIL'} ${!validation.rule3.valid ? `(${validation.rule3.violations.length} in forbidden zone)` : ''}`);
+
+            if (validation.valid) {
+                return { x: testMirror.x, y: testMirror.y };
+            }
+            return null;
+        };
+
+        // STEP 1: Try EXACT current position first
+        console.log(`  📍 Testing exact current position (${mirror.x}, ${mirror.y})`);
+        const exactResult = testPositionWithLogging(mirror.x, mirror.y, "Exact position");
         if (exactResult) {
-            console.log(`  ✅ Exact snap position is valid!`);
+            console.log(`  ✅ Current position is already valid!`);
             return exactResult;
         }
 
-        // STEP 2: Try nearby grid intersections in order of distance
-        console.log(`  🔍 Searching nearby grid intersections...`);
+        // STEP 2: Try snapping to nearest grid cell
+        const currentGrid = toGridCoords(mirror.x, mirror.y);
+        const snappedPixels = toPixels(currentGrid.gx, currentGrid.gy);
+        console.log(`  🎯 Snapping to nearest grid [${currentGrid.gx}, ${currentGrid.gy}] = (${snappedPixels.px}, ${snappedPixels.py})`);
+
+        const snappedResult = testPositionWithLogging(snappedPixels.px, snappedPixels.py, "Snapped position");
+        if (snappedResult) {
+            console.log(`  ✅ Snapped position is valid!`);
+            return snappedResult;
+        }
+
+        // STEP 3: Try nearby grid cells in order of distance
+        console.log(`  🔍 Searching nearby grid cells...`);
 
         const candidates = [];
-        const searchRadius = 10; // Grid cells to search
+        const searchRadius = 5; // Grid cells to search (5 cells = 100px)
 
-        for (let dx = -searchRadius; dx <= searchRadius; dx++) {
-            for (let dy = -searchRadius; dy <= searchRadius; dy++) {
-                if (dx === 0 && dy === 0) continue; // Already tested
+        for (let dgx = -searchRadius; dgx <= searchRadius; dgx++) {
+            for (let dgy = -searchRadius; dgy <= searchRadius; dgy++) {
+                if (dgx === 0 && dgy === 0) continue; // Already tested snapped position
 
-                const testVertexX = snappedVertexX + dx * gridSize;
-                const testVertexY = snappedVertexY + dy * gridSize;
+                const testGx = currentGrid.gx + dgx;
+                const testGy = currentGrid.gy + dgy;
 
-                // Calculate distance from this grid intersection to original vertex position
-                const dist = Math.sqrt(
-                    (testVertexX - primaryVertex.x) ** 2 +
-                    (testVertexY - primaryVertex.y) ** 2
-                );
+                // Calculate grid distance (using grid cells, not pixels!)
+                const gridDist = Math.sqrt(dgx * dgx + dgy * dgy);
 
-                candidates.push({ x: testVertexX, y: testVertexY, dist });
+                const testPixels = toPixels(testGx, testGy);
+                candidates.push({
+                    gx: testGx,
+                    gy: testGy,
+                    px: testPixels.px,
+                    py: testPixels.py,
+                    gridDist
+                });
             }
         }
 
-        // Sort by distance (closest first)
-        candidates.sort((a, b) => a.dist - b.dist);
+        // Sort by grid distance (closest first)
+        candidates.sort((a, b) => a.gridDist - b.gridDist);
 
-        // Test each grid intersection in order
+        // Test each grid cell in order
         for (const candidate of candidates) {
-            const result = testVertexPosition(candidate.x, candidate.y);
+            const result = testPosition(candidate.px, candidate.py);
             if (result) {
-                console.log(`  ✅ Found valid position (vertex at ${candidate.x}, ${candidate.y}), ${candidate.dist.toFixed(0)}px from original`);
+                console.log(`  ✅ Found valid at grid [${candidate.gx}, ${candidate.gy}] = (${candidate.px}, ${candidate.py} pixels), ${candidate.gridDist.toFixed(1)} grid cells away`);
                 return result;
             }
         }
 
-        console.error('  ❌ CRITICAL: No valid position found!');
+        console.error('  ❌ No valid position found!');
         return null;
     }
     
