@@ -27,7 +27,9 @@
       "Bash(osascript:*)",
       "Bash(open http://localhost:8000/test_surface_area.html)",
       "Bash(xargs kill:*)",
-      "Bash(open http://localhost:8000/test_simple.html)"
+      "Bash(open http://localhost:8000/test_simple.html)",
+      "WebSearch",
+      "WebFetch(domain:github.com)"
     ],
     "deny": [],
     "ask": []

@@ -463,30 +463,66 @@ export class Game {
         GridAlignmentSystem.snapMirrorToGrid(mirror, this);
     }
     
+    /**
+     * Get the primary vertex for a shape - this is the anchor point for snapping
+     */
+    getPrimaryVertex(mirror) {
+        // Use first vertex as primary anchor point
+        // Vertices are already calculated during drag
+        const vertices = mirror.vertices || mirror.getVertices();
+        if (vertices && vertices.length > 0) {
+            return { x: vertices[0].x, y: vertices[0].y };
+        }
+
+        // Fallback: use top-left corner based on shape
+        switch (mirror.shape) {
+            case 'square':
+            case 'rectangle':
+                const halfWidth = mirror.width / 2;
+                const halfHeight = mirror.height / 2;
+                return { x: mirror.x - halfWidth, y: mirror.y - halfHeight };
+            default:
+                return { x: mirror.x, y: mirror.y };
+        }
+    }
+
     findNearestValidPositionSmart(mirror, dropX, dropY) {
         /**
-         * Smart algorithm that searches for valid positions in order of priority:
-         * 1. Try exact drop position first
-         * 2. If in forbidden zone, move toward nearest border in straight line
-         * 3. Search in expanding concentric grid pattern around drop point
-         * 4. Each position tested fully with IronCladValidator
+         * VERTEX-BASED SNAPPING:
+         * 1. Find where the primary vertex currently is
+         * 2. Snap that vertex to nearest grid intersection
+         * 3. Calculate where mirror center should be
+         * 4. Test if valid, if not, try nearby grid intersections for the vertex
          */
 
-        const startX = this.snapToGrid(dropX);
-        const startY = this.snapToGrid(dropY);
-        const centerX = CONFIG.CANVAS_WIDTH / 2;
-        const centerY = CONFIG.CANVAS_HEIGHT / 2;
-        const forbiddenRadius = CONFIG.TARGET_RADIUS + 40;
+        const gridSize = CONFIG.GRID_SIZE;
 
-        // Create test mirror at start position with proper grid alignment and vertex updates
-        const createTestMirror = (x, y) => {
-            // Create a deep copy to avoid modifying the original mirror
+        // Get current primary vertex position
+        const primaryVertex = this.getPrimaryVertex(mirror);
+        console.log(`  📍 Mirror center at (${mirror.x.toFixed(1)}, ${mirror.y.toFixed(1)})`);
+        console.log(`  📍 Primary vertex at (${primaryVertex.x.toFixed(1)}, ${primaryVertex.y.toFixed(1)})`);
+
+        // Calculate offset from mirror center to primary vertex
+        const vertexOffsetX = primaryVertex.x - mirror.x;
+        const vertexOffsetY = primaryVertex.y - mirror.y;
+        console.log(`  📐 Vertex offset from center: (${vertexOffsetX.toFixed(1)}, ${vertexOffsetY.toFixed(1)})`);
+
+        // Helper to test if placing primary vertex at a grid intersection is valid
+        const testVertexPosition = (vertexX, vertexY) => {
+            // Calculate where mirror center would be if vertex is at this position
+            const mirrorX = vertexX - vertexOffsetX;
+            const mirrorY = vertexY - vertexOffsetY;
+
+            console.log(`  🧪 Testing vertex at (${vertexX}, ${vertexY}) → mirror center would be (${mirrorX.toFixed(1)}, ${mirrorY.toFixed(1)})`);
+            const centerDist = Math.sqrt((mirrorX - mirror.x) ** 2 + (mirrorY - mirror.y) ** 2);
+            console.log(`      Mirror would move ${centerDist.toFixed(1)}px from current position`);
+
+            // Create test mirror
             const testMirror = {
                 ...mirror,
-                x,
-                y,
+                x: mirrorX,
+                y: mirrorY,
                 isDragging: false,
-                // Copy all shape-specific properties
                 size: mirror.size,
                 width: mirror.width,
                 height: mirror.height,
@@ -496,116 +532,79 @@ export class Game {
                 skew: mirror.skew
             };
 
-            // CRITICAL: Force grid alignment on the test position
-            GridAlignmentEnforcer.enforceGridAlignment(testMirror);
-
-            // CRITICAL: Update vertices after alignment to ensure they're calculated correctly
+            // Update vertices
             if (typeof testMirror.updateVertices === 'function') {
                 testMirror.updateVertices();
             } else if (typeof mirror.calculateVertices === 'function') {
-                // Copy the method from original mirror
                 testMirror.calculateVertices = mirror.calculateVertices.bind(testMirror);
                 testMirror.vertices = testMirror.calculateVertices();
             } else {
-                // Fallback: manually calculate vertices using safeUpdateVertices
                 this.safeUpdateVertices(testMirror);
             }
 
-            // CRITICAL: Add getVertices method that the validator expects
+            // Add getVertices method
             if (!testMirror.getVertices) {
                 testMirror.getVertices = function() {
                     return this.vertices || [];
                 };
             }
 
-            return testMirror;
-        };
-
-        // Test if a position is valid
-        const testPosition = (x, y) => {
-            const testMirror = createTestMirror(x, y);
+            // Validate
             const validation = IronCladValidator.validateMirror(testMirror, this.mirrors);
-            return validation.valid ? { x: testMirror.x, y: testMirror.y } : null;
+
+            if (validation.valid) {
+                return { x: testMirror.x, y: testMirror.y };
+            }
+            return null;
         };
 
-        // STEP 1: Try exact drop position
-        const exactResult = testPosition(startX, startY);
-        if (exactResult) return exactResult;
+        // STEP 1: Snap primary vertex to nearest grid intersection
+        const snappedVertexX = this.snapToGrid(primaryVertex.x);
+        const snappedVertexY = this.snapToGrid(primaryVertex.y);
 
-        // STEP 2: If dropped in forbidden zone, search toward nearest border
-        const distToCenter = Math.sqrt((startX - centerX) ** 2 + (startY - centerY) ** 2);
-        if (distToCenter < forbiddenRadius + 60) { // Close to or in forbidden zone
-            // Calculate direction away from center
-            const dx = startX - centerX;
-            const dy = startY - centerY;
-            const angle = Math.atan2(dy, dx);
+        console.log(`  🎯 Snapping primary vertex to (${snappedVertexX}, ${snappedVertexY})`);
+        const exactResult = testVertexPosition(snappedVertexX, snappedVertexY);
+        if (exactResult) {
+            console.log(`  ✅ Exact snap position is valid!`);
+            return exactResult;
+        }
 
-            // Search outward along this direction
-            for (let dist = CONFIG.GRID_SIZE; dist <= 200; dist += CONFIG.GRID_SIZE) {
-                const testX = this.snapToGrid(centerX + Math.cos(angle) * (forbiddenRadius + 60 + dist));
-                const testY = this.snapToGrid(centerY + Math.sin(angle) * (forbiddenRadius + 60 + dist));
+        // STEP 2: Try nearby grid intersections in order of distance
+        console.log(`  🔍 Searching nearby grid intersections...`);
 
-                const result = testPosition(testX, testY);
-                if (result) return result;
+        const candidates = [];
+        const searchRadius = 10; // Grid cells to search
+
+        for (let dx = -searchRadius; dx <= searchRadius; dx++) {
+            for (let dy = -searchRadius; dy <= searchRadius; dy++) {
+                if (dx === 0 && dy === 0) continue; // Already tested
+
+                const testVertexX = snappedVertexX + dx * gridSize;
+                const testVertexY = snappedVertexY + dy * gridSize;
+
+                // Calculate distance from this grid intersection to original vertex position
+                const dist = Math.sqrt(
+                    (testVertexX - primaryVertex.x) ** 2 +
+                    (testVertexY - primaryVertex.y) ** 2
+                );
+
+                candidates.push({ x: testVertexX, y: testVertexY, dist });
             }
         }
 
-        // STEP 3: Expanding grid search from drop point (prioritize closer positions)
-        // Search the ENTIRE board - with 800x600 canvas and 20px grid, that's 40x30 cells
-        const maxRadius = 50; // Grid cells - guaranteed to cover entire board
-        const gridSize = CONFIG.GRID_SIZE;
+        // Sort by distance (closest first)
+        candidates.sort((a, b) => a.dist - b.dist);
 
-        for (let radius = 1; radius <= maxRadius; radius++) {
-            // Create a sorted list of positions at this radius, ordered by distance to drop point
-            const positions = [];
-
-            // Generate all positions in a square ring at this radius
-            for (let dx = -radius; dx <= radius; dx++) {
-                for (let dy = -radius; dy <= radius; dy++) {
-                    // Only check positions on the perimeter of the square
-                    if (Math.abs(dx) === radius || Math.abs(dy) === radius) {
-                        const testX = this.snapToGrid(startX + dx * gridSize);
-                        const testY = this.snapToGrid(startY + dy * gridSize);
-
-                        // Skip if out of bounds (with safety margin)
-                        if (testX < 60 || testX > CONFIG.CANVAS_WIDTH - 60 ||
-                            testY < 60 || testY > CONFIG.CANVAS_HEIGHT - 60) {
-                            continue;
-                        }
-
-                        // Calculate actual distance to drop point
-                        const actualDist = Math.sqrt((testX - dropX) ** 2 + (testY - dropY) ** 2);
-                        positions.push({ x: testX, y: testY, dist: actualDist });
-                    }
-                }
-            }
-
-            // Sort by distance to drop point (closest first)
-            positions.sort((a, b) => a.dist - b.dist);
-
-            // Test each position in order
-            for (const pos of positions) {
-                const result = testPosition(pos.x, pos.y);
-                if (result) {
-                    console.log(`  ✅ Found valid position at radius ${radius} (${pos.x}, ${pos.y})`);
-                    return result;
-                }
+        // Test each grid intersection in order
+        for (const candidate of candidates) {
+            const result = testVertexPosition(candidate.x, candidate.y);
+            if (result) {
+                console.log(`  ✅ Found valid position (vertex at ${candidate.x}, ${candidate.y}), ${candidate.dist.toFixed(0)}px from original`);
+                return result;
             }
         }
 
-        // STEP 4: LAST RESORT - If we still haven't found anything, try EVERY single grid position
-        console.warn('  ⚠️ Expanding to full board search...');
-        for (let testX = 60; testX < CONFIG.CANVAS_WIDTH - 60; testX += gridSize) {
-            for (let testY = 60; testY < CONFIG.CANVAS_HEIGHT - 60; testY += gridSize) {
-                const result = testPosition(testX, testY);
-                if (result) {
-                    console.log(`  ✅ Found valid position in full scan at (${testX}, ${testY})`);
-                    return result;
-                }
-            }
-        }
-
-        console.error('  ❌ CRITICAL: No valid position found on ENTIRE board!');
+        console.error('  ❌ CRITICAL: No valid position found!');
         return null;
     }
     
