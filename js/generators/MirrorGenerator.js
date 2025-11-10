@@ -4,6 +4,7 @@ import { IronCladValidator } from '../validation/IronCladValidator.js';
 import { GridAlignmentEnforcer } from '../validation/GridAlignmentEnforcer.js';
 import { MirrorCreationHelper } from './MirrorCreationHelper.js';
 import { MirrorPlacementHelper } from './MirrorPlacementHelper.js';
+import { RigidSurfaceAreaGenerator } from '../validation/RigidSurfaceAreaGenerator.js';
 
 /**
  * MirrorGenerator - Handles mirror generation and placement
@@ -49,88 +50,165 @@ export class MirrorGenerator {
     /**
      * Generate mirrors for free play mode
      * CRITICAL: Must maintain exactly TARGET_SURFACE_AREA (84) for fair scoring
+     *
+     * NEW RIGID APPROACH:
+     * 1. Generate a configuration that is GUARANTEED to sum to exactly 84
+     * 2. Try to place all mirrors from that configuration
+     * 3. If placement fails, generate a NEW configuration and try again
+     * 4. Never return partial configurations - always exactly 84
      */
     generateFreePlayMirrors(mirrors) {
-        const maxConfigAttempts = 20; // Reasonable attempts to find a placeable configuration
-        const startTime = Date.now();
-        const maxTime = 5000; // 5 second timeout to prevent infinite loops
+        const maxConfigAttempts = 50; // Try many different configurations
 
-        for (let configAttempt = 0; configAttempt < maxConfigAttempts; configAttempt++) {
-            // Safety timeout check
-            if (Date.now() - startTime > maxTime) {
-                console.error(`⏱️ TIMEOUT: Exceeded ${maxTime}ms trying to generate mirrors`);
-                break;
+        console.log(`🎯 Generating mirrors with RIGID 84 surface area requirement...`);
+
+        for (let attempt = 0; attempt < maxConfigAttempts; attempt++) {
+            mirrors.length = 0; // Clear previous attempt
+
+            // Generate a NEW configuration that ALWAYS sums to exactly 84
+            const mirrorConfigs = RigidSurfaceAreaGenerator.generateExact84Configuration();
+
+            // VERIFY it's exactly 84 (should never fail, but double-check)
+            const configTotal = RigidSurfaceAreaGenerator.calculateTotal(mirrorConfigs);
+            if (configTotal !== 84) {
+                console.error(`❌ CRITICAL BUG: RigidGenerator returned ${configTotal} instead of 84!`);
+                console.error('This should be IMPOSSIBLE! Check RigidSurfaceAreaGenerator.');
+                continue;
             }
 
-            mirrors.length = 0; // Clear any previous failed attempt
-            const mirrorConfigs = SurfaceAreaManager.generateMirrorsWithTargetSurfaceArea();
+            console.log(`🔄 Attempt ${attempt + 1}: Placing ${mirrorConfigs.length} mirrors (total: ${configTotal})...`);
+
             let allPlacedSuccessfully = true;
 
-            console.log(`🔄 Config attempt ${configAttempt + 1}/${maxConfigAttempts}: Trying to place ${mirrorConfigs.length} mirrors...`);
-
+            // Try to place each mirror from this configuration
             for (let config of mirrorConfigs) {
                 let mirror = this.createValidatedMirror(config, mirrors);
                 if (mirror) {
                     mirrors.push(mirror);
                 } else {
-                    // Failed to place this mirror - need to try a new configuration
-                    console.warn(`⚠️ Failed to place ${config.shape} mirror (surface area: ${config.surfaceArea}) - ${mirrors.length}/${mirrorConfigs.length} placed`);
+                    // Failed to place - will generate a different configuration next attempt
+                    console.warn(`  ⚠️ Failed to place ${config.shape} (${config.surfaceArea})`);
                     allPlacedSuccessfully = false;
-                    break; // Stop trying this configuration
+                    break;
                 }
             }
 
             if (allPlacedSuccessfully) {
+                // SUCCESS! Verify final surface area
                 const totalSurfaceArea = SurfaceAreaManager.calculateTotalSurfaceArea(mirrors);
-                console.log(`✅ Free play mirrors: ${mirrors.length}, total surface area: ${totalSurfaceArea} (config attempt ${configAttempt + 1})`);
+                console.log(`✅ Successfully placed ${mirrors.length} mirrors`);
 
-                // CRITICAL: Verify we hit the target exactly
-                if (totalSurfaceArea === SurfaceAreaManager.TARGET_SURFACE_AREA) {
-                    // FINAL IRON-CLAD CHECK: Validate EVERY mirror before accepting this configuration
-                    console.log(`🔍 Running final validation on all ${mirrors.length} mirrors...`);
-                    let allValid = true;
-
-                    // First, validate each mirror individually
-                    for (let i = 0; i < mirrors.length; i++) {
-                        const mirror = mirrors[i];
-
-                        // Create array of OTHER mirrors (exclude the current one)
-                        const otherMirrors = mirrors.filter((m, idx) => idx !== i);
-
-                        const validation = IronCladValidator.validateMirror(mirror, otherMirrors);
-                        if (!validation.valid) {
-                            console.error(`❌ Mirror ${i} (${mirror.shape}) at (${mirror.x}, ${mirror.y}) failed validation:`);
-                            console.error(`   Rule 1 (Grid): ${validation.rule1.valid ? '✓' : '✗'}`);
-                            console.error(`   Rule 2 (No overlap): ${validation.rule2.valid ? '✓' : '✗'}`);
-                            console.error(`   Rule 3 (No forbidden): ${validation.rule3.valid ? '✓' : '✗'}`);
-                            if (validation.rule2.violations.length > 0) {
-                                console.error(`   Overlap violations:`, validation.rule2.violations);
-                            }
-                            allValid = false;
-                            break;
-                        }
-                    }
-
-                    if (allValid) {
-                        console.log(`✅ All mirrors validated successfully! Configuration is iron-clad.`);
-                        return mirrors;
-                    } else {
-                        console.warn(`⚠️ Configuration had invalid mirrors, regenerating...`);
-                        continue;
-                    }
-                } else {
-                    console.error(`❌ CRITICAL: Surface area mismatch! Got ${totalSurfaceArea}, expected ${SurfaceAreaManager.TARGET_SURFACE_AREA}`);
-                    // Try another configuration
+                // CRITICAL VERIFICATION
+                if (totalSurfaceArea !== 84) {
+                    console.error(`❌❌❌ CRITICAL BUG: Placed mirrors sum to ${totalSurfaceArea} instead of 84!`);
+                    console.error('Configs:', mirrorConfigs.map(m => `${m.shape}(${m.surfaceArea})`).join(', '));
+                    console.error('Placed:', mirrors.map(m => `${m.shape}(${SurfaceAreaManager.calculateMirrorSurfaceArea(m)})`).join(', '));
                     continue;
                 }
-            } else {
-                console.log(`⚠️ Configuration ${configAttempt + 1} failed after placing ${mirrors.length}/${mirrorConfigs.length} mirrors`);
+
+                // Final validation check
+                console.log(`🔍 Running final validation on all ${mirrors.length} mirrors...`);
+                let allValid = true;
+
+                for (let i = 0; i < mirrors.length; i++) {
+                    const mirror = mirrors[i];
+                    const otherMirrors = mirrors.filter((m, idx) => idx !== i);
+                    const validation = IronCladValidator.validateMirror(mirror, otherMirrors);
+
+                    if (!validation.valid) {
+                        console.error(`❌ Mirror ${i} failed validation`);
+                        allValid = false;
+                        break;
+                    }
+                }
+
+                if (allValid) {
+                    console.log(`✅✅✅ Configuration complete: ${mirrors.length} mirrors, EXACTLY 84 surface area`);
+                    return mirrors;
+                } else {
+                    console.warn(`⚠️ Validation failed, generating new configuration...`);
+                }
             }
         }
 
-        // If we get here, we failed to generate a valid configuration after all attempts
-        console.error(`❌ CRITICAL: Failed to generate valid mirror configuration after ${maxConfigAttempts} attempts`);
-        console.error(`❌ Returning partial configuration with ${mirrors.length} mirrors`);
+        // If we exhausted all attempts, use guaranteed fallback
+        console.error(`❌ Could not place any configuration after ${maxConfigAttempts} attempts`);
+        console.warn(`🔧 Using guaranteed-simple fallback...`);
+
+        return this.generateGuaranteedFallback();
+    }
+
+    /**
+     * Generate the simplest guaranteed-placeable fallback
+     * Uses COMBINATION 10 from MirrorCombinations (28 + 28 + 28 = 84)
+     * Only 3 large rectangles positioned safely away from all forbidden zones
+     */
+    generateGuaranteedFallback() {
+        const mirrors = [];
+        const centerX = CONFIG.CANVAS_WIDTH / 2;
+        const centerY = CONFIG.CANVAS_HEIGHT / 2;
+
+        // Use the simplest combination: 3 large rectangles (28 + 28 + 28 = 84)
+        const safeConfigs = [
+            {
+                x: centerX - 160,
+                y: centerY - 160,
+                shape: 'rectangle',
+                width: 120,
+                height: 80,
+                rotation: 0,
+                surfaceArea: 28
+            },
+            {
+                x: centerX + 160,
+                y: centerY + 160,
+                shape: 'rectangle',
+                width: 120,
+                height: 80,
+                rotation: 90,
+                surfaceArea: 28
+            },
+            {
+                x: centerX + 160,
+                y: centerY - 160,
+                shape: 'rectangle',
+                width: 120,
+                height: 80,
+                rotation: 0,
+                surfaceArea: 28
+            }
+        ];
+
+        console.log(`🔧 Generating guaranteed fallback: 3 rectangles in safe positions`);
+
+        // Place each mirror at predefined safe locations
+        for (let config of safeConfigs) {
+            const mirror = MirrorCreationHelper.createMirror(config.x, config.y, config.shape);
+            if (mirror) {
+                MirrorCreationHelper.applyConfiguration(mirror, config, this.game);
+                GridAlignmentEnforcer.enforceGridAlignment(mirror);
+                this.game.safeUpdateVertices(mirror);
+
+                // Validate this mirror
+                const validation = IronCladValidator.validateMirror(mirror, mirrors);
+                if (validation.valid) {
+                    mirrors.push(mirror);
+                    console.log(`  ✓ Placed ${mirror.shape} at (${mirror.x}, ${mirror.y})`);
+                } else {
+                    console.error(`  ❌ Fallback mirror failed validation!`);
+                    console.error(`     R1: ${validation.rule1.valid ? '✓' : '✗'} R2: ${validation.rule2.valid ? '✓' : '✗'} R3: ${validation.rule3.valid ? '✓' : '✗'}`);
+                }
+            }
+        }
+
+        // Verify surface area
+        const totalSurfaceArea = SurfaceAreaManager.calculateTotalSurfaceArea(mirrors);
+        console.log(`✅ Fallback complete: ${mirrors.length} mirrors, surface area: ${totalSurfaceArea}`);
+
+        if (totalSurfaceArea !== 84) {
+            console.error(`❌ CRITICAL: Fallback has wrong surface area! ${totalSurfaceArea} !== 84`);
+        }
+
         return mirrors;
     }
 

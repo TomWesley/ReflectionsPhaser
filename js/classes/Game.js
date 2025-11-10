@@ -190,20 +190,8 @@ export class Game {
             return;
         }
 
-        // All mirrors should already be valid (enforced during generation and drag)
-        // But run a quick safety check anyway
-        console.log('🔍 Running quick safety check...');
-        const validationReport = IronCladValidator.generateReport(this.mirrors);
-
-        if (!validationReport.allValid) {
-            console.error('❌ CRITICAL BUG: Invalid mirrors detected at launch time!');
-            console.error('This should NEVER happen - mirrors should always be valid');
-            console.error('Attempting to fix by regenerating...');
-            this.resetGame();
-            return;
-        }
-
-        console.log('✅ All mirrors valid - launching lasers!');
+        // Skip validation check - player has manually positioned mirrors
+        // Let them play with their chosen configuration
 
         // Show brief loading message
         const statusEl = document.getElementById('status');
