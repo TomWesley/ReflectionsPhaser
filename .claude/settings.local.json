@@ -29,7 +29,11 @@
       "Bash(xargs kill:*)",
       "Bash(open http://localhost:8000/test_simple.html)",
       "WebSearch",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:www.nytimes.com)",
+      "Bash(open http://localhost:8000/test_mirror_inheritance.html)",
+      "Bash(pkill:*)",
+      "Bash(open http://localhost:8000/test_click_detection.html)"
     ],
     "deny": [],
     "ask": []

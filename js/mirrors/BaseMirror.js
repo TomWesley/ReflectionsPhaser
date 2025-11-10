@@ -61,6 +61,38 @@ export class BaseMirror {
     }
 
     /**
+     * Check if a point is inside this mirror's shape
+     * Uses ray-casting algorithm on the canonical vertices
+     * Fixed version with proper edge case handling
+     */
+    containsPoint(px, py) {
+        if (!this.vertices || this.vertices.length < 3) {
+            return false;
+        }
+
+        let inside = false;
+        const n = this.vertices.length;
+
+        for (let i = 0; i < n; i++) {
+            const j = (i + 1) % n;
+            const xi = this.vertices[i].x;
+            const yi = this.vertices[i].y;
+            const xj = this.vertices[j].x;
+            const yj = this.vertices[j].y;
+
+            // Check if point is on a horizontal or vertical ray from the test point
+            const intersect = ((yi > py) !== (yj > py)) &&
+                              (px < (xj - xi) * (py - yi) / (yj - yi) + xi);
+
+            if (intersect) {
+                inside = !inside;
+            }
+        }
+
+        return inside;
+    }
+
+    /**
      * Abstract method - must be implemented by subclasses
      */
     getShapeType() {

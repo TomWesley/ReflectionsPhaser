@@ -32,61 +32,26 @@ export class MirrorPlacementValidation {
     }
     
     /**
-     * Generate forbidden zones (center target area and edge margins)
+     * Generate forbidden zones (ONLY center target area)
+     * Edge boundaries are handled separately by canvas bounds checking
      */
     static generateForbiddenZones() {
         this.forbiddenZones = [];
-        
-        // Center forbidden zone (circular area around target)
+
+        // ONLY forbidden zone: Center circle around target
         const centerX = CONFIG.CANVAS_WIDTH / 2;
         const centerY = CONFIG.CANVAS_HEIGHT / 2;
-        const centerRadius = CONFIG.TARGET_RADIUS + 40; // Same as existing logic
-        
+        const centerRadius = CONFIG.TARGET_RADIUS + 40; // 50 + 40 = 90px radius
+
         this.forbiddenZones.push({
             type: 'circle',
             x: centerX,
             y: centerY,
             radius: centerRadius
         });
-        
-        // Edge margins
-        const margin = CONFIG.EDGE_MARGIN;
-        
-        // Left edge
-        this.forbiddenZones.push({
-            type: 'rectangle',
-            x: 0,
-            y: 0,
-            width: margin,
-            height: CONFIG.CANVAS_HEIGHT
-        });
-        
-        // Right edge
-        this.forbiddenZones.push({
-            type: 'rectangle',
-            x: CONFIG.CANVAS_WIDTH - margin,
-            y: 0,
-            width: margin,
-            height: CONFIG.CANVAS_HEIGHT
-        });
-        
-        // Top edge
-        this.forbiddenZones.push({
-            type: 'rectangle',
-            x: 0,
-            y: 0,
-            width: CONFIG.CANVAS_WIDTH,
-            height: margin
-        });
-        
-        // Bottom edge
-        this.forbiddenZones.push({
-            type: 'rectangle',
-            x: 0,
-            y: CONFIG.CANVAS_HEIGHT - margin,
-            width: CONFIG.CANVAS_WIDTH,
-            height: margin
-        });
+
+        // NOTE: Edge margins are NOT forbidden zones - mirrors can be placed near edges
+        // Canvas bounds checking will prevent mirrors from going off-screen
     }
     
     /**

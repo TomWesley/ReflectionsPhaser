@@ -11,18 +11,94 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- Iconoir Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/iconoir-icons/iconoir@main/css/iconoir.css">
     <link rel="stylesheet" href="styles/game.css">
 </head>
 <body>
-    <h1><span class="neon-text">REFLECTIONS</span></h1>
-    
+    <!-- Professional Navigation Bar -->
+    <nav class="navbar">
+        <div class="navbar-left">
+            <button class="nav-icon-btn" onclick="openRules()" title="How to Play">
+                <i class="iconoir-info-circle"></i>
+            </button>
+        </div>
+
+        <div class="navbar-center">
+            <h1 class="navbar-title">REFLECTIONS</h1>
+
+            <!-- Mode Selector in Navbar -->
+            <div class="mode-selector-nav">
+                <button id="freePlayBtn" class="mode-btn-nav active">
+                    <i class="iconoir-play"></i>
+                    <span>Free Play</span>
+                </button>
+                <button id="dailyChallengeBtn" class="mode-btn-nav">
+                    <i class="iconoir-calendar"></i>
+                    <span>Daily Challenge</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="navbar-right">
+            <a href="about.html" class="nav-icon-btn" title="About">
+                <i class="iconoir-book"></i>
+            </a>
+        </div>
+    </nav>
+
+    <!-- Main Content Wrapper -->
+    <main class="main-content">
+        <!-- Game Header Section -->
+        <div class="game-header-section">
+            <!-- Daily Challenge Info -->
+            <div id="dailyInfo" class="daily-info hidden">
+                <div class="daily-date"></div>
+                <div class="daily-status"></div>
+            </div>
+
+            <!-- Game Controls Bar -->
+            <div class="game-controls-bar">
+                <div class="control-group">
+                    <div class="timer-display">
+                        <i class="iconoir-timer"></i>
+                        <div class="timer-content">
+                            <div class="timer-label">SURVIVAL TIME</div>
+                            <div id="timer" class="timer-value">0:00</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="control-group control-group-center">
+                    <div id="status" class="status-display">Position your mirrors to protect the center!</div>
+                </div>
+
+                <div class="control-group control-group-actions">
+                    <button id="launchBtn" class="btn-primary">
+                        <i class="iconoir-rocket"></i>
+                        <span>Launch Lasers</span>
+                    </button>
+                    <button id="resetBtn" class="btn-secondary">
+                        <i class="iconoir-refresh"></i>
+                        <span>New Config</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Canvas Container (Independent Module) -->
+        <div id="gameContainer">
+            <canvas id="gameCanvas" width="800" height="600"></canvas>
+        </div>
+    </main>
+
     <!-- Hidden Mission Briefing Modal -->
     <div id="rulesModal" class="rules-modal hidden">
         <div class="rules-content">
             <div class="instruction-header">⚡ MISSION BRIEFING ⚡</div>
             <div class="instruction-content">
                 <div class="instruction-item">🎯 Drag mirrors to redirect incoming laser threats</div>
-                <div class="instruction-item">⚡ Mirrors auto-snap to defensive grid positions</div>
+                <div class="instruction-item">⚡ Mirrors snap to defensive grid positions when placed</div>
                 <div class="instruction-item">🚫 Mirrors cannot overlap or be placed in the forbidden zone around the core</div>
                 <div class="instruction-item">🛡️ Deflect ALL lasers away from the central core</div>
                 <div class="instruction-item">🚀 Launch lasers locks the mirrors in place and starts the round</div>
@@ -48,34 +124,6 @@
             </div>
             <button class="btn-primary" onclick="closeGameOver()">CONTINUE DEFENDING</button>
         </div>
-    </div>
-
-    <!-- Game Mode Selection -->
-    <div class="mode-selector">
-        <button id="freePlayBtn" class="mode-btn active">Free Play</button>
-        <button id="dailyChallengeBtn" class="mode-btn">Daily Challenge</button>
-    </div>
-
-    <!-- Game Header with Controls -->
-    <div class="game-header">
-        <div class="controls-row">
-            <button id="launchBtn" class="btn-primary">Launch Lasers</button>
-            <button id="resetBtn" class="btn-secondary">New Configuration</button>
-            <button class="btn-info" onclick="openRules()">Mission Brief</button>
-        </div>
-        <div id="status" class="status-modern">Position your mirrors to protect the center!</div>
-        <div class="timer-display">
-            <div class="timer-label">SURVIVAL TIME</div>
-            <div id="timer" class="timer-value">0:00</div>
-        </div>
-        <div id="dailyInfo" class="daily-info hidden">
-            <div class="daily-date"></div>
-            <div class="daily-status"></div>
-        </div>
-    </div>
-    
-    <div id="gameContainer">
-        <canvas id="gameCanvas" width="800" height="600"></canvas>
     </div>
 
     <!-- Mobile info bubble -->

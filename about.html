@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>About - REFLECTIONS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- Iconoir Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/iconoir-icons/iconoir@main/css/iconoir.css">
+    <link rel="stylesheet" href="styles/game.css">
+    <style>
+        /* Override body padding for about page */
+        body {
+            padding: 0;
+        }
+
+        .about-container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px 20px 60px 20px;
+        }
+
+        .back-button {
+            display: none; /* Replaced by navbar */
+        }
+
+        .about-section {
+            background: var(--card-bg);
+            border: 1px solid var(--border-glow);
+            border-radius: 15px;
+            padding: 35px;
+            margin-bottom: 30px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(255, 107, 53, 0.2),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .about-section h2 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--sunset-orange);
+            margin-bottom: 20px;
+            text-shadow: 0 0 20px rgba(255, 107, 53, 0.6);
+            letter-spacing: 2px;
+        }
+
+        .about-section h3 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: var(--sunset-pink);
+            margin-top: 25px;
+            margin-bottom: 15px;
+            text-shadow: 0 0 15px rgba(255, 0, 110, 0.4);
+        }
+
+        .about-section p {
+            font-size: 1.1rem;
+            line-height: 1.8;
+            color: var(--text-primary);
+            margin-bottom: 15px;
+        }
+
+        .about-section ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .about-section li {
+            font-size: 1.05rem;
+            line-height: 1.8;
+            color: var(--text-primary);
+            margin-bottom: 12px;
+            padding-left: 25px;
+            position: relative;
+        }
+
+        .about-section li::before {
+            content: '⚡';
+            position: absolute;
+            left: 0;
+            color: var(--sunset-orange);
+            font-size: 1.2rem;
+        }
+
+        .highlight {
+            color: var(--sunset-gold);
+            font-weight: 600;
+            text-shadow: 0 0 10px rgba(255, 182, 39, 0.4);
+        }
+
+        .code-block {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 107, 53, 0.3);
+            border-radius: 8px;
+            padding: 15px 20px;
+            margin: 15px 0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.95rem;
+            color: var(--sunset-gold);
+        }
+
+        .game-modes {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .mode-card {
+            background: rgba(0, 0, 0, 0.4);
+            border: 2px solid var(--border-glow);
+            border-radius: 12px;
+            padding: 25px;
+            transition: all 0.3s ease;
+        }
+
+        .mode-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(255, 107, 53, 0.3);
+            border-color: var(--sunset-orange);
+        }
+
+        .mode-card h4 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--sunset-orange);
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .skills-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .skill-item {
+            background: linear-gradient(135deg, rgba(255, 107, 53, 0.1), rgba(255, 0, 110, 0.1));
+            border: 1px solid rgba(255, 107, 53, 0.3);
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .skill-item:hover {
+            background: linear-gradient(135deg, rgba(255, 107, 53, 0.2), rgba(255, 0, 110, 0.2));
+            border-color: var(--sunset-pink);
+            transform: scale(1.05);
+        }
+
+        .skill-icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .skill-name {
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: var(--sunset-gold);
+            margin-bottom: 8px;
+        }
+
+        .skill-desc {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .page-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 700;
+            text-align: center;
+            margin: 30px 0 20px 0;
+            background: linear-gradient(135deg, var(--sunset-orange), var(--sunset-pink));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+<body>
+    <!-- Professional Navigation Bar -->
+    <nav class="navbar">
+        <div class="navbar-left">
+            <a href="index.html" class="nav-icon-btn" title="Back to Game">
+                <i class="iconoir-arrow-left"></i>
+            </a>
+        </div>
+
+        <div class="navbar-center">
+            <h1 class="navbar-title">REFLECTIONS</h1>
+        </div>
+
+        <div class="navbar-right">
+            <a href="index.html" class="nav-icon-btn" title="Play Game">
+                <i class="iconoir-play"></i>
+            </a>
+        </div>
+    </nav>
+
+    <h2 class="page-title">About</h2>
+
+    <div class="about-container">
+        <!-- What is REFLECTIONS -->
+        <div class="about-section">
+            <h2>🎮 What is REFLECTIONS?</h2>
+            <p>
+                REFLECTIONS is a <span class="highlight">geometric laser defense puzzle game</span> that challenges your spatial reasoning,
+                strategic planning, and quick thinking. Your mission: protect the central core from incoming laser threats by
+                strategically positioning reflective mirrors.
+            </p>
+            <p>
+                Each round presents you with a set of mirrors with varying shapes and sizes. Position them wisely to deflect
+                all incoming lasers away from the vulnerable core. The longer you survive, the higher your score!
+            </p>
+        </div>
+
+        <!-- Game Modes -->
+        <div class="about-section">
+            <h2>🎯 Game Modes</h2>
+
+            <div class="game-modes">
+                <div class="mode-card">
+                    <h4>🔄 Free Play Mode</h4>
+                    <p>The main game mode with a unique twist:</p>
+                    <ul>
+                        <li>Mirrors are generated with a <span class="highlight">predetermined total surface area (84 square units)</span></li>
+                        <li>Each new configuration is randomly generated but <span class="highlight">always fair</span> - every player gets the same total reflective power</li>
+                        <li>The challenge: optimal placement with limited resources</li>
+                        <li>Infinite retries - perfect for practicing and improving your skills</li>
+                    </ul>
+                    <div class="code-block">
+                        Surface Area = Total reflective power available<br>
+                        Example: 2 large squares (40 units) + 1 trapezoid (4 units) = 84 units
+                    </div>
+                </div>
+
+                <div class="mode-card">
+                    <h4>📅 Daily Challenge</h4>
+                    <p>A special mode for competitive players:</p>
+                    <ul>
+                        <li><span class="highlight">One puzzle per day</span> - everyone worldwide gets the same configuration</li>
+                        <li>Same mirrors, same spawner positions for all players</li>
+                        <li>Compare your survival time with players globally</li>
+                        <li><span class="highlight">One attempt only</span> - make it count!</li>
+                        <li>New challenge unlocks every 24 hours</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Why Surface Area Matters -->
+        <div class="about-section">
+            <h2>📐 Why Predetermined Surface Area?</h2>
+            <p>
+                The predetermined surface area system ensures <span class="highlight">fairness and strategic depth</span>:
+            </p>
+            <ul>
+                <li><strong>Fair Scoring:</strong> Every configuration has exactly 84 units of total surface area, so your score reflects
+                    placement skill, not luck with mirror generation</li>
+                <li><strong>Strategic Trade-offs:</strong> Fewer large mirrors vs. many small mirrors - each configuration requires
+                    different strategies</li>
+                <li><strong>Consistent Difficulty:</strong> No "impossible" or "trivial" rounds - every game is winnable with smart placement</li>
+                <li><strong>Replayability:</strong> Infinite variety within a balanced constraint creates endless puzzle possibilities</li>
+            </ul>
+            <p>
+                This system was inspired by resource management in strategy games - you have a fixed "budget" of reflective power
+                to spend wisely!
+            </p>
+        </div>
+
+        <!-- Cognitive Skills -->
+        <div class="about-section">
+            <h2>🧠 Brain Muscles Trained</h2>
+            <p>
+                REFLECTIONS exercises multiple cognitive abilities simultaneously:
+            </p>
+
+            <div class="skills-grid">
+                <div class="skill-item">
+                    <div class="skill-icon">🎯</div>
+                    <div class="skill-name">Spatial Reasoning</div>
+                    <div class="skill-desc">
+                        Visualize laser paths, angles of reflection, and geometric relationships in real-time
+                    </div>
+                </div>
+
+                <div class="skill-item">
+                    <div class="skill-icon">🧩</div>
+                    <div class="skill-name">Strategic Planning</div>
+                    <div class="skill-desc">
+                        Optimize mirror placement considering all laser spawners simultaneously
+                    </div>
+                </div>
+
+                <div class="skill-item">
+                    <div class="skill-icon">⚡</div>
+                    <div class="skill-name">Problem Solving</div>
+                    <div class="skill-desc">
+                        Find creative solutions within geometric constraints and surface area limits
+                    </div>
+                </div>
+
+                <div class="skill-item">
+                    <div class="skill-icon">🎨</div>
+                    <div class="skill-name">Pattern Recognition</div>
+                    <div class="skill-desc">
+                        Identify optimal mirror arrangements and predict laser behavior patterns
+                    </div>
+                </div>
+
+                <div class="skill-item">
+                    <div class="skill-icon">⏱️</div>
+                    <div class="skill-name">Decision Making</div>
+                    <div class="skill-desc">
+                        Make quick adjustments under pressure as lasers close in on the core
+                    </div>
+                </div>
+
+                <div class="skill-item">
+                    <div class="skill-icon">🔄</div>
+                    <div class="skill-name">Iterative Thinking</div>
+                    <div class="skill-desc">
+                        Learn from each attempt, refine strategies, and continuously improve
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- How to Play -->
+        <div class="about-section">
+            <h2>🕹️ How to Play</h2>
+
+            <h3>Setup Phase</h3>
+            <ul>
+                <li>You're presented with several geometric mirrors of varying shapes and sizes</li>
+                <li>Drag and position each mirror anywhere on the grid</li>
+                <li>Mirrors <strong>cannot overlap</strong> with each other</li>
+                <li>Mirrors <strong>cannot enter</strong> the red forbidden zone around the core</li>
+            </ul>
+
+            <h3>Defense Phase</h3>
+            <ul>
+                <li>Click "Launch Lasers" when you're ready</li>
+                <li>Lasers will spawn from multiple angles and move toward the center</li>
+                <li>Watch as your mirrors deflect the laser beams</li>
+                <li>The game continues until a laser hits the central core</li>
+            </ul>
+
+            <h3>Scoring</h3>
+            <ul>
+                <li>Your score is determined by <span class="highlight">survival time</span></li>
+                <li>The longer you keep the core protected, the higher your score</li>
+                <li>Performance ratings range from "Failed" to legendary status</li>
+            </ul>
+        </div>
+
+        <!-- Tips & Strategy -->
+        <div class="about-section">
+            <h2>💡 Pro Tips</h2>
+            <ul>
+                <li><strong>Think in Angles:</strong> Mirrors reflect lasers at equal angles - visualize the paths before placing</li>
+                <li><strong>Cover All Spawners:</strong> Make sure each laser spawner has a mirror defending against it</li>
+                <li><strong>Use Large Mirrors Wisely:</strong> Bigger mirrors can deflect from more angles but take up more space</li>
+                <li><strong>Create Defensive Layers:</strong> Multiple mirrors can work together to redirect stubborn lasers</li>
+                <li><strong>Mind the Forbidden Zone:</strong> Place mirrors close to (but not touching) the red zone for maximum coverage</li>
+                <li><strong>Experiment:</strong> Free Play mode allows unlimited retries - use it to test different strategies!</li>
+            </ul>
+        </div>
+
+        <!-- The Tech -->
+        <div class="about-section">
+            <h2>⚙️ Technical Details</h2>
+            <p>
+                REFLECTIONS is built with modern web technologies for smooth, responsive gameplay:
+            </p>
+            <ul>
+                <li><strong>Canvas-based rendering</strong> for high-performance geometric calculations</li>
+                <li><strong>Real-time collision detection</strong> using polygon-to-polygon intersection algorithms</li>
+                <li><strong>Grid-aligned validation</strong> ensures precise mirror placement</li>
+                <li><strong>Surface area balancing system</strong> for fair, competitive gameplay</li>
+                <li><strong>Deterministic daily challenges</strong> using seed-based generation</li>
+            </ul>
+        </div>
+
+        <!-- Call to Action -->
+        <div class="about-section" style="text-align: center; border: 2px solid var(--sunset-orange);">
+            <h2>🚀 Ready to Defend?</h2>
+            <p style="font-size: 1.2rem; margin-bottom: 25px;">
+                Challenge yourself with geometric puzzles that test your spatial intelligence and strategic thinking!
+            </p>
+            <a href="index.html" class="btn-primary" style="display: inline-block; text-decoration: none; padding: 15px 40px; font-size: 1.2rem;">
+                Start Playing Now
+            </a>
+        </div>
+    </div>
+
+    <div style="height: 60px;"></div>
+</body>
+</html>

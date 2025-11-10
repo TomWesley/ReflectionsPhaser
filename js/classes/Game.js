@@ -19,6 +19,7 @@ import { MirrorGenerator } from '../generators/MirrorGenerator.js';
 import { SpawnerGenerator } from '../generators/SpawnerGenerator.js';
 import { GridAlignmentSystem } from '../systems/GridAlignmentSystem.js';
 import { MirrorPlacementHelper } from '../generators/MirrorPlacementHelper.js';
+import { MirrorDragAndSnapHandler } from '../handlers/MirrorDragAndSnapHandler.js';
 
 export class Game {
     constructor() {
@@ -39,6 +40,7 @@ export class Game {
         this.dragOffset = { x: 0, y: 0 };
         this.dragStartPos = { x: 0, y: 0 };
         this.mouseHasMoved = false;
+        this.hoveredMirror = null; // Track which mirror is being hovered
 
         // Initialize collision systems
         this.collisionSystem = new CollisionSystem();
@@ -55,6 +57,9 @@ export class Game {
 
         // Initialize spawner generator
         this.spawnerGenerator = new SpawnerGenerator(this);
+
+        // Initialize drag and snap handler
+        this.dragAndSnapHandler = new MirrorDragAndSnapHandler(this);
 
         this.init();
     }
@@ -79,6 +84,9 @@ export class Game {
         // Mouse down only on canvas
         this.canvas.addEventListener('mousedown', (e) => this.onMouseDown(e));
 
+        // Mouse move for hover effects (when not dragging)
+        this.canvas.addEventListener('mousemove', (e) => this.onCanvasHover(e));
+
         // UI buttons
         document.getElementById('launchBtn').addEventListener('click', () => this.launchLasers());
         document.getElementById('resetBtn').addEventListener('click', () => this.resetGame());
@@ -102,26 +110,22 @@ export class Game {
         // These will work anywhere on the page
         document.addEventListener('mousemove', this.boundMouseMove);
         document.addEventListener('mouseup', this.boundMouseUp);
-
-        console.log('Started dragging mirror at', mirror.x, mirror.y);
     }
 
     stopDragging() {
-        console.log('🛑 Stopping drag and removing event listeners...');
-
-        // Remove global event listeners
+        // Remove global event listeners FIRST
+        // This prevents any race conditions where events could fire during cleanup
         document.removeEventListener('mousemove', this.boundMouseMove);
         document.removeEventListener('mouseup', this.boundMouseUp);
 
         // Reset all drag state
+        // Note: draggedMirror may already be null if cleared by handleDragEnd
         if (this.draggedMirror) {
             this.draggedMirror.isDragging = false;
+            this.draggedMirror = null;
         }
-        this.draggedMirror = null;
         this.mouseHasMoved = false;
         this.canvas.style.cursor = 'crosshair';
-
-        console.log('✅ Drag stopped, event listeners removed');
     }
     
     
@@ -136,6 +140,10 @@ export class Game {
             mirror.updateVertices();
         } else if (typeof mirror.calculateVertices === 'function') {
             mirror.vertices = mirror.calculateVertices();
+        } else if (mirror.vertices && mirror.vertices.length > 0) {
+            // Mirror already has vertices - no action needed
+            // This happens with test mirrors created by spread operator
+            return;
         } else {
             console.error('Mirror has no way to calculate vertices!', mirror);
         }
@@ -272,6 +280,41 @@ export class Game {
         statusEl.className = 'status-modern';
     }
     
+    onCanvasHover(e) {
+        // Only detect hover when not playing and not dragging
+        if (this.isPlaying || this.draggedMirror) {
+            this.hoveredMirror = null;
+            return;
+        }
+
+        const rect = this.canvas.getBoundingClientRect();
+        const scaleX = this.canvas.width / rect.width;
+        const scaleY = this.canvas.height / rect.height;
+        const mouseX = (e.clientX - rect.left) * scaleX;
+        const mouseY = (e.clientY - rect.top) * scaleY;
+
+        // Check if hovering over a mirror
+        let foundMirror = null;
+        for (let mirror of this.mirrors) {
+            if (this.isMouseOverMirror(mouseX, mouseY, mirror)) {
+                foundMirror = mirror;
+                break;
+            }
+        }
+
+        // Update hover state
+        this.hoveredMirror = foundMirror;
+
+        // Change cursor based on hover
+        this.canvas.style.cursor = foundMirror ? 'grab' : 'crosshair';
+    }
+
+    isMouseOverMirror(mouseX, mouseY, mirror) {
+        // Use the mirror's own containsPoint method - proper OOP approach
+        // Each mirror knows how to test if a point is inside it
+        return mirror.containsPoint(mouseX, mouseY);
+    }
+
     onMouseDown(e) {
         if (this.isPlaying) return;
 
@@ -279,40 +322,16 @@ export class Game {
         if (this.modeManager.isDailyChallenge() && this.modeManager.isDailyChallengeCompleted()) {
             return;
         }
-        
+
         const rect = this.canvas.getBoundingClientRect();
-        const mouseX = e.clientX - rect.left;
-        const mouseY = e.clientY - rect.top;
-        
-        // Check if clicking on a mirror
+        const scaleX = this.canvas.width / rect.width;
+        const scaleY = this.canvas.height / rect.height;
+        const mouseX = (e.clientX - rect.left) * scaleX;
+        const mouseY = (e.clientY - rect.top) * scaleY;
+
+        // Check if clicking on a mirror - use proper OOP method
         for (let mirror of this.mirrors) {
-            let isMouseOverMirror = false;
-            
-            switch (mirror.shape) {
-                case 'square':
-                case 'rectangle':
-                    const halfWidth = mirror.width / 2;
-                    const halfHeight = mirror.height / 2;
-                    isMouseOverMirror = mouseX >= mirror.x - halfWidth && 
-                                      mouseX <= mirror.x + halfWidth &&
-                                      mouseY >= mirror.y - halfHeight && 
-                                      mouseY <= mirror.y + halfHeight;
-                    break;
-                case 'rightTriangle':
-                    isMouseOverMirror = this.pointInRightTriangle(mouseX, mouseY, mirror);
-                    break;
-                case 'isoscelesTriangle':
-                    isMouseOverMirror = this.pointInIsoscelesTriangle(mouseX, mouseY, mirror);
-                    break;
-                case 'trapezoid':
-                    isMouseOverMirror = this.pointInTrapezoid(mouseX, mouseY, mirror);
-                    break;
-                case 'parallelogram':
-                    isMouseOverMirror = this.pointInParallelogram(mouseX, mouseY, mirror);
-                    break;
-            }
-            
-            if (isMouseOverMirror) {
+            if (mirror.containsPoint(mouseX, mouseY)) {
                 this.startDragging(mirror, mouseX, mouseY);
                 break;
             }
@@ -321,10 +340,12 @@ export class Game {
     
     onMouseMove(e) {
         if (!this.draggedMirror || this.isPlaying) return;
-        
+
         const rect = this.canvas.getBoundingClientRect();
-        const mouseX = e.clientX - rect.left;
-        const mouseY = e.clientY - rect.top;
+        const scaleX = this.canvas.width / rect.width;
+        const scaleY = this.canvas.height / rect.height;
+        const mouseX = (e.clientX - rect.left) * scaleX;
+        const mouseY = (e.clientY - rect.top) * scaleY;
         
         // Check if mouse has moved significantly from start position
         const moveThreshold = 5; // pixels
@@ -359,9 +380,11 @@ export class Game {
     handleDragEnd(e) {
         if (!this.draggedMirror) return;
 
-        console.log('🎯 Mouse released - finalizing mirror placement...');
-
         const mirror = this.draggedMirror;
+
+        // CRITICAL: Store mirror reference and clear draggedMirror IMMEDIATELY
+        // This prevents any race conditions where a new drag could start
+        this.draggedMirror = null;
 
         // CRITICAL: Use try/finally to ensure stopDragging is ALWAYS called
         try {
@@ -370,48 +393,32 @@ export class Game {
 
             // If mouse didn't move, just keep it where it was
             if (!this.mouseHasMoved) {
-                console.log('  No movement detected, keeping mirror at original position');
                 return;
             }
 
-            // Get the final drop position
+            // Get the final drop position with proper scaling
             const rect = this.canvas.getBoundingClientRect();
-            const mouseX = e.clientX - rect.left;
-            const mouseY = e.clientY - rect.top;
+            const scaleX = this.canvas.width / rect.width;
+            const scaleY = this.canvas.height / rect.height;
+            const mouseX = (e.clientX - rect.left) * scaleX;
+            const mouseY = (e.clientY - rect.top) * scaleY;
             const dropX = mouseX - this.dragOffset.x;
             const dropY = mouseY - this.dragOffset.y;
 
-            console.log(`  Attempting to place at (${Math.round(dropX)}, ${Math.round(dropY)})`);
-
-            // Find nearest valid position (includes drop point as first attempt)
-            const nearestValid = this.findNearestValidPositionSmart(mirror, dropX, dropY);
+            // Find nearest valid position using the dedicated handler
+            const nearestValid = this.dragAndSnapHandler.findNearestValidPosition(mirror, dropX, dropY);
 
             if (nearestValid) {
                 // nearestValid already has the correctly aligned position
                 mirror.x = nearestValid.x;
                 mirror.y = nearestValid.y;
                 this.safeUpdateVertices(mirror);
-                console.log(`  ✅ Placed at (${mirror.x}, ${mirror.y})`);
             } else {
-                console.warn(`  ⚠️ No valid position found, reverting to original`);
+                // Revert to original position - mirror stays where it started
                 mirror.x = mirror.originalX;
                 mirror.y = mirror.originalY;
-                GridAlignmentEnforcer.enforceGridAlignment(mirror);
                 this.safeUpdateVertices(mirror);
             }
-
-            // FINAL SAFETY: One last validation check
-            const finalCheck = IronCladValidator.validateMirror(mirror, this.mirrors);
-            if (!finalCheck.valid) {
-                console.error(`  🚨 CRITICAL: Mirror still invalid after all attempts!`);
-                console.error(`  Forcing revert to original position`);
-                mirror.x = mirror.originalX;
-                mirror.y = mirror.originalY;
-                GridAlignmentEnforcer.enforceGridAlignment(mirror);
-                this.safeUpdateVertices(mirror);
-            }
-
-            console.log('✅ Drag complete\n');
         } catch (error) {
             console.error('❌ Error during drag end:', error);
             // Revert to original position on any error
