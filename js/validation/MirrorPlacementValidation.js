@@ -32,13 +32,13 @@ export class MirrorPlacementValidation {
     }
     
     /**
-     * Generate forbidden zones (ONLY center target area)
-     * Edge boundaries are handled separately by canvas bounds checking
+     * Generate forbidden zones - DRY modular approach
+     * Both center zone and edge zones use the same data structure
      */
     static generateForbiddenZones() {
         this.forbiddenZones = [];
 
-        // ONLY forbidden zone: Center circle around target
+        // Center forbidden zone: Circle around target
         const centerX = CONFIG.CANVAS_WIDTH / 2;
         const centerY = CONFIG.CANVAS_HEIGHT / 2;
         const centerRadius = CONFIG.TARGET_RADIUS + 40; // 50 + 40 = 90px radius
@@ -50,8 +50,46 @@ export class MirrorPlacementValidation {
             radius: centerRadius
         });
 
-        // NOTE: Edge margins are NOT forbidden zones - mirrors can be placed near edges
-        // Canvas bounds checking will prevent mirrors from going off-screen
+        // Edge forbidden zones: Rectangles at canvas edges
+        const edgeMargin = CONFIG.EDGE_MARGIN || 60;
+
+        // Top edge
+        this.forbiddenZones.push({
+            type: 'rectangle',
+            x: 0,
+            y: 0,
+            width: CONFIG.CANVAS_WIDTH,
+            height: edgeMargin
+        });
+
+        // Bottom edge
+        this.forbiddenZones.push({
+            type: 'rectangle',
+            x: 0,
+            y: CONFIG.CANVAS_HEIGHT - edgeMargin,
+            width: CONFIG.CANVAS_WIDTH,
+            height: edgeMargin
+        });
+
+        // Left edge
+        this.forbiddenZones.push({
+            type: 'rectangle',
+            x: 0,
+            y: 0,
+            width: edgeMargin,
+            height: CONFIG.CANVAS_HEIGHT
+        });
+
+        // Right edge
+        this.forbiddenZones.push({
+            type: 'rectangle',
+            x: CONFIG.CANVAS_WIDTH - edgeMargin,
+            y: 0,
+            width: edgeMargin,
+            height: CONFIG.CANVAS_HEIGHT
+        });
+
+        console.log(`Generated ${this.forbiddenZones.length} forbidden zones (1 center + 4 edges)`);
     }
     
     /**
@@ -75,16 +113,11 @@ export class MirrorPlacementValidation {
     }
     
     /**
-     * Check if a point is in a forbidden zone or on game boundary edges
+     * Check if a point is in a forbidden zone
+     * DRY approach - all zones checked the same way
      */
     static isPointInForbiddenZone(point) {
-        // First check: No vertices can be on the very edges of the game grid
-        if (point.x <= 0 || point.x >= CONFIG.CANVAS_WIDTH || 
-            point.y <= 0 || point.y >= CONFIG.CANVAS_HEIGHT) {
-            return true;
-        }
-        
-        // Second check: Standard forbidden zones
+        // Check all forbidden zones (center + edges)
         for (let zone of this.forbiddenZones) {
             if (zone.type === 'circle') {
                 const distance = Math.sqrt(
@@ -142,18 +175,11 @@ export class MirrorPlacementValidation {
     }
     
     /**
-     * Check if a line segment intersects with any forbidden zone or game boundaries
+     * Check if a line segment intersects with any forbidden zone
+     * DRY approach - all zones checked the same way
      */
     static doesLineIntersectForbiddenZone(lineStart, lineEnd) {
-        // First check: No lines can touch or cross the game boundary edges
-        if (lineStart.x <= 0 || lineStart.x >= CONFIG.CANVAS_WIDTH || 
-            lineStart.y <= 0 || lineStart.y >= CONFIG.CANVAS_HEIGHT ||
-            lineEnd.x <= 0 || lineEnd.x >= CONFIG.CANVAS_WIDTH || 
-            lineEnd.y <= 0 || lineEnd.y >= CONFIG.CANVAS_HEIGHT) {
-            return true;
-        }
-        
-        // Second check: Standard forbidden zones
+        // Check all forbidden zones (center + edges)
         for (let zone of this.forbiddenZones) {
             if (zone.type === 'circle') {
                 // Check if line intersects circle
