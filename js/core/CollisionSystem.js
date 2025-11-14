@@ -38,6 +38,7 @@ export class CollisionSystem {
 
     /**
      * Calculate boundary for mirror placement (excludes borders)
+     * CRITICAL: Use the mirror's canonical vertices - single source of truth!
      */
     calculateMirrorPlacementBoundary(mirror) {
         const boundary = {
@@ -46,48 +47,17 @@ export class CollisionSystem {
             rotation: mirror.rotation || 0
         };
 
-        switch (mirror.shape) {
-            case 'square':
-                const halfSize = mirror.size / 2;
-                boundary.points = [
-                    { x: mirror.x - halfSize, y: mirror.y - halfSize },
-                    { x: mirror.x + halfSize, y: mirror.y - halfSize },
-                    { x: mirror.x + halfSize, y: mirror.y + halfSize },
-                    { x: mirror.x - halfSize, y: mirror.y + halfSize }
-                ];
-                break;
-
-            case 'rectangle':
-                const halfWidth = mirror.width / 2;
-                const halfHeight = mirror.height / 2;
-                boundary.points = [
-                    { x: mirror.x - halfWidth, y: mirror.y - halfHeight },
-                    { x: mirror.x + halfWidth, y: mirror.y - halfHeight },
-                    { x: mirror.x + halfWidth, y: mirror.y + halfHeight },
-                    { x: mirror.x - halfWidth, y: mirror.y + halfHeight }
-                ];
-                break;
-
-            case 'rightTriangle':
-                boundary.points = this.getRightTrianglePoints(mirror);
-                break;
-
-            case 'isoscelesTriangle':
-                boundary.points = this.getIsoscelesTrianglePoints(mirror);
-                break;
-
-            case 'trapezoid':
-                boundary.points = this.getTrapezoidPoints(mirror);
-                break;
-
-            case 'parallelogram':
-                boundary.points = this.getParallelogramPoints(mirror);
-                break;
-        }
-
-        // Apply rotation if needed
-        if (mirror.rotation) {
-            boundary.points = this.rotatePoints(boundary.points, mirror.x, mirror.y, mirror.rotation);
+        // USE THE CANONICAL VERTICES FROM THE MIRROR
+        // This is the ONLY source of truth - what you see is what you get
+        if (mirror.vertices && mirror.vertices.length > 0) {
+            // Deep copy the vertices to avoid mutations
+            boundary.points = mirror.vertices.map(v => ({ x: v.x, y: v.y }));
+        } else if (typeof mirror.getVertices === 'function') {
+            const vertices = mirror.getVertices();
+            boundary.points = vertices.map(v => ({ x: v.x, y: v.y }));
+        } else {
+            console.error('Mirror has no vertices!', mirror);
+            boundary.points = [];
         }
 
         return boundary;
@@ -139,8 +109,112 @@ export class CollisionSystem {
         const boundary = this.laserCollisionBoundaries.get(mirrorId);
         if (!boundary) return false;
 
-        // Point in polygon test with edge tolerance
+        // Point in polygon test
         return this.pointInPolygon(laser.x, laser.y, boundary.points);
+    }
+
+    /**
+     * Check if a line segment (laser path) crosses any edge of the mirror
+     * This catches fast-moving lasers that might skip over thin mirrors
+     */
+    checkLineSegmentCrossesEdge(x1, y1, x2, y2, mirrorId) {
+        const boundary = this.laserCollisionBoundaries.get(mirrorId);
+        if (!boundary || !boundary.edges) return false;
+
+        // Check if laser path intersects any mirror edge
+        for (const edge of boundary.edges) {
+            if (this.lineSegmentsIntersect(
+                x1, y1, x2, y2,
+                edge.start.x, edge.start.y, edge.end.x, edge.end.y
+            )) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Check if two line segments intersect
+     * Returns true if segments cross each other
+     */
+    lineSegmentsIntersect(x1, y1, x2, y2, x3, y3, x4, y4) {
+        // Calculate direction of line segments
+        const denom = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1);
+
+        // Lines are parallel if denom is 0
+        if (Math.abs(denom) < 0.0001) {
+            return false;
+        }
+
+        const ua = ((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)) / denom;
+        const ub = ((x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)) / denom;
+
+        // Intersection occurs if both parameters are between 0 and 1
+        return ua >= 0 && ua <= 1 && ub >= 0 && ub <= 1;
+    }
+
+    /**
+     * Find the exact intersection point between laser path and mirror edge
+     * Returns { x, y, edge } if found, null otherwise
+     */
+    findExactIntersection(prevX, prevY, currentX, currentY, mirrorId) {
+        const boundary = this.laserCollisionBoundaries.get(mirrorId);
+        if (!boundary || !boundary.edges) return null;
+
+        let closestIntersection = null;
+        let minDistanceFromStart = Infinity;
+
+        // Check each edge for intersection
+        for (const edge of boundary.edges) {
+            const intersection = this.lineSegmentIntersectionPoint(
+                prevX, prevY, currentX, currentY,
+                edge.start.x, edge.start.y, edge.end.x, edge.end.y
+            );
+
+            if (intersection) {
+                // Calculate distance from laser's previous position
+                const distSq = (intersection.x - prevX) ** 2 + (intersection.y - prevY) ** 2;
+
+                if (distSq < minDistanceFromStart) {
+                    minDistanceFromStart = distSq;
+                    closestIntersection = {
+                        x: intersection.x,
+                        y: intersection.y,
+                        edge: edge
+                    };
+                }
+            }
+        }
+
+        return closestIntersection;
+    }
+
+    /**
+     * Find intersection point of two line segments
+     * Returns {x, y} if they intersect, null otherwise
+     */
+    lineSegmentIntersectionPoint(x1, y1, x2, y2, x3, y3, x4, y4) {
+        const denom = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1);
+
+        // Lines are parallel
+        if (Math.abs(denom) < 0.0001) {
+            return null;
+        }
+
+        const ua = ((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)) / denom;
+        const ub = ((x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)) / denom;
+
+        // Check if intersection occurs within both line segments
+        if (ua >= 0 && ua <= 1 && ub >= 0 && ub <= 1) {
+            // Calculate intersection point
+            return {
+                x: x1 + ua * (x2 - x1),
+                y: y1 + ua * (y2 - y1)
+            };
+        }
+
+        return null;
     }
 
     /**
@@ -166,27 +240,52 @@ export class CollisionSystem {
 
     /**
      * Reflect laser off an edge
+     * Uses proper vector reflection with correct normal orientation
      */
     reflectLaserOffEdge(laser, edge) {
-        // Calculate edge vector
+        // Calculate edge vector (from start to end)
         const edgeVector = {
             x: edge.end.x - edge.start.x,
             y: edge.end.y - edge.start.y
         };
 
-        // Calculate normal vector (perpendicular to edge)
+        // Normalize edge vector
         const edgeLength = Math.sqrt(edgeVector.x * edgeVector.x + edgeVector.y * edgeVector.y);
-        const normal = {
-            x: -edgeVector.y / edgeLength,
-            y: edgeVector.x / edgeLength
+        if (edgeLength === 0) {
+            console.error('Zero-length edge detected!');
+            return;
+        }
+
+        const edgeNormalized = {
+            x: edgeVector.x / edgeLength,
+            y: edgeVector.y / edgeLength
         };
 
-        // Reflect velocity vector: v' = v - 2(v·n)n
+        // Calculate perpendicular normal (rotate edge 90 degrees counterclockwise)
+        // We have two possible normals - need to pick the one the laser is coming FROM
+        let normal = {
+            x: -edgeNormalized.y,
+            y: edgeNormalized.x
+        };
+
+        // Check if normal points toward the incoming laser
+        // The normal should point in the direction the laser came from
+        // If dot product of (incoming direction) and normal is negative, flip the normal
+        const incomingDot = laser.vx * normal.x + laser.vy * normal.y;
+
+        // If incoming velocity and normal point in same direction, flip normal
+        // We want the normal to point TOWARD the incoming laser (opposite of velocity)
+        if (incomingDot > 0) {
+            normal.x = -normal.x;
+            normal.y = -normal.y;
+        }
+
+        // Apply reflection formula: v' = v - 2(v·n)n
         const dotProduct = laser.vx * normal.x + laser.vy * normal.y;
         laser.vx = laser.vx - 2 * dotProduct * normal.x;
         laser.vy = laser.vy - 2 * dotProduct * normal.y;
 
-        // Snap to standard angles
+        // Snap to standard angles (15-degree increments)
         this.snapLaserAngle(laser);
     }
 
@@ -384,50 +483,4 @@ export class CollisionSystem {
         }));
     }
 
-    // ===== SHAPE-SPECIFIC POINT CALCULATIONS =====
-
-    getRightTrianglePoints(mirror) {
-        const halfSize = mirror.size / 2;
-        return [
-            { x: mirror.x - halfSize, y: mirror.y + halfSize }, // bottom-left
-            { x: mirror.x + halfSize, y: mirror.y + halfSize }, // bottom-right
-            { x: mirror.x + halfSize, y: mirror.y - halfSize }  // top-right
-        ];
-    }
-
-    getIsoscelesTrianglePoints(mirror) {
-        const halfWidth = mirror.width / 2;
-        const halfHeight = mirror.height / 2;
-        return [
-            { x: mirror.x - halfWidth, y: mirror.y + halfHeight }, // bottom-left
-            { x: mirror.x + halfWidth, y: mirror.y + halfHeight }, // bottom-right
-            { x: mirror.x, y: mirror.y - halfHeight }             // top-center
-        ];
-    }
-
-    getTrapezoidPoints(mirror) {
-        const halfHeight = mirror.height / 2;
-        const halfBottomWidth = mirror.width / 2;
-        const halfTopWidth = mirror.topWidth / 2;
-
-        return [
-            { x: mirror.x - halfBottomWidth, y: mirror.y + halfHeight }, // bottom-left
-            { x: mirror.x + halfBottomWidth, y: mirror.y + halfHeight }, // bottom-right
-            { x: mirror.x + halfTopWidth, y: mirror.y - halfHeight },    // top-right
-            { x: mirror.x - halfTopWidth, y: mirror.y - halfHeight }     // top-left
-        ];
-    }
-
-    getParallelogramPoints(mirror) {
-        const halfHeight = mirror.height / 2;
-        const halfWidth = mirror.width / 2;
-        const skew = mirror.skew || 20;
-
-        return [
-            { x: mirror.x - halfWidth, y: mirror.y + halfHeight },         // bottom-left
-            { x: mirror.x + halfWidth, y: mirror.y + halfHeight },         // bottom-right
-            { x: mirror.x + halfWidth + skew, y: mirror.y - halfHeight },  // top-right (skewed)
-            { x: mirror.x - halfWidth + skew, y: mirror.y - halfHeight }   // top-left (skewed)
-        ];
-    }
 }

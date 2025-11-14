@@ -50,6 +50,7 @@ export class LaserCollisionHandler {
 
     /**
      * Check if laser collides with a specific mirror
+     * Uses line-segment intersection for precise collision detection
      */
     checkLaserMirrorCollision(laser, mirrorId) {
         // Use previous position for continuous collision detection
@@ -59,18 +60,29 @@ export class LaserCollisionHandler {
             );
             const isInside = this.collisionSystem.checkLaserMirrorCollision(laser, mirrorId);
 
-            // Collision occurs when laser enters mirror (was outside, now inside)
+            // CASE 1: Laser entered mirror (was outside, now inside)
             if (!wasInside && isInside) {
                 return true;
             }
 
-            // Emergency escape if laser gets stuck inside
+            // CASE 2: Laser crossed an edge (line-segment intersection)
+            // This catches cases where laser moves fast and might skip over thin mirrors
+            if (!wasInside && !isInside) {
+                const crossedEdge = this.collisionSystem.checkLineSegmentCrossesEdge(
+                    laser.prevX, laser.prevY, laser.x, laser.y, mirrorId
+                );
+                if (crossedEdge) {
+                    return true;
+                }
+            }
+
+            // CASE 3: Emergency escape if laser gets stuck inside
             if (wasInside && isInside && laser.reflectionCooldown === 0) {
                 this.emergencyEscape(laser, mirrorId);
                 return false;
             }
         } else {
-            // Fallback for first frame
+            // Fallback for first frame (no previous position yet)
             return this.collisionSystem.checkLaserMirrorCollision(laser, mirrorId);
         }
 
@@ -81,19 +93,32 @@ export class LaserCollisionHandler {
      * Handle collision between laser and mirror
      */
     handleCollision(laser, mirror, mirrorId) {
-        // Move laser to edge to prevent getting stuck
-        this.collisionSystem.moveLaserToEdge(laser, mirrorId);
+        // STEP 1: Find the exact intersection point on the mirror edge
+        // This is critical for accurate reflections
+        const intersectionData = this.collisionSystem.findExactIntersection(
+            laser.prevX, laser.prevY, laser.x, laser.y, mirrorId
+        );
 
-        // Find collision edge
-        const collisionEdge = this.collisionSystem.findCollisionEdge(laser, mirrorId);
+        if (intersectionData) {
+            // Place laser at exact intersection point
+            laser.x = intersectionData.x;
+            laser.y = intersectionData.y;
 
-        if (collisionEdge) {
-            // Reflect laser off the edge
-            this.collisionSystem.reflectLaserOffEdge(laser, collisionEdge);
+            // Reflect off the edge that was hit
+            this.collisionSystem.reflectLaserOffEdge(laser, intersectionData.edge);
         } else {
-            // Fallback: use mirror's built-in reflection
-            console.warn('No collision edge found, using fallback reflection');
-            mirror.reflect(laser);
+            // Fallback: Move laser to nearest edge and find collision edge
+            this.collisionSystem.moveLaserToEdge(laser, mirrorId);
+
+            const collisionEdge = this.collisionSystem.findCollisionEdge(laser, mirrorId);
+
+            if (collisionEdge) {
+                this.collisionSystem.reflectLaserOffEdge(laser, collisionEdge);
+            } else {
+                // Last resort: use mirror's built-in reflection
+                console.warn('No collision edge found, using fallback reflection');
+                mirror.reflect(laser);
+            }
         }
 
         // Update laser state

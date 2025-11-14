@@ -95,14 +95,15 @@
     <!-- Hidden Mission Briefing Modal -->
     <div id="rulesModal" class="rules-modal hidden">
         <div class="rules-content">
-            <div class="instruction-header">⚡ MISSION BRIEFING ⚡</div>
+            <div class="instruction-header"><i class="iconoir-flash"></i> MISSION BRIEFING <i class="iconoir-flash"></i></div>
             <div class="instruction-content">
-                <div class="instruction-item">🎯 Drag mirrors to redirect incoming laser threats</div>
-                <div class="instruction-item">⚡ Mirrors snap to defensive grid positions when placed</div>
-                <div class="instruction-item">🚫 Mirrors cannot overlap or be placed in the forbidden zone around the core</div>
-                <div class="instruction-item">🛡️ Deflect ALL lasers away from the central core</div>
-                <div class="instruction-item">🚀 Launch lasers locks the mirrors in place and starts the round</div>
-                <div class="instruction-item">💥 Final score determined by how long the core goes untouched</div>
+                <div class="instruction-item"><i class="iconoir-mouse-button-left"></i> Drag mirrors freely to redirect incoming laser threats</div>
+                <div class="instruction-item"><i class="iconoir-design-nib"></i> Position mirrors anywhere - no grid snapping required</div>
+                <div class="instruction-item"><i class="iconoir-prohibition"></i> Mirrors cannot overlap or enter forbidden zones (center circle + edge borders)</div>
+                <div class="instruction-item"><i class="iconoir-shield"></i> Deflect ALL lasers away from the central core to survive</div>
+                <div class="instruction-item"><i class="iconoir-rocket"></i> Launch lasers locks mirrors in place and starts the defense round</div>
+                <div class="instruction-item"><i class="iconoir-timer"></i> Final score determined by survival time - keep the core protected</div>
+                <div class="instruction-item"><i class="iconoir-frame"></i> In Free Play: all configurations have uniform surface area (84 units) for fair scoring</div>
             </div>
             <button class="btn-primary close-rules" onclick="closeRules()">INITIATE DEFENSE</button>
         </div>
@@ -111,7 +112,7 @@
     <!-- Game Over Modal -->
     <div id="gameOverModal" class="rules-modal hidden">
         <div class="rules-content">
-            <div class="instruction-header">💥 CORE BREACH! 💥</div>
+            <div class="instruction-header"><i class="iconoir-xmark-circle"></i> CORE BREACH! <i class="iconoir-xmark-circle"></i></div>
             <div class="game-over-content">
                 <div class="final-score">
                     <div class="score-label">SURVIVAL TIME</div>
@@ -132,12 +133,12 @@
         <div id="infoPopup" class="info-popup hidden">
             <button class="close-button" onclick="toggleInfoPopup()">×</button>
             <div class="info-content">
-                <strong>🎯 LASER DEFENSE PROTOCOL</strong><br><br>
-                🔧 Drag mirrors to redirect laser threats<br>
-                🚫 Mirrors cannot overlap or enter the forbidden zone<br>
-                🎯 Protect the central core at all costs<br>
-                🚀 Launch when ready for action<br>
-                💥 Survival time determines your final score
+                <strong><i class="iconoir-flash"></i> LASER DEFENSE PROTOCOL</strong><br><br>
+                <i class="iconoir-mouse-button-left"></i> Drag mirrors to redirect laser threats<br>
+                <i class="iconoir-prohibition"></i> Mirrors cannot overlap or enter forbidden zones<br>
+                <i class="iconoir-shield"></i> Protect the central core at all costs<br>
+                <i class="iconoir-rocket"></i> Launch when ready for action<br>
+                <i class="iconoir-timer"></i> Survival time determines your final score
             </div>
         </div>
     </div>

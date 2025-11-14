@@ -393,6 +393,23 @@ export class Game {
             const dropX = mouseX - this.dragOffset.x;
             const dropY = mouseY - this.dragOffset.y;
 
+            // CRITICAL: Check if drop position is completely off-canvas
+            const maxMirrorSize = Math.max(mirror.width || mirror.size, mirror.height || mirror.size);
+            const safeMargin = maxMirrorSize + 20; // Mirror size + buffer
+
+            const isOffCanvas = dropX < -safeMargin ||
+                               dropX > CONFIG.CANVAS_WIDTH + safeMargin ||
+                               dropY < -safeMargin ||
+                               dropY > CONFIG.CANVAS_HEIGHT + safeMargin;
+
+            if (isOffCanvas) {
+                console.warn('Drop position is off-canvas, reverting to original position');
+                mirror.x = mirror.originalX;
+                mirror.y = mirror.originalY;
+                this.safeUpdateVertices(mirror);
+                return;
+            }
+
             // Find nearest valid position using the dedicated handler
             const nearestValid = this.dragAndSnapHandler.findNearestValidPosition(mirror, dropX, dropY);
 
@@ -401,8 +418,10 @@ export class Game {
                 mirror.x = nearestValid.x;
                 mirror.y = nearestValid.y;
                 this.safeUpdateVertices(mirror);
+                console.log(`✅ Mirror placed at (${mirror.x}, ${mirror.y})`);
             } else {
                 // Revert to original position - mirror stays where it started
+                console.warn('No valid position found, reverting to original');
                 mirror.x = mirror.originalX;
                 mirror.y = mirror.originalY;
                 this.safeUpdateVertices(mirror);

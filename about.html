@@ -83,7 +83,7 @@
         }
 
         .about-section li::before {
-            content: '⚡';
+            content: '▸';
             position: absolute;
             left: 0;
             color: var(--sunset-orange);
@@ -224,7 +224,7 @@
     <div class="about-container">
         <!-- What is REFLECTIONS -->
         <div class="about-section">
-            <h2>🎮 What is REFLECTIONS?</h2>
+            <h2><i class="iconoir-game-controller"></i> What is REFLECTIONS?</h2>
             <p>
                 REFLECTIONS is a <span class="highlight">geometric laser defense puzzle game</span> that challenges your spatial reasoning,
                 strategic planning, and quick thinking. Your mission: protect the central core from incoming laser threats by
@@ -238,26 +238,28 @@
 
         <!-- Game Modes -->
         <div class="about-section">
-            <h2>🎯 Game Modes</h2>
+            <h2><i class="iconoir-target"></i> Game Modes</h2>
 
             <div class="game-modes">
                 <div class="mode-card">
-                    <h4>🔄 Free Play Mode</h4>
+                    <h4><i class="iconoir-refresh-double"></i> Free Play Mode</h4>
                     <p>The main game mode with a unique twist:</p>
                     <ul>
-                        <li>Mirrors are generated with a <span class="highlight">predetermined total surface area (84 square units)</span></li>
+                        <li>Mirrors are generated with a <span class="highlight">predetermined total surface area (84 units)</span></li>
+                        <li>Mirror count varies per configuration, but total surface area is always uniform</li>
                         <li>Each new configuration is randomly generated but <span class="highlight">always fair</span> - every player gets the same total reflective power</li>
                         <li>The challenge: optimal placement with limited resources</li>
                         <li>Infinite retries - perfect for practicing and improving your skills</li>
                     </ul>
                     <div class="code-block">
                         Surface Area = Total reflective power available<br>
-                        Example: 2 large squares (40 units) + 1 trapezoid (4 units) = 84 units
+                        Example: 2 large squares (40 units) + 1 trapezoid (4 units) = 84 units<br>
+                        All configurations total exactly 84 units for fair scoring
                     </div>
                 </div>
 
                 <div class="mode-card">
-                    <h4>📅 Daily Challenge</h4>
+                    <h4><i class="iconoir-calendar"></i> Daily Challenge</h4>
                     <p>A special mode for competitive players:</p>
                     <ul>
                         <li><span class="highlight">One puzzle per day</span> - everyone worldwide gets the same configuration</li>
@@ -272,7 +274,7 @@
 
         <!-- Why Surface Area Matters -->
         <div class="about-section">
-            <h2>📐 Why Predetermined Surface Area?</h2>
+            <h2><i class="iconoir-3d-select-solid"></i> Why Predetermined Surface Area?</h2>
             <p>
                 The predetermined surface area system ensures <span class="highlight">fairness and strategic depth</span>:
             </p>
@@ -292,14 +294,14 @@
 
         <!-- Cognitive Skills -->
         <div class="about-section">
-            <h2>🧠 Brain Muscles Trained</h2>
+            <h2><i class="iconoir-brain"></i> Brain Muscles Trained</h2>
             <p>
                 REFLECTIONS exercises multiple cognitive abilities simultaneously:
             </p>
 
             <div class="skills-grid">
                 <div class="skill-item">
-                    <div class="skill-icon">🎯</div>
+                    <div class="skill-icon"><i class="iconoir-3d-select-solid"></i></div>
                     <div class="skill-name">Spatial Reasoning</div>
                     <div class="skill-desc">
                         Visualize laser paths, angles of reflection, and geometric relationships in real-time
@@ -307,7 +309,7 @@
                 </div>
 
                 <div class="skill-item">
-                    <div class="skill-icon">🧩</div>
+                    <div class="skill-icon"><i class="iconoir-strategy"></i></div>
                     <div class="skill-name">Strategic Planning</div>
                     <div class="skill-desc">
                         Optimize mirror placement considering all laser spawners simultaneously
@@ -315,7 +317,7 @@
                 </div>
 
                 <div class="skill-item">
-                    <div class="skill-icon">⚡</div>
+                    <div class="skill-icon"><i class="iconoir-flash"></i></div>
                     <div class="skill-name">Problem Solving</div>
                     <div class="skill-desc">
                         Find creative solutions within geometric constraints and surface area limits
@@ -323,7 +325,7 @@
                 </div>
 
                 <div class="skill-item">
-                    <div class="skill-icon">🎨</div>
+                    <div class="skill-icon"><i class="iconoir-eye"></i></div>
                     <div class="skill-name">Pattern Recognition</div>
                     <div class="skill-desc">
                         Identify optimal mirror arrangements and predict laser behavior patterns
@@ -331,7 +333,7 @@
                 </div>
 
                 <div class="skill-item">
-                    <div class="skill-icon">⏱️</div>
+                    <div class="skill-icon"><i class="iconoir-timer"></i></div>
                     <div class="skill-name">Decision Making</div>
                     <div class="skill-desc">
                         Make quick adjustments under pressure as lasers close in on the core
@@ -339,7 +341,7 @@
                 </div>
 
                 <div class="skill-item">
-                    <div class="skill-icon">🔄</div>
+                    <div class="skill-icon"><i class="iconoir-refresh"></i></div>
                     <div class="skill-name">Iterative Thinking</div>
                     <div class="skill-desc">
                         Learn from each attempt, refine strategies, and continuously improve
@@ -350,14 +352,14 @@
 
         <!-- How to Play -->
         <div class="about-section">
-            <h2>🕹️ How to Play</h2>
+            <h2><i class="iconoir-game-controller"></i> How to Play</h2>
 
             <h3>Setup Phase</h3>
             <ul>
                 <li>You're presented with several geometric mirrors of varying shapes and sizes</li>
-                <li>Drag and position each mirror anywhere on the grid</li>
+                <li>Drag and position each mirror anywhere - no grid snapping required</li>
                 <li>Mirrors <strong>cannot overlap</strong> with each other</li>
-                <li>Mirrors <strong>cannot enter</strong> the red forbidden zone around the core</li>
+                <li>Mirrors <strong>cannot enter</strong> the red forbidden zones (center circle + edge borders)</li>
             </ul>
 
             <h3>Defense Phase</h3>
@@ -378,27 +380,28 @@
 
         <!-- Tips & Strategy -->
         <div class="about-section">
-            <h2>💡 Pro Tips</h2>
+            <h2><i class="iconoir-light-bulb"></i> Pro Tips</h2>
             <ul>
                 <li><strong>Think in Angles:</strong> Mirrors reflect lasers at equal angles - visualize the paths before placing</li>
                 <li><strong>Cover All Spawners:</strong> Make sure each laser spawner has a mirror defending against it</li>
                 <li><strong>Use Large Mirrors Wisely:</strong> Bigger mirrors can deflect from more angles but take up more space</li>
                 <li><strong>Create Defensive Layers:</strong> Multiple mirrors can work together to redirect stubborn lasers</li>
-                <li><strong>Mind the Forbidden Zone:</strong> Place mirrors close to (but not touching) the red zone for maximum coverage</li>
+                <li><strong>Mind the Forbidden Zones:</strong> Place mirrors close to (but not touching) the red zones (center + edges) for maximum coverage</li>
+                <li><strong>Free Placement:</strong> Without grid snapping, you have pixel-perfect control for optimal positioning</li>
                 <li><strong>Experiment:</strong> Free Play mode allows unlimited retries - use it to test different strategies!</li>
             </ul>
         </div>
 
         <!-- The Tech -->
         <div class="about-section">
-            <h2>⚙️ Technical Details</h2>
+            <h2><i class="iconoir-settings"></i> Technical Details</h2>
             <p>
                 REFLECTIONS is built with modern web technologies for smooth, responsive gameplay:
             </p>
             <ul>
                 <li><strong>Canvas-based rendering</strong> for high-performance geometric calculations</li>
                 <li><strong>Real-time collision detection</strong> using polygon-to-polygon intersection algorithms</li>
-                <li><strong>Grid-aligned validation</strong> ensures precise mirror placement</li>
+                <li><strong>Free-form placement validation</strong> with forbidden zone checking (center + edges)</li>
                 <li><strong>Surface area balancing system</strong> for fair, competitive gameplay</li>
                 <li><strong>Deterministic daily challenges</strong> using seed-based generation</li>
             </ul>
@@ -406,7 +409,7 @@
 
         <!-- Call to Action -->
         <div class="about-section" style="text-align: center; border: 2px solid var(--sunset-orange);">
-            <h2>🚀 Ready to Defend?</h2>
+            <h2><i class="iconoir-rocket"></i> Ready to Defend?</h2>
             <p style="font-size: 1.2rem; margin-bottom: 25px;">
                 Challenge yourself with geometric puzzles that test your spatial intelligence and strategic thinking!
             </p>

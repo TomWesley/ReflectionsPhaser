@@ -1,9 +1,7 @@
 import { CONFIG } from '../config.js';
 import { SurfaceAreaManager } from '../validation/SurfaceAreaManager.js';
-import { IronCladValidator } from '../validation/IronCladValidator.js';
-import { GridAlignmentEnforcer } from '../validation/GridAlignmentEnforcer.js';
+import { SimpleValidator } from '../validation/SimpleValidator.js';
 import { MirrorCreationHelper } from './MirrorCreationHelper.js';
-import { MirrorPlacementHelper } from './MirrorPlacementHelper.js';
 import { RigidSurfaceAreaGenerator } from '../validation/RigidSurfaceAreaGenerator.js';
 
 /**
@@ -113,10 +111,10 @@ export class MirrorGenerator {
                 for (let i = 0; i < mirrors.length; i++) {
                     const mirror = mirrors[i];
                     const otherMirrors = mirrors.filter((m, idx) => idx !== i);
-                    const validation = IronCladValidator.validateMirror(mirror, otherMirrors);
+                    const validation = SimpleValidator.validateMirror(mirror, otherMirrors);
 
                     if (!validation.valid) {
-                        console.error(`❌ Mirror ${i} failed validation`);
+                        console.error(`❌ Mirror ${i} failed validation: ${validation.reason}`);
                         allValid = false;
                         break;
                     }
@@ -186,17 +184,15 @@ export class MirrorGenerator {
             const mirror = MirrorCreationHelper.createMirror(config.x, config.y, config.shape);
             if (mirror) {
                 MirrorCreationHelper.applyConfiguration(mirror, config, this.game);
-                GridAlignmentEnforcer.enforceGridAlignment(mirror);
                 this.game.safeUpdateVertices(mirror);
 
                 // Validate this mirror
-                const validation = IronCladValidator.validateMirror(mirror, mirrors);
+                const validation = SimpleValidator.validateMirror(mirror, mirrors);
                 if (validation.valid) {
                     mirrors.push(mirror);
                     console.log(`  ✓ Placed ${mirror.shape} at (${mirror.x}, ${mirror.y})`);
                 } else {
-                    console.error(`  ❌ Fallback mirror failed validation!`);
-                    console.error(`     R1: ${validation.rule1.valid ? '✓' : '✗'} R2: ${validation.rule2.valid ? '✓' : '✗'} R3: ${validation.rule3.valid ? '✓' : '✗'}`);
+                    console.error(`  ❌ Fallback mirror failed validation: ${validation.reason}`);
                 }
             }
         }
@@ -229,17 +225,16 @@ export class MirrorGenerator {
 
             MirrorCreationHelper.applyConfiguration(mirror, config, this.game);
 
-            // IRON-CLAD STEP 1: Force grid alignment
+            // Update vertices
             try {
-                GridAlignmentEnforcer.enforceGridAlignment(mirror);
                 this.game.safeUpdateVertices(mirror);
             } catch (error) {
-                console.error('Failed to align mirror:', error);
+                console.error('Failed to update vertices:', error);
                 continue;
             }
 
-            // IRON-CLAD STEP 2: Validate all 3 rules
-            const validation = IronCladValidator.validateMirror(mirror, existingMirrors);
+            // Validate (only two rules: no forbidden zones, no overlap)
+            const validation = SimpleValidator.validateMirror(mirror, existingMirrors);
 
             if (validation.valid) {
                 console.log(`✓ Created valid ${mirror.shape} mirror at (${mirror.x}, ${mirror.y}) [${existingMirrors.length} existing mirrors]`);
@@ -247,30 +242,11 @@ export class MirrorGenerator {
             } else {
                 // Log why it's invalid (but only occasionally to avoid spam)
                 if (attempt % 20 === 0) {
-                    console.log(`  Attempt ${attempt}: ${mirror.shape} at (${mirror.x}, ${mirror.y}) invalid - R1:${validation.rule1.valid ? '✓' : '✗'} R2:${validation.rule2.valid ? '✓' : '✗'} R3:${validation.rule3.valid ? '✓' : '✗'}`);
+                    console.log(`  Attempt ${attempt}: ${mirror.shape} at (${mirror.x}, ${mirror.y}) invalid - ${validation.reason}`);
                 }
             }
 
-            // Try to find nearby valid position
-            const nearestValidPos = MirrorPlacementHelper.findNearestValidPositionIronClad(
-                mirror,
-                existingMirrors,
-                this.game
-            );
-
-            if (nearestValidPos) {
-                mirror.x = nearestValidPos.x;
-                mirror.y = nearestValidPos.y;
-
-                GridAlignmentEnforcer.enforceGridAlignment(mirror);
-                this.game.safeUpdateVertices(mirror);
-
-                const revalidation = IronCladValidator.validateMirror(mirror, existingMirrors);
-                if (revalidation.valid) {
-                    console.log(`✓ Created valid ${mirror.shape} mirror at adjusted (${mirror.x}, ${mirror.y})`);
-                    return mirror;
-                }
-            }
+            // Could add nearby position search here if needed in the future
         }
 
         console.warn(`✗ Failed to place ${config.shape} mirror after ${maxAttempts} attempts`);
