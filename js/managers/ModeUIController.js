@@ -52,10 +52,10 @@ export class ModeUIController {
             // Show completion status
             if (DailyChallenge.hasCompletedToday()) {
                 const score = DailyChallenge.getTodayScore();
-                dailyStatus.textContent = `Completed in ${score.time}s`;
+                dailyStatus.textContent = `Final Score: ${score.time}`;
                 dailyStatus.classList.add('completed');
             } else {
-                dailyStatus.textContent = 'Not completed yet';
+                dailyStatus.textContent = 'Not attempted yet';
                 dailyStatus.classList.remove('completed');
             }
         } else {

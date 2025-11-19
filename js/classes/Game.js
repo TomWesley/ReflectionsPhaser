@@ -234,34 +234,76 @@ export class Game {
         document.getElementById('launchBtn').disabled = true;
     }
     
-    resetGame() {
-        // In Daily Challenge mode, don't allow reset if already completed
-        if (this.modeManager.isDailyChallenge() && this.modeManager.isDailyChallengeCompleted()) {
-            return;
-        }
-
+    async resetGame() {
         this.isPlaying = false;
         this.gameOver = false;
         this.startTime = 0;
         this.gameTime = 0;
         this.lasers = [];
         document.getElementById('timer').textContent = '0:00';
-        this.generateMirrors();
-        this.generateSpawners();
+
+        // Use daily puzzle data if in daily challenge mode
+        if (this.modeManager.isDailyChallenge()) {
+            // Check if already completed
+            if (this.modeManager.isDailyChallengeCompleted()) {
+                // Load saved mirror and laser positions from completed challenge
+                const DailyChallenge = (await import('../validation/DailyChallenge.js')).DailyChallenge;
+                const savedMirrorState = DailyChallenge.getTodayMirrorState();
+                const savedLaserState = DailyChallenge.getTodayLaserState();
+
+                if (savedMirrorState) {
+                    // Reconstruct mirrors from saved state
+                    this.mirrors = DailyChallenge.reconstructMirrors(savedMirrorState);
+                    console.log('Loaded completed daily challenge mirror state');
+                } else {
+                    // Fallback: generate the puzzle
+                    const dailyPuzzle = this.modeManager.generateDailyPuzzle();
+                    this.mirrors = dailyPuzzle.mirrors;
+                }
+
+                // Reconstruct frozen lasers from saved state
+                if (savedLaserState) {
+                    this.lasers = DailyChallenge.reconstructLasers(savedLaserState);
+                    console.log('Loaded completed daily challenge laser freeze frame');
+                } else {
+                    this.lasers = [];
+                }
+
+                // Generate spawners
+                this.generateSpawners();
+
+                // Mark as completed freeze frame state
+                this.isPlaying = false;
+                this.gameOver = true;  // Freeze frame state
+
+                // Disable launch button
+                document.getElementById('launchBtn').disabled = true;
+                const statusEl = document.getElementById('status');
+                statusEl.textContent = 'Daily Challenge Complete! This is your final solution. Come back tomorrow for a new puzzle.';
+                statusEl.className = 'status-modern status-success';
+                return;
+            } else {
+                // Not completed yet - generate fresh puzzle
+                const dailyPuzzle = this.modeManager.generateDailyPuzzle();
+                this.mirrors = dailyPuzzle.mirrors;
+
+                // Update vertices for all mirrors
+                this.mirrors.forEach(mirror => this.safeUpdateVertices(mirror));
+
+                // Generate spawners
+                this.generateSpawners();
+            }
+        } else {
+            // Free play mode
+            this.generateMirrors();
+            this.generateSpawners();
+        }
 
         document.getElementById('launchBtn').disabled = false;
         const statusEl = document.getElementById('status');
 
         if (this.modeManager.isDailyChallenge()) {
             statusEl.textContent = 'Daily Challenge: Position mirrors to protect the center!';
-
-            // Disable launch button if already completed
-            if (this.modeManager.isDailyChallengeCompleted()) {
-                document.getElementById('launchBtn').disabled = true;
-                statusEl.textContent = 'Daily Challenge Complete! Come back tomorrow for a new puzzle.';
-                statusEl.className = 'status-modern status-success';
-                return;
-            }
         } else {
             statusEl.textContent = 'Position your mirrors to protect the center!';
         }
@@ -272,6 +314,13 @@ export class Game {
         // Only detect hover when not playing and not dragging
         if (this.isPlaying || this.draggedMirror) {
             this.hoveredMirror = null;
+            return;
+        }
+
+        // No hover effects for completed daily challenges
+        if (this.modeManager.isDailyChallenge() && this.modeManager.isDailyChallengeCompleted()) {
+            this.hoveredMirror = null;
+            this.canvas.style.cursor = 'default';
             return;
         }
 
@@ -1064,16 +1113,23 @@ export class Game {
     
     async showGameOverModal() {
         this.gameOver = true;
-        
+
         // Format final time with centiseconds
         const minutes = Math.floor(this.gameTime / 60);
         const seconds = Math.floor(this.gameTime % 60);
         const centiseconds = Math.floor((this.gameTime % 1) * 100);
         const finalTimeString = `${minutes}:${seconds.toString().padStart(2, '0')}.${centiseconds.toString().padStart(2, '0')}`;
-        
+
+        // Mark daily challenge as completed if in daily challenge mode
+        if (this.modeManager.isDailyChallenge() && !this.modeManager.isDailyChallengeCompleted()) {
+            const DailyChallenge = (await import('../validation/DailyChallenge.js')).DailyChallenge;
+            DailyChallenge.markCompleted(this.gameTime, finalTimeString, this.mirrors, this.lasers);
+            console.log('Daily Challenge completed and marked with mirror + laser positions saved!');
+        }
+
         // Update modal content
         document.getElementById('finalTime').textContent = finalTimeString;
-        
+
         // Get performance rating based on survival time
         try {
             const performanceData = await PerformanceRating.getRating(this.gameTime);
@@ -1088,10 +1144,10 @@ export class Game {
             performanceElement.textContent = 'Failed';
             performanceElement.style.color = '#ff3366';
         }
-        
+
         // Show modal
         document.getElementById('gameOverModal').classList.remove('hidden');
-        
+
         // Update status
         const statusEl = document.getElementById('status');
         statusEl.textContent = 'CORE BREACH! Check your final score above.';
@@ -1102,7 +1158,13 @@ export class Game {
         // Allow player to continue playing after game over
         this.gameOver = false;
         this.isPlaying = false;
-        
+
+        // Update mode UI if in daily challenge mode (show completion status)
+        if (this.modeManager.isDailyChallenge()) {
+            this.modeManager.updateModeButtons();
+            this.modeManager.updateDailyInfo();
+        }
+
         // Reset the game state
         this.resetGame();
     }

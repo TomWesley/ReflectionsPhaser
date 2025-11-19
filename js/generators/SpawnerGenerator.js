@@ -24,7 +24,9 @@ export class SpawnerGenerator {
             if (dailyPuzzle) {
                 // Create spawners from daily puzzle data
                 dailyPuzzle.spawners.forEach(spawnerData => {
-                    spawners.push(new Spawner(spawnerData.x, spawnerData.y, spawnerData.angle));
+                    const spawner = new Spawner(spawnerData.x, spawnerData.y, spawnerData.angle);
+                    spawner.isDailyChallenge = spawnerData.isDailyChallenge || true;
+                    spawners.push(spawner);
                 });
                 return spawners;
             }

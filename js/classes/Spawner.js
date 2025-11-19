@@ -8,17 +8,21 @@ export class Spawner {
     draw(ctx, showPreview = true) {
         ctx.save();
 
-        // Draw glowing spawner body - sunset purple
-        ctx.shadowColor = '#8338EC';
+        // Choose colors based on daily challenge mode
+        const outerColor = this.isDailyChallenge ? '#32FFB4' : '#8338EC';  // Mint green or sunset purple
+        const innerColor = this.isDailyChallenge ? '#7FFFD4' : '#FF8FA3';  // Aquamarine or sunset coral/pink
+
+        // Draw glowing spawner body
+        ctx.shadowColor = outerColor;
         ctx.shadowBlur = 18;
-        ctx.fillStyle = '#8338EC';
+        ctx.fillStyle = outerColor;
         ctx.beginPath();
         ctx.arc(this.x, this.y, 10, 0, Math.PI * 2);
         ctx.fill();
 
-        // Inner bright core - sunset coral/pink
+        // Inner bright core
         ctx.shadowBlur = 10;
-        ctx.fillStyle = '#FF8FA3';
+        ctx.fillStyle = innerColor;
         ctx.beginPath();
         ctx.arc(this.x, this.y, 6, 0, Math.PI * 2);
         ctx.fill();
@@ -29,10 +33,13 @@ export class Spawner {
             const endX = this.x + Math.cos(this.angle) * pathLength;
             const endY = this.y + Math.sin(this.angle) * pathLength;
 
+            // Colors for preview path
+            const pathOuterColor = this.isDailyChallenge ? 'rgba(50, 255, 180, 0.4)' : 'rgba(131, 56, 236, 0.4)';
+
             // Outer glow for path
-            ctx.shadowColor = '#8338EC';
+            ctx.shadowColor = outerColor;
             ctx.shadowBlur = 14;
-            ctx.strokeStyle = 'rgba(131, 56, 236, 0.4)';
+            ctx.strokeStyle = pathOuterColor;
             ctx.lineWidth = 8;
             ctx.lineCap = 'round';
             ctx.beginPath();
@@ -42,7 +49,7 @@ export class Spawner {
 
             // Bright inner path
             ctx.shadowBlur = 8;
-            ctx.strokeStyle = '#8338EC';
+            ctx.strokeStyle = outerColor;
             ctx.lineWidth = 3;
             ctx.beginPath();
             ctx.moveTo(this.x, this.y);
@@ -55,7 +62,7 @@ export class Spawner {
             const arrowAngle2 = this.angle - Math.PI * 0.8;
 
             ctx.shadowBlur = 10;
-            ctx.strokeStyle = '#8338EC';
+            ctx.strokeStyle = outerColor;
             ctx.lineWidth = 4;
             ctx.lineCap = 'round';
             ctx.beginPath();
