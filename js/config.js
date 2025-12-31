@@ -13,5 +13,6 @@ export const CONFIG = {
     TARGET_RADIUS: 50, // Aligns hexagon top/bottom vertices with grid lines
     EDGE_MARGIN: 40,
     ANGLE_INCREMENT: 15, // degrees
-    MIRROR_COUNT: 8
+    MIRROR_COUNT: 8,
+    MAX_GAME_TIME: 300 // 5 minutes - perfect score threshold
 };

@@ -1,0 +1,14 @@
+{
+  "name": "reflections-phaser",
+  "version": "1.0.0",
+  "description": "Geometric laser defense puzzle game",
+  "type": "module",
+  "scripts": {
+    "test": "node tests/run-tests.js",
+    "test:watch": "nodemon tests/run-tests.js"
+  },
+  "keywords": ["game", "puzzle", "laser", "mirrors"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {}
+}

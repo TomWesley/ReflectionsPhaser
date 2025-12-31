@@ -127,7 +127,25 @@
         </div>
     </div>
 
-    <!-- Mobile info bubble -->
+    <!-- Victory Modal -->
+    <div id="victoryModal" class="rules-modal hidden">
+        <div class="rules-content">
+            <div class="instruction-header"><i class="iconoir-trophy"></i> PERFECT DEFENSE! <i class="iconoir-trophy"></i></div>
+            <div class="game-over-content">
+                <div class="final-score">
+                    <div class="score-label">SURVIVAL TIME</div>
+                    <div id="victoryTime" class="score-value">5:00.00</div>
+                </div>
+                <div class="score-details">
+                    <div class="score-item">Mission Performance: <span id="victoryPerformance" class="performance-rating" style="color: #FFD700; text-shadow: 0 0 10px #FFD700;">PERFECT</span></div>
+                    <div class="score-item">You protected the core for the maximum time!</div>
+                </div>
+            </div>
+            <button class="btn-primary" onclick="closeVictory()">CONTINUE DEFENDING</button>
+        </div>
+    </div>
+
+    <!-- Mobile info bubble (legacy - hidden on mobile landscape) -->
     <div class="info-bubble">
         <button class="info-button" onclick="toggleInfoPopup()">?</button>
         <div id="infoPopup" class="info-popup hidden">
@@ -139,6 +157,74 @@
                 <i class="iconoir-shield"></i> Protect the central core at all costs<br>
                 <i class="iconoir-rocket"></i> Launch when ready for action<br>
                 <i class="iconoir-timer"></i> Survival time determines your final score
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Landscape HUD -->
+    <div class="mobile-hud">
+        <div class="mobile-hud-left">
+            <button class="hamburger-btn" onclick="toggleMobileMenu()" aria-label="Menu">
+                <i class="iconoir-menu"></i>
+            </button>
+        </div>
+        <div class="mobile-hud-center">
+            <div class="mobile-timer">
+                <i class="iconoir-timer"></i>
+                <span id="mobileTimer">0:00</span>
+            </div>
+        </div>
+        <div class="mobile-hud-right">
+            <button id="mobileLaunchBtn" class="mobile-launch-btn">
+                <i class="iconoir-rocket"></i>
+            </button>
+            <button id="mobileResetBtn" class="mobile-reset-btn">
+                <i class="iconoir-refresh"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Mobile Slide-out Menu -->
+    <div id="mobileMenuOverlay" class="mobile-menu-overlay hidden" onclick="closeMobileMenu()"></div>
+    <div id="mobileMenu" class="mobile-menu">
+        <div class="mobile-menu-header">
+            <h2 class="mobile-menu-title">REFLECTIONS</h2>
+            <button class="mobile-menu-close" onclick="closeMobileMenu()">
+                <i class="iconoir-xmark"></i>
+            </button>
+        </div>
+        <div class="mobile-menu-content">
+            <!-- Mode Selector -->
+            <div class="mobile-menu-section">
+                <div class="mobile-menu-label">GAME MODE</div>
+                <div class="mobile-mode-selector">
+                    <button id="mobileFreePlayBtn" class="mobile-mode-btn active" onclick="selectMobileMode('freeplay')">
+                        <i class="iconoir-play"></i>
+                        <span>Free Play</span>
+                    </button>
+                    <button id="mobileDailyChallengeBtn" class="mobile-mode-btn" onclick="selectMobileMode('daily')">
+                        <i class="iconoir-calendar"></i>
+                        <span>Daily Challenge</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Daily Info (shown when daily challenge active) -->
+            <div id="mobileDailyInfo" class="mobile-daily-info hidden">
+                <div class="mobile-daily-date"></div>
+                <div class="mobile-daily-status"></div>
+            </div>
+
+            <!-- Menu Links -->
+            <div class="mobile-menu-section">
+                <button class="mobile-menu-item" onclick="openMobileRules()">
+                    <i class="iconoir-info-circle"></i>
+                    <span>How to Play</span>
+                </button>
+                <a href="about.html" class="mobile-menu-item">
+                    <i class="iconoir-book"></i>
+                    <span>About</span>
+                </a>
             </div>
         </div>
     </div>
@@ -167,6 +253,142 @@
             }
         }
 
+        function closeVictory() {
+            document.getElementById('victoryModal').classList.add('hidden');
+            // Let the game know to allow continuing
+            if (window.game) {
+                window.game.continueAfterGameOver();
+            }
+        }
+
+        // Mobile Menu Functions
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobileMenu');
+            const overlay = document.getElementById('mobileMenuOverlay');
+            menu.classList.toggle('open');
+            overlay.classList.toggle('hidden');
+            document.body.classList.toggle('menu-open');
+        }
+
+        function closeMobileMenu() {
+            const menu = document.getElementById('mobileMenu');
+            const overlay = document.getElementById('mobileMenuOverlay');
+            menu.classList.remove('open');
+            overlay.classList.add('hidden');
+            document.body.classList.remove('menu-open');
+        }
+
+        function selectMobileMode(mode) {
+            const freePlayBtn = document.getElementById('mobileFreePlayBtn');
+            const dailyBtn = document.getElementById('mobileDailyChallengeBtn');
+            const mobileDailyInfo = document.getElementById('mobileDailyInfo');
+
+            if (mode === 'freeplay') {
+                freePlayBtn.classList.add('active');
+                dailyBtn.classList.remove('active');
+                mobileDailyInfo.classList.add('hidden');
+                // Trigger the desktop button to sync state
+                document.getElementById('freePlayBtn').click();
+            } else {
+                dailyBtn.classList.add('active');
+                freePlayBtn.classList.remove('active');
+                mobileDailyInfo.classList.remove('hidden');
+                // Trigger the desktop button to sync state
+                document.getElementById('dailyChallengeBtn').click();
+                // Update mobile daily info
+                updateMobileDailyInfo();
+            }
+            closeMobileMenu();
+        }
+
+        function updateMobileDailyInfo() {
+            const desktopDate = document.querySelector('.daily-date');
+            const desktopStatus = document.querySelector('.daily-status');
+            const mobileDate = document.querySelector('.mobile-daily-date');
+            const mobileStatus = document.querySelector('.mobile-daily-status');
+
+            if (desktopDate && mobileDate) {
+                mobileDate.textContent = desktopDate.textContent;
+            }
+            if (desktopStatus && mobileStatus) {
+                mobileStatus.textContent = desktopStatus.textContent;
+                mobileStatus.className = desktopStatus.className.replace('daily-status', 'mobile-daily-status');
+            }
+        }
+
+        function openMobileRules() {
+            closeMobileMenu();
+            openRules();
+        }
+
+        // Mobile button handlers
+        document.addEventListener('DOMContentLoaded', function() {
+            // Mobile launch button syncs with desktop
+            const mobileLaunchBtn = document.getElementById('mobileLaunchBtn');
+            const mobileResetBtn = document.getElementById('mobileResetBtn');
+            const desktopLaunchBtn = document.getElementById('launchBtn');
+            const desktopResetBtn = document.getElementById('resetBtn');
+
+            if (mobileLaunchBtn && desktopLaunchBtn) {
+                mobileLaunchBtn.addEventListener('click', function() {
+                    desktopLaunchBtn.click();
+                });
+            }
+
+            if (mobileResetBtn && desktopResetBtn) {
+                mobileResetBtn.addEventListener('click', function() {
+                    desktopResetBtn.click();
+                });
+            }
+
+            // Sync mobile mode buttons with desktop state
+            const observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                        const freePlayActive = document.getElementById('freePlayBtn').classList.contains('active');
+                        const mobileFreePlay = document.getElementById('mobileFreePlayBtn');
+                        const mobileDaily = document.getElementById('mobileDailyChallengeBtn');
+                        const mobileDailyInfo = document.getElementById('mobileDailyInfo');
+
+                        if (freePlayActive) {
+                            mobileFreePlay.classList.add('active');
+                            mobileDaily.classList.remove('active');
+                            mobileDailyInfo.classList.add('hidden');
+                        } else {
+                            mobileDaily.classList.add('active');
+                            mobileFreePlay.classList.remove('active');
+                            mobileDailyInfo.classList.remove('hidden');
+                            updateMobileDailyInfo();
+                        }
+                    }
+                });
+            });
+
+            const freePlayBtn = document.getElementById('freePlayBtn');
+            if (freePlayBtn) {
+                observer.observe(freePlayBtn, { attributes: true });
+            }
+
+            // Sync launch button disabled state
+            const launchObserver = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    if (mutation.type === 'attributes' && mutation.attributeName === 'disabled') {
+                        const isDisabled = desktopLaunchBtn.disabled;
+                        mobileLaunchBtn.disabled = isDisabled;
+                        if (isDisabled) {
+                            mobileLaunchBtn.classList.add('disabled');
+                        } else {
+                            mobileLaunchBtn.classList.remove('disabled');
+                        }
+                    }
+                });
+            });
+
+            if (desktopLaunchBtn) {
+                launchObserver.observe(desktopLaunchBtn, { attributes: true });
+            }
+        });
+
         // Close modal when clicking outside
         document.getElementById('rulesModal').addEventListener('click', function(e) {
             if (e.target === this) {
@@ -177,6 +399,12 @@
         document.getElementById('gameOverModal').addEventListener('click', function(e) {
             if (e.target === this) {
                 closeGameOver();
+            }
+        });
+
+        document.getElementById('victoryModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeVictory();
             }
         });
     </script>

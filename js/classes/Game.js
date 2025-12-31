@@ -861,11 +861,18 @@ export class Game {
     
     update() {
         if (!this.isPlaying || this.gameOver) return;
-        
+
         // Update game time
         this.gameTime = (Date.now() - this.startTime) / 1000;
         this.updateTimerDisplay();
-        
+
+        // Check for victory (perfect score - survived max time)
+        if (this.gameTime >= CONFIG.MAX_GAME_TIME) {
+            this.gameTime = CONFIG.MAX_GAME_TIME; // Cap at exactly max time
+            this.showVictoryModal();
+            return;
+        }
+
         // Update lasers with new collision system
         for (let i = this.lasers.length - 1; i >= 0; i--) {
             const laser = this.lasers[i];
@@ -1109,6 +1116,12 @@ export class Game {
         const centiseconds = Math.floor((this.gameTime % 1) * 100);
         const timeString = `${minutes}:${seconds.toString().padStart(2, '0')}.${centiseconds.toString().padStart(2, '0')}`;
         document.getElementById('timer').textContent = timeString;
+
+        // Also update mobile timer (shorter format without centiseconds)
+        const mobileTimer = document.getElementById('mobileTimer');
+        if (mobileTimer) {
+            mobileTimer.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        }
     }
     
     async showGameOverModal() {
@@ -1153,7 +1166,34 @@ export class Game {
         statusEl.textContent = 'CORE BREACH! Check your final score above.';
         statusEl.className = 'status-modern status-game-over';
     }
-    
+
+    async showVictoryModal() {
+        this.gameOver = true;
+
+        // Format final time (should be exactly 5:00.00)
+        const minutes = Math.floor(this.gameTime / 60);
+        const seconds = Math.floor(this.gameTime % 60);
+        const centiseconds = Math.floor((this.gameTime % 1) * 100);
+        const finalTimeString = `${minutes}:${seconds.toString().padStart(2, '0')}.${centiseconds.toString().padStart(2, '0')}`;
+
+        // Mark daily challenge as completed if in daily challenge mode
+        if (this.modeManager.isDailyChallenge() && !this.modeManager.isDailyChallengeCompleted()) {
+            DailyChallenge.markCompleted(this.gameTime, finalTimeString, this.mirrors, this.lasers);
+            console.log('Daily Challenge completed with PERFECT SCORE! Mirror + laser positions saved.');
+        }
+
+        // Update modal content
+        document.getElementById('victoryTime').textContent = finalTimeString;
+
+        // Show modal
+        document.getElementById('victoryModal').classList.remove('hidden');
+
+        // Update status
+        const statusEl = document.getElementById('status');
+        statusEl.textContent = 'PERFECT DEFENSE! You protected the core for the maximum time!';
+        statusEl.className = 'status-modern status-game-over';
+    }
+
     continueAfterGameOver() {
         // Allow player to continue playing after game over
         this.gameOver = false;
