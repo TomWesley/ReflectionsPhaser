@@ -803,6 +803,30 @@ h1 {
     color: var(--text-secondary);
 }
 
+/* Compact score layout */
+.compact-score {
+    text-align: center;
+    padding: 20px;
+}
+
+.compact-score .score-value {
+    margin-bottom: 10px;
+}
+
+.compact-score .performance-rating {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+.compact-score .performance-rating.perfect {
+    color: #FFD700;
+    text-shadow: 0 0 10px #FFD700;
+}
+
 .status-failed {
     color: var(--danger-red);
     font-weight: 600;
@@ -1341,13 +1365,9 @@ h1 {
 
     /* Game Container - Fullscreen with aspect ratio */
     #gameContainer {
-        position: fixed !important;
-        top: 44px !important;
-        left: 0 !important;
-        right: 0 !important;
-        bottom: 0 !important;
+        position: relative !important;
         width: 100% !important;
-        height: calc(100% - 44px) !important;
+        height: 100% !important;
         max-width: none !important;
         max-height: none !important;
         margin: 0 !important;
@@ -1360,17 +1380,18 @@ h1 {
         align-items: center !important;
         justify-content: center !important;
         box-shadow: none !important;
+        overflow: hidden !important;
     }
 
     #gameCanvas {
         /* Maintain exact 800x600 (4:3) aspect ratio */
+        display: block !important;
         width: auto !important;
-        height: auto !important;
+        height: 100% !important;
         max-width: 100% !important;
         max-height: 100% !important;
-        aspect-ratio: 4 / 3;
-        object-fit: contain;
         border-radius: 0 !important;
+        touch-action: none !important;
     }
 
     /* Mobile Menu Overlay */
@@ -1585,15 +1606,43 @@ h1 {
         padding: 6px 0;
     }
 
-    /* Game over/victory modals on mobile */
-    .game-over-content {
-        margin: 20px;
-        padding: 20px;
-        min-height: auto;
+    /* Compact modals on mobile */
+    .compact-modal {
+        padding: 20px !important;
+        max-width: 280px !important;
+        width: 90% !important;
     }
 
-    .score-value {
-        font-size: 2rem;
+    .compact-modal .instruction-header {
+        font-size: 1.1rem !important;
+        margin-bottom: 15px !important;
+        padding-bottom: 10px !important;
+    }
+
+    .compact-score {
+        text-align: center;
+        margin-bottom: 15px;
+    }
+
+    .compact-score .score-value {
+        font-size: 2.2rem !important;
+        margin-bottom: 8px;
+    }
+
+    .compact-score .performance-rating {
+        font-size: 0.9rem;
+        font-weight: 600;
+        letter-spacing: 1px;
+    }
+
+    .compact-score .performance-rating.perfect {
+        color: #FFD700;
+        text-shadow: 0 0 10px #FFD700;
+    }
+
+    .compact-modal .btn-primary {
+        padding: 12px 24px !important;
+        font-size: 0.9rem !important;
     }
 }
 

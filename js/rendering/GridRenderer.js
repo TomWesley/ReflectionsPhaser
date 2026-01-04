@@ -23,5 +23,10 @@ export class GridRenderer {
             ctx.lineTo(CONFIG.CANVAS_WIDTH, y);
             ctx.stroke();
         }
+
+        // Draw visible border around the entire playable area
+        ctx.strokeStyle = 'rgba(255, 107, 53, 0.6)';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(1, 1, CONFIG.CANVAS_WIDTH - 2, CONFIG.CANVAS_HEIGHT - 2);
     }
 }

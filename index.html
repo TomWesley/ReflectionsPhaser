@@ -111,37 +111,25 @@
 
     <!-- Game Over Modal -->
     <div id="gameOverModal" class="rules-modal hidden">
-        <div class="rules-content">
-            <div class="instruction-header"><i class="iconoir-xmark-circle"></i> CORE BREACH! <i class="iconoir-xmark-circle"></i></div>
-            <div class="game-over-content">
-                <div class="final-score">
-                    <div class="score-label">SURVIVAL TIME</div>
-                    <div id="finalTime" class="score-value">0:00.00</div>
-                </div>
-                <div class="score-details">
-                    <div class="score-item">Mission Performance: <span id="missionPerformance" class="performance-rating">Calculating...</span></div>
-                    <div class="score-item">Leaderboard Position: <span id="leaderboardPosition">Coming Soon</span></div>
-                </div>
+        <div class="rules-content compact-modal">
+            <div class="instruction-header"><i class="iconoir-xmark-circle"></i> CORE BREACH!</div>
+            <div class="compact-score">
+                <div id="finalTime" class="score-value">0:00.00</div>
+                <div id="missionPerformance" class="performance-rating">Calculating...</div>
             </div>
-            <button class="btn-primary" onclick="closeGameOver()">CONTINUE DEFENDING</button>
+            <button class="btn-primary" onclick="closeGameOver()">PLAY AGAIN</button>
         </div>
     </div>
 
     <!-- Victory Modal -->
     <div id="victoryModal" class="rules-modal hidden">
-        <div class="rules-content">
-            <div class="instruction-header"><i class="iconoir-trophy"></i> PERFECT DEFENSE! <i class="iconoir-trophy"></i></div>
-            <div class="game-over-content">
-                <div class="final-score">
-                    <div class="score-label">SURVIVAL TIME</div>
-                    <div id="victoryTime" class="score-value">5:00.00</div>
-                </div>
-                <div class="score-details">
-                    <div class="score-item">Mission Performance: <span id="victoryPerformance" class="performance-rating" style="color: #FFD700; text-shadow: 0 0 10px #FFD700;">PERFECT</span></div>
-                    <div class="score-item">You protected the core for the maximum time!</div>
-                </div>
+        <div class="rules-content compact-modal">
+            <div class="instruction-header"><i class="iconoir-trophy"></i> PERFECT!</div>
+            <div class="compact-score">
+                <div id="victoryTime" class="score-value">5:00.00</div>
+                <div id="victoryPerformance" class="performance-rating perfect">MAX SURVIVAL</div>
             </div>
-            <button class="btn-primary" onclick="closeVictory()">CONTINUE DEFENDING</button>
+            <button class="btn-primary" onclick="closeVictory()">PLAY AGAIN</button>
         </div>
     </div>
 

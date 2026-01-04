@@ -18,8 +18,12 @@ export class GameRenderer {
      * Main render method - orchestrates all drawing operations
      */
     render() {
-        // Clear canvas
+        // Clear canvas and fill with dark background
         this.ctx.clearRect(0, 0, CONFIG.CANVAS_WIDTH, CONFIG.CANVAS_HEIGHT);
+
+        // Fill with dark background (ensures visibility on all devices)
+        this.ctx.fillStyle = '#0a0a0f';
+        this.ctx.fillRect(0, 0, CONFIG.CANVAS_WIDTH, CONFIG.CANVAS_HEIGHT);
 
         // Add subtle mint green tint for daily challenge mode
         if (this.game.modeManager && this.game.modeManager.isDailyChallenge()) {

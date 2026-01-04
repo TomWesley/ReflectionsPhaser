@@ -80,6 +80,8 @@ export class Game {
         // Store bound functions so we can add/remove them properly
         this.boundMouseMove = this.onMouseMove.bind(this);
         this.boundMouseUp = this.handleDragEnd.bind(this);
+        this.boundTouchMove = this.onTouchMove.bind(this);
+        this.boundTouchEnd = this.onTouchEnd.bind(this);
 
         // Mouse down only on canvas
         this.canvas.addEventListener('mousedown', (e) => this.onMouseDown(e));
@@ -87,9 +89,85 @@ export class Game {
         // Mouse move for hover effects (when not dragging)
         this.canvas.addEventListener('mousemove', (e) => this.onCanvasHover(e));
 
+        // Touch events for mobile support
+        this.canvas.addEventListener('touchstart', (e) => this.onTouchStart(e), { passive: false });
+
         // UI buttons
         document.getElementById('launchBtn').addEventListener('click', () => this.launchLasers());
         document.getElementById('resetBtn').addEventListener('click', () => this.resetGame());
+    }
+
+    // Helper to get canvas coordinates from mouse or touch event
+    getCanvasCoordinates(e) {
+        const rect = this.canvas.getBoundingClientRect();
+        const scaleX = this.canvas.width / rect.width;
+        const scaleY = this.canvas.height / rect.height;
+
+        let clientX, clientY;
+        if (e.touches && e.touches.length > 0) {
+            clientX = e.touches[0].clientX;
+            clientY = e.touches[0].clientY;
+        } else if (e.changedTouches && e.changedTouches.length > 0) {
+            clientX = e.changedTouches[0].clientX;
+            clientY = e.changedTouches[0].clientY;
+        } else {
+            clientX = e.clientX;
+            clientY = e.clientY;
+        }
+
+        return {
+            x: (clientX - rect.left) * scaleX,
+            y: (clientY - rect.top) * scaleY
+        };
+    }
+
+    onTouchStart(e) {
+        if (this.isPlaying) return;
+
+        // Prevent interaction in completed Daily Challenges
+        if (this.modeManager.isDailyChallenge() && this.modeManager.isDailyChallengeCompleted()) {
+            return;
+        }
+
+        const coords = this.getCanvasCoordinates(e);
+
+        // Check if touching a mirror
+        for (let mirror of this.mirrors) {
+            if (mirror.containsPoint(coords.x, coords.y)) {
+                e.preventDefault(); // Prevent scrolling when dragging mirror
+                this.startDragging(mirror, coords.x, coords.y);
+                break;
+            }
+        }
+    }
+
+    onTouchMove(e) {
+        if (!this.draggedMirror || this.isPlaying) return;
+
+        e.preventDefault(); // Prevent scrolling while dragging
+
+        const coords = this.getCanvasCoordinates(e);
+
+        // Check if finger has moved significantly from start position
+        const moveThreshold = 5;
+        const deltaX = Math.abs(coords.x - this.dragStartPos.x);
+        const deltaY = Math.abs(coords.y - this.dragStartPos.y);
+
+        if (deltaX > moveThreshold || deltaY > moveThreshold) {
+            this.mouseHasMoved = true;
+        }
+
+        // Move smoothly without snapping during drag
+        let newX = coords.x - this.dragOffset.x;
+        let newY = coords.y - this.dragOffset.y;
+
+        this.draggedMirror.x = newX;
+        this.draggedMirror.y = newY;
+        this.safeUpdateVertices(this.draggedMirror);
+    }
+
+    onTouchEnd(e) {
+        this.handleDragEnd(e);
     }
 
     startDragging(mirror, mouseX, mouseY) {
@@ -106,17 +184,23 @@ export class Game {
         mirror.originalX = mirror.x;
         mirror.originalY = mirror.y;
 
-        // Add global event listeners for drag
+        // Add global event listeners for drag (mouse and touch)
         // These will work anywhere on the page
         document.addEventListener('mousemove', this.boundMouseMove);
         document.addEventListener('mouseup', this.boundMouseUp);
+        document.addEventListener('touchmove', this.boundTouchMove, { passive: false });
+        document.addEventListener('touchend', this.boundTouchEnd);
+        document.addEventListener('touchcancel', this.boundTouchEnd);
     }
 
     stopDragging() {
-        // Remove global event listeners FIRST
+        // Remove global event listeners FIRST (mouse and touch)
         // This prevents any race conditions where events could fire during cleanup
         document.removeEventListener('mousemove', this.boundMouseMove);
         document.removeEventListener('mouseup', this.boundMouseUp);
+        document.removeEventListener('touchmove', this.boundTouchMove);
+        document.removeEventListener('touchend', this.boundTouchEnd);
+        document.removeEventListener('touchcancel', this.boundTouchEnd);
 
         // Reset all drag state
         // Note: draggedMirror may already be null if cleared by handleDragEnd
@@ -433,14 +517,10 @@ export class Game {
                 return;
             }
 
-            // Get the final drop position with proper scaling
-            const rect = this.canvas.getBoundingClientRect();
-            const scaleX = this.canvas.width / rect.width;
-            const scaleY = this.canvas.height / rect.height;
-            const mouseX = (e.clientX - rect.left) * scaleX;
-            const mouseY = (e.clientY - rect.top) * scaleY;
-            const dropX = mouseX - this.dragOffset.x;
-            const dropY = mouseY - this.dragOffset.y;
+            // Get the final drop position with proper scaling (works for both mouse and touch)
+            const coords = this.getCanvasCoordinates(e);
+            const dropX = coords.x - this.dragOffset.x;
+            const dropY = coords.y - this.dragOffset.y;
 
             // CRITICAL: Check if drop position is completely off-canvas
             const maxMirrorSize = Math.max(mirror.width || mirror.size, mirror.height || mirror.size);
