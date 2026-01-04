@@ -117,7 +117,10 @@
                 <div id="finalTime" class="score-value">0:00.00</div>
                 <div id="missionPerformance" class="performance-rating">Calculating...</div>
             </div>
-            <button class="btn-primary" onclick="closeGameOver()">PLAY AGAIN</button>
+            <div class="modal-buttons">
+                <button class="btn-primary" onclick="closeGameOver()">RETRY</button>
+                <button class="btn-secondary" onclick="openLeaderboard()">RANKS</button>
+            </div>
         </div>
     </div>
 
@@ -129,7 +132,10 @@
                 <div id="victoryTime" class="score-value">5:00.00</div>
                 <div id="victoryPerformance" class="performance-rating perfect">MAX SURVIVAL</div>
             </div>
-            <button class="btn-primary" onclick="closeVictory()">PLAY AGAIN</button>
+            <div class="modal-buttons">
+                <button class="btn-primary" onclick="closeVictory()">RETRY</button>
+                <button class="btn-secondary" onclick="openLeaderboard()">RANKS</button>
+            </div>
         </div>
     </div>
 
@@ -247,6 +253,11 @@
             if (window.game) {
                 window.game.continueAfterGameOver();
             }
+        }
+
+        function openLeaderboard() {
+            // Placeholder - leaderboard coming soon
+            alert('Leaderboard coming soon!');
         }
 
         // Mobile Menu Functions
