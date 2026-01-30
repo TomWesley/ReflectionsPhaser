@@ -13,7 +13,7 @@ export class Laser {
         this.maxReflections = 50; // Prevent infinite bouncing
     }
     
-    update() {
+    update(deltaTime) {
         // Store previous position for continuous collision detection
         this.prevX = this.x;
         this.prevY = this.y;
@@ -29,9 +29,10 @@ export class Laser {
             this.trail.shift();
         }
         
-        // Move laser
-        this.x += this.vx;
-        this.y += this.vy;
+        // Move laser (frame-rate independent)
+        // Base multiplier 60 (for 60fps), then * 0.4 for 60% slower (40% of original speed)
+        this.x += this.vx * deltaTime * 24;
+        this.y += this.vy * deltaTime * 24;
         
         // Bounce off walls
         if (this.x <= 0 || this.x >= CONFIG.CANVAS_WIDTH) {
@@ -63,93 +64,97 @@ export class Laser {
     }
     
     draw(ctx) {
-        // Draw enhanced trail with sunset pink/purple gradient
+        // Draw trail with dramatic fade - bright at head, dim at tail
         if (this.trail.length > 1) {
             ctx.save();
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
 
-            // Outer glow trail
-            ctx.lineWidth = 8;
-            ctx.strokeStyle = 'rgba(255, 0, 110, 0.12)';
-            ctx.beginPath();
+            // Draw trail segments individually for smooth gradient effect
             for (let i = 1; i < this.trail.length; i++) {
-                const alpha = (i / this.trail.length) * 0.12;
-                ctx.globalAlpha = alpha;
-                ctx.moveTo(this.trail[i-1].x, this.trail[i-1].y);
-                ctx.lineTo(this.trail[i].x, this.trail[i].y);
-            }
-            ctx.stroke();
+                // Progress from 0 (tail) to 1 (head)
+                const progress = i / this.trail.length;
+                // Use exponential curve for more dramatic fade
+                const intensity = Math.pow(progress, 2);
 
-            // Middle glow trail
-            ctx.lineWidth = 4;
-            ctx.strokeStyle = 'rgba(255, 0, 110, 0.35)';
-            ctx.beginPath();
-            for (let i = 1; i < this.trail.length; i++) {
-                const alpha = (i / this.trail.length) * 0.35;
-                ctx.globalAlpha = alpha;
-                ctx.moveTo(this.trail[i-1].x, this.trail[i-1].y);
-                ctx.lineTo(this.trail[i].x, this.trail[i].y);
-            }
-            ctx.stroke();
+                const prev = this.trail[i - 1];
+                const curr = this.trail[i];
 
-            // Inner bright trail
-            ctx.lineWidth = 2;
-            ctx.strokeStyle = 'rgba(255, 0, 110, 0.85)';
-            ctx.beginPath();
-            for (let i = 1; i < this.trail.length; i++) {
-                const alpha = (i / this.trail.length) * 0.85;
-                ctx.globalAlpha = alpha;
-                ctx.moveTo(this.trail[i-1].x, this.trail[i-1].y);
-                ctx.lineTo(this.trail[i].x, this.trail[i].y);
+                // Outer glow - very faint at tail, visible near head
+                ctx.beginPath();
+                ctx.moveTo(prev.x, prev.y);
+                ctx.lineTo(curr.x, curr.y);
+                ctx.lineWidth = 6 + intensity * 6; // 6-12px width
+                ctx.strokeStyle = `rgba(255, 100, 150, ${intensity * 0.3})`;
+                ctx.stroke();
+
+                // Middle glow
+                ctx.beginPath();
+                ctx.moveTo(prev.x, prev.y);
+                ctx.lineTo(curr.x, curr.y);
+                ctx.lineWidth = 3 + intensity * 4; // 3-7px width
+                ctx.strokeStyle = `rgba(255, 50, 120, ${intensity * 0.6})`;
+                ctx.stroke();
+
+                // Core trail - bright pink/white gradient
+                ctx.beginPath();
+                ctx.moveTo(prev.x, prev.y);
+                ctx.lineTo(curr.x, curr.y);
+                ctx.lineWidth = 1 + intensity * 3; // 1-4px width
+                // Interpolate from dim pink to bright white-pink
+                const r = Math.round(255);
+                const g = Math.round(50 + intensity * 200); // 50-250
+                const b = Math.round(110 + intensity * 145); // 110-255
+                ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${0.3 + intensity * 0.7})`;
+                ctx.stroke();
             }
-            ctx.stroke();
 
             ctx.restore();
         }
 
-        // Draw laser point with enhanced glow - sunset pink
+        // Draw laser head with intense pulsing glow
         ctx.save();
 
-        // Outer glow
-        ctx.shadowColor = '#FF006E';
-        ctx.shadowBlur = 20;
-        ctx.fillStyle = 'rgba(255, 0, 110, 0.35)';
+        // Pulsing effect using time
+        const pulse = 0.8 + Math.sin(Date.now() * 0.01) * 0.2; // 0.6-1.0 pulse
+
+        // Large outer glow
+        ctx.shadowColor = '#FF69B4';
+        ctx.shadowBlur = 30 * pulse;
+        ctx.fillStyle = `rgba(255, 105, 180, ${0.3 * pulse})`;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, CONFIG.LASER_RADIUS * 5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Medium glow
+        ctx.shadowColor = '#FF1493';
+        ctx.shadowBlur = 20 * pulse;
+        ctx.fillStyle = `rgba(255, 20, 147, ${0.5 * pulse})`;
         ctx.beginPath();
         ctx.arc(this.x, this.y, CONFIG.LASER_RADIUS * 3, 0, Math.PI * 2);
         ctx.fill();
 
-        // Middle glow
-        ctx.shadowBlur = 12;
-        ctx.fillStyle = 'rgba(255, 0, 110, 0.65)';
+        // Inner bright glow
+        ctx.shadowBlur = 15 * pulse;
+        ctx.fillStyle = `rgba(255, 100, 180, ${0.8 * pulse})`;
         ctx.beginPath();
         ctx.arc(this.x, this.y, CONFIG.LASER_RADIUS * 2, 0, Math.PI * 2);
         ctx.fill();
 
-        // Core laser point - bright sunset pink
-        ctx.shadowBlur = 8;
-        ctx.fillStyle = '#FF006E';
+        // Core - bright white/pink center
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = '#FFFFFF';
+        ctx.fillStyle = '#FFFFFF';
         ctx.beginPath();
-        ctx.arc(this.x, this.y, CONFIG.LASER_RADIUS, 0, Math.PI * 2);
+        ctx.arc(this.x, this.y, CONFIG.LASER_RADIUS * 1.2, 0, Math.PI * 2);
         ctx.fill();
 
-        ctx.restore();
-
-        // Draw direction indicator with glow
-        const dirLength = 12;
-        const endX = this.x + (this.vx / CONFIG.LASER_SPEED) * dirLength;
-        const endY = this.y + (this.vy / CONFIG.LASER_SPEED) * dirLength;
-
-        ctx.save();
-        ctx.shadowColor = '#FF006E';
-        ctx.shadowBlur = 10;
-        ctx.strokeStyle = '#FF006E';
-        ctx.lineWidth = 2;
-        ctx.lineCap = 'round';
+        // Hot white center
+        ctx.fillStyle = '#FFFFFF';
         ctx.beginPath();
-        ctx.moveTo(this.x, this.y);
-        ctx.lineTo(endX, endY);
-        ctx.stroke();
+        ctx.arc(this.x, this.y, CONFIG.LASER_RADIUS * 0.6, 0, Math.PI * 2);
+        ctx.fill();
+
         ctx.restore();
     }
 }

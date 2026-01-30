@@ -4,7 +4,8 @@
       "Bash(lsof:*)",
       "Bash(kill:*)",
       "Bash(npm test)",
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "Bash(git checkout:*)"
     ],
     "deny": [],
     "ask": []

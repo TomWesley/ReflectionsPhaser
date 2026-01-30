@@ -84,6 +84,12 @@ export class SimpleValidator {
         for (let other of otherMirrors) {
             if (!other.vertices || other.vertices.length === 0) continue;
 
+            // Quick check: Are the centers nearly identical? (same position = definite overlap)
+            const centerDist = Math.sqrt((mirror.x - other.x) ** 2 + (mirror.y - other.y) ** 2);
+            if (centerDist < 5) { // Within 5 pixels = same position
+                return { valid: false, reason: 'Mirror is at same position as another mirror' };
+            }
+
             if (this.polygonsOverlap(mirror.vertices, other.vertices)) {
                 return { valid: false, reason: 'Overlaps with another mirror' };
             }

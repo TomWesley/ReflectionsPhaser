@@ -29,6 +29,8 @@ export class Game {
         this.gameOver = false;
         this.startTime = 0;
         this.gameTime = 0;
+        this.lastTimestamp = null;
+        this.deltaTime = 1/60;
 
         // Game objects
         this.mirrors = [];
@@ -363,8 +365,10 @@ export class Game {
                 // Disable launch button
                 document.getElementById('launchBtn').disabled = true;
                 const statusEl = document.getElementById('status');
-                statusEl.textContent = 'Daily Challenge Complete! This is your final solution. Come back tomorrow for a new puzzle.';
-                statusEl.className = 'status-modern status-success';
+                if (statusEl) {
+                    statusEl.textContent = 'Daily Challenge Complete! This is your final solution. Come back tomorrow for a new puzzle.';
+                    statusEl.className = 'status-modern status-success';
+                }
                 return;
             } else {
                 // Not completed yet - generate fresh puzzle
@@ -386,12 +390,14 @@ export class Game {
         document.getElementById('launchBtn').disabled = false;
         const statusEl = document.getElementById('status');
 
-        if (this.modeManager.isDailyChallenge()) {
-            statusEl.textContent = 'Daily Challenge: Position mirrors to protect the center!';
-        } else {
-            statusEl.textContent = 'Position your mirrors to protect the center!';
+        if (statusEl) {
+            if (this.modeManager.isDailyChallenge()) {
+                statusEl.textContent = 'Daily Challenge: Position mirrors to protect the center!';
+            } else {
+                statusEl.textContent = 'Position your mirrors to protect the center!';
+            }
+            statusEl.className = 'status-modern';
         }
-        statusEl.className = 'status-modern';
     }
     
     onCanvasHover(e) {
@@ -522,17 +528,16 @@ export class Game {
             const dropX = coords.x - this.dragOffset.x;
             const dropY = coords.y - this.dragOffset.y;
 
-            // CRITICAL: Check if drop position is completely off-canvas
-            const maxMirrorSize = Math.max(mirror.width || mirror.size, mirror.height || mirror.size);
-            const safeMargin = maxMirrorSize + 20; // Mirror size + buffer
+            // Quick bounds check - reject positions clearly outside the canvas
+            // The SimpleValidator will handle precise forbidden zone checking
+            const margin = 20; // Small buffer
+            const isWayOutOfBounds = dropX < margin ||
+                                     dropX > CONFIG.CANVAS_WIDTH - margin ||
+                                     dropY < margin ||
+                                     dropY > CONFIG.CANVAS_HEIGHT - margin;
 
-            const isOffCanvas = dropX < -safeMargin ||
-                               dropX > CONFIG.CANVAS_WIDTH + safeMargin ||
-                               dropY < -safeMargin ||
-                               dropY > CONFIG.CANVAS_HEIGHT + safeMargin;
-
-            if (isOffCanvas) {
-                console.warn('Drop position is off-canvas, reverting to original position');
+            if (isWayOutOfBounds) {
+                console.warn('Drop position is way out of bounds, reverting to original position');
                 mirror.x = mirror.originalX;
                 mirror.y = mirror.originalY;
                 this.safeUpdateVertices(mirror);
@@ -956,7 +961,7 @@ export class Game {
         // Update lasers with new collision system
         for (let i = this.lasers.length - 1; i >= 0; i--) {
             const laser = this.lasers[i];
-            laser.update();
+            laser.update(this.deltaTime);
 
             // Use new collision system for mirror collisions
             this.laserCollisionHandler.checkAndHandleCollisions(laser, this.mirrors);
@@ -1241,10 +1246,12 @@ export class Game {
         // Show modal
         document.getElementById('gameOverModal').classList.remove('hidden');
 
-        // Update status
+        // Update status (if element exists)
         const statusEl = document.getElementById('status');
-        statusEl.textContent = 'CORE BREACH! Check your final score above.';
-        statusEl.className = 'status-modern status-game-over';
+        if (statusEl) {
+            statusEl.textContent = 'CORE BREACH! Check your final score above.';
+            statusEl.className = 'status-modern status-game-over';
+        }
     }
 
     async showVictoryModal() {
@@ -1268,10 +1275,12 @@ export class Game {
         // Show modal
         document.getElementById('victoryModal').classList.remove('hidden');
 
-        // Update status
+        // Update status (if element exists)
         const statusEl = document.getElementById('status');
-        statusEl.textContent = 'PERFECT DEFENSE! You protected the core for the maximum time!';
-        statusEl.className = 'status-modern status-game-over';
+        if (statusEl) {
+            statusEl.textContent = 'PERFECT DEFENSE! You protected the core for the maximum time!';
+            statusEl.className = 'status-modern status-game-over';
+        }
     }
 
     continueAfterGameOver() {
@@ -1289,9 +1298,19 @@ export class Game {
         this.resetGame();
     }
     
-    gameLoop() {
+    gameLoop(timestamp) {
+        // Calculate delta time
+        if (this.lastTimestamp !== null && timestamp !== undefined) {
+            this.deltaTime = (timestamp - this.lastTimestamp) / 1000;
+            if (this.deltaTime > 0.1) this.deltaTime = 0.1;
+            if (this.deltaTime <= 0) this.deltaTime = 1/60;
+        }
+        if (timestamp !== undefined) {
+            this.lastTimestamp = timestamp;
+        }
+
         this.update();
         this.render();
-        requestAnimationFrame(() => this.gameLoop());
+        requestAnimationFrame((t) => this.gameLoop(t));
     }
 }

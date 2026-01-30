@@ -128,11 +128,12 @@ export class MirrorPlacementValidation {
                     return true;
                 }
             } else if (zone.type === 'rectangle') {
-                // Point is forbidden if it's INSIDE or ON the rectangle edges
-                if (point.x >= zone.x && 
-                    point.x <= zone.x + zone.width &&
-                    point.y >= zone.y && 
-                    point.y <= zone.y + zone.height) {
+                // Point is forbidden if it's STRICTLY INSIDE the rectangle
+                // Points exactly on the inner boundary are VALID (not forbidden)
+                if (point.x >= zone.x &&
+                    point.x < zone.x + zone.width &&
+                    point.y >= zone.y &&
+                    point.y < zone.y + zone.height) {
                     return true;
                 }
             }
@@ -237,13 +238,14 @@ export class MirrorPlacementValidation {
      * Check if line intersects rectangle (crosses interior or touches boundary)
      */
     static lineIntersectsRectangle(lineStart, lineEnd, rect) {
-        // Check if either endpoint is inside or on the rectangle boundary
-        const startInside = lineStart.x >= rect.x && lineStart.x <= rect.x + rect.width &&
-                           lineStart.y >= rect.y && lineStart.y <= rect.y + rect.height;
-        const endInside = lineEnd.x >= rect.x && lineEnd.x <= rect.x + rect.width &&
-                         lineEnd.y >= rect.y && lineEnd.y <= rect.y + rect.height;
-        
-        // If either endpoint is inside or on boundary, that's forbidden
+        // Check if either endpoint is strictly inside the rectangle
+        // Points on the inner boundary are VALID
+        const startInside = lineStart.x >= rect.x && lineStart.x < rect.x + rect.width &&
+                           lineStart.y >= rect.y && lineStart.y < rect.y + rect.height;
+        const endInside = lineEnd.x >= rect.x && lineEnd.x < rect.x + rect.width &&
+                         lineEnd.y >= rect.y && lineEnd.y < rect.y + rect.height;
+
+        // If either endpoint is strictly inside, that's forbidden
         if (startInside || endInside) {
             return true;
         }

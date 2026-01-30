@@ -44,13 +44,13 @@ body {
 /* Professional Navigation Bar */
 .navbar {
     width: 100%;
-    height: 70px;
+    height: 55px;
     background: var(--card-bg);
     border-bottom: 1px solid var(--border-glow);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0 30px;
+    padding: 0 25px;
     position: sticky;
     top: 0;
     z-index: 100;
@@ -288,7 +288,7 @@ h1 {
 
 .timer-value {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 2.2rem;
+    font-size: 1.8rem;
     font-weight: 700;
     color: var(--sunset-gold);
     text-shadow: 0 0 20px rgba(255, 182, 39, 0.6);
@@ -299,10 +299,10 @@ h1 {
     width: 100%;
     max-width: 900px;
     margin: 0 auto;
-    padding: 20px;
+    padding: 10px 20px;
     display: flex;
     flex-direction: column;
-    gap: 20px; /* Consistent spacing between header and game */
+    gap: 10px; /* Compact spacing between header and game */
     /* Ensure no z-index/stacking issues */
     position: relative;
     z-index: auto;
@@ -321,16 +321,16 @@ h1 {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 20px;
-    padding: 20px 25px;
+    gap: 15px;
+    padding: 12px 20px;
     background: var(--card-bg);
     border: 1px solid var(--border-glow);
-    border-radius: 15px;
+    border-radius: 12px;
     backdrop-filter: blur(10px);
     box-shadow:
         0 8px 32px rgba(255, 107, 53, 0.2),
         inset 0 1px 0 rgba(255, 255, 255, 0.05);
-    margin: 20px 0; /* Vertical margin only, horizontal handled by parent */
+    margin: 5px 0; /* Compact vertical margin */
     /* Ensure it doesn't interfere with canvas */
     position: relative;
     z-index: 2; /* Above canvas but below modals */

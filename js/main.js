@@ -73,10 +73,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             this.updateModeButtons();
             this.updateDailyInfo();
 
-            // Show success message
+            // Show success message (if status element exists)
             const statusEl = document.getElementById('status');
-            statusEl.textContent = `Daily Challenge Complete! Time: ${completionTime}s, Score: ${score}`;
-            statusEl.className = 'status-modern status-success';
+            if (statusEl) {
+                statusEl.textContent = `Daily Challenge Complete! Time: ${completionTime}s, Score: ${score}`;
+                statusEl.className = 'status-modern status-success';
+            }
         };
         
     } catch (error) {

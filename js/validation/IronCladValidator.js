@@ -65,6 +65,27 @@ export class IronCladValidator {
 
             const otherVertices = MirrorPlacementValidation.getMirrorVertices(otherMirror);
 
+            // Quick check: Are the centers nearly identical? (same position = definite overlap)
+            const centerDist = Math.sqrt((mirror.x - otherMirror.x) ** 2 + (mirror.y - otherMirror.y) ** 2);
+            if (centerDist < 5) { // Within 5 pixels = same position
+                violations.push({
+                    type: 'same_position',
+                    otherMirror,
+                    message: `Mirror is at the same position as another mirror`
+                });
+                continue; // Skip other checks, already invalid
+            }
+
+            // Check A: Do bounding boxes overlap significantly? (quick rejection test)
+            const thisBounds = this.getBoundingBox(thisVertices);
+            const otherBounds = this.getBoundingBox(otherVertices);
+
+            // If bounding boxes don't overlap, mirrors can't overlap
+            if (thisBounds.maxX <= otherBounds.minX || otherBounds.maxX <= thisBounds.minX ||
+                thisBounds.maxY <= otherBounds.minY || otherBounds.maxY <= thisBounds.minY) {
+                continue; // No overlap possible
+            }
+
             // Check A: Do any edges intersect? (crossing through each other)
             for (let i = 0; i < thisVertices.length; i++) {
                 const next = (i + 1) % thisVertices.length;
@@ -250,6 +271,20 @@ export class IronCladValidator {
             invalidMirrors: violations.length,
             results,
             violations
+        };
+    }
+
+    /**
+     * Helper: Get bounding box of vertices
+     */
+    static getBoundingBox(vertices) {
+        const xs = vertices.map(v => v.x);
+        const ys = vertices.map(v => v.y);
+        return {
+            minX: Math.min(...xs),
+            maxX: Math.max(...xs),
+            minY: Math.min(...ys),
+            maxY: Math.max(...ys)
         };
     }
 
