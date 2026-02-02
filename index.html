@@ -106,11 +106,13 @@
 
     <!-- Game Over Modal -->
     <div id="gameOverModal" class="rules-modal hidden">
-        <div class="rules-content compact-modal">
-            <div class="instruction-header"><i class="iconoir-xmark-circle"></i> CORE BREACH!</div>
-            <div class="compact-score">
+        <div class="rules-content snapshot-modal">
+            <div class="snapshot-header">
                 <div id="finalTime" class="score-value">0:00.00</div>
                 <div id="missionPerformance" class="performance-rating">Calculating...</div>
+            </div>
+            <div class="snapshot-container">
+                <img id="gameOverSnapshot" class="game-snapshot" alt="Game Over State">
             </div>
             <div class="modal-buttons">
                 <button class="btn-primary" onclick="closeGameOver()">RETRY</button>
@@ -121,11 +123,13 @@
 
     <!-- Victory Modal -->
     <div id="victoryModal" class="rules-modal hidden">
-        <div class="rules-content compact-modal">
-            <div class="instruction-header"><i class="iconoir-trophy"></i> PERFECT!</div>
-            <div class="compact-score">
+        <div class="rules-content snapshot-modal victory-modal">
+            <div class="snapshot-header victory">
                 <div id="victoryTime" class="score-value">5:00.00</div>
                 <div id="victoryPerformance" class="performance-rating perfect">MAX SURVIVAL</div>
+            </div>
+            <div class="snapshot-container">
+                <img id="victorySnapshot" class="game-snapshot" alt="Victory State">
             </div>
             <div class="modal-buttons">
                 <button class="btn-primary" onclick="closeVictory()">RETRY</button>

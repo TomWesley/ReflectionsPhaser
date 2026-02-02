@@ -1212,6 +1212,12 @@ export class Game {
     async showGameOverModal() {
         this.gameOver = true;
 
+        // Capture canvas snapshot before any modal overlay
+        const snapshotImg = document.getElementById('gameOverSnapshot');
+        if (snapshotImg) {
+            snapshotImg.src = this.canvas.toDataURL('image/png');
+        }
+
         // Format final time with centiseconds
         const minutes = Math.floor(this.gameTime / 60);
         const seconds = Math.floor(this.gameTime % 60);
@@ -1256,6 +1262,12 @@ export class Game {
 
     async showVictoryModal() {
         this.gameOver = true;
+
+        // Capture canvas snapshot before any modal overlay
+        const snapshotImg = document.getElementById('victorySnapshot');
+        if (snapshotImg) {
+            snapshotImg.src = this.canvas.toDataURL('image/png');
+        }
 
         // Format final time (should be exactly 5:00.00)
         const minutes = Math.floor(this.gameTime / 60);

@@ -31,8 +31,8 @@ export class Laser {
         
         // Move laser (frame-rate independent)
         // Base multiplier 60 (for 60fps), then * 0.4 for 60% slower (40% of original speed)
-        this.x += this.vx * deltaTime * 24;
-        this.y += this.vy * deltaTime * 24;
+        this.x += this.vx * deltaTime * 35;
+        this.y += this.vy * deltaTime * 35;
         
         // Bounce off walls
         if (this.x <= 0 || this.x >= CONFIG.CANVAS_WIDTH) {
