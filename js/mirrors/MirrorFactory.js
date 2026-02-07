@@ -4,6 +4,7 @@ import { RightTriangleMirror } from './RightTriangleMirror.js';
 import { IsoscelesTriangleMirror } from './IsoscelesTriangleMirror.js';
 import { TrapezoidMirror } from './TrapezoidMirror.js';
 import { ParallelogramMirror } from './ParallelogramMirror.js';
+import { HexagonMirror } from './HexagonMirror.js';
 
 /**
  * Factory for creating mirror instances using proper inheritance hierarchy
@@ -25,17 +26,19 @@ export class MirrorFactory {
                 return new TrapezoidMirror(x, y);
             case 'parallelogram':
                 return new ParallelogramMirror(x, y);
+            case 'hexagon':
+                return new HexagonMirror(x, y);
             default:
                 throw new Error(`Unknown mirror shape: ${shape}`);
         }
     }
 
     static getRandomShape() {
-        const shapes = ['square', 'rectangle', 'rightTriangle', 'isoscelesTriangle', 'trapezoid', 'parallelogram'];
+        const shapes = ['square', 'rectangle', 'rightTriangle', 'isoscelesTriangle', 'trapezoid', 'parallelogram', 'hexagon'];
         return shapes[Math.floor(Math.random() * shapes.length)];
     }
 
     static getAllShapes() {
-        return ['square', 'rectangle', 'rightTriangle', 'isoscelesTriangle', 'trapezoid', 'parallelogram'];
+        return ['square', 'rectangle', 'rightTriangle', 'isoscelesTriangle', 'trapezoid', 'parallelogram', 'hexagon'];
     }
 }

@@ -11,7 +11,7 @@
 - Use language like "Final Score", "Survival Time", never "Completed in"
 
 ### Game Modes
-1. **Free Play**: Random mirror configurations with exactly 84 surface area units (uniform for fair scoring)
+1. **Main Game**: Random mirror configurations with exactly 84 surface area units (uniform for fair scoring)
 2. **Daily Challenge**: Date-based seeded puzzles with NO surface area limit (3-12 mirrors, any sizes), more spawners (6-10), unique mint green visual theme
 
 ---
@@ -52,18 +52,18 @@
 ### Mirror System
 - **No grid snapping** - mirrors can be placed anywhere with pixel-perfect control
 - **Forbidden zones**: Center circle + edge borders (check both vertices AND edges for overlap)
-- **Validation**: Use `SimpleValidator` for free play (no grid alignment requirements)
+- **Validation**: Use `SimpleValidator` for main game (no grid alignment requirements)
 - **Daily challenges**: Mirrors marked with `isDailyChallenge = true` for mint green glow
 
 ### Daily Challenge System
 - **Seeded generation**: Date-based (YYYY-MM-DD) for worldwide consistency
-- **No surface area limit**: Unlike free play's 84 units
+- **No surface area limit**: Unlike main game's 84 units
 - **Freeze frame**: Save mirrors AND lasers when core is hit, display exact final state on revisit
 - **One attempt per day**: Store completion in localStorage
 - **Visual distinction**: Mint green glow on mirrors/spawners, subtle canvas tint, "DAILY CHALLENGE" text
 
 ### Visual Design
-- **Free Play colors**: Sunset theme (purple #8338EC, coral #FF8FA3, orange #FF6B35)
+- **Main Game colors**: Sunset theme (purple #8338EC, coral #FF8FA3, orange #FF6B35)
 - **Daily Challenge colors**: Mint green theme (#32FFB4, #7FFFD4)
 - **No emojis**: Use iconoir icons instead
 - **Smooth animations**: Use Math.sin() for pulsing effects
@@ -84,7 +84,7 @@ Game.js                 - Main game controller, orchestrates all systems
 ├── CollisionSystem.js  - Handles all collision detection
 ├── MirrorGenerator.js  - Generates mirror configurations
 ├── SpawnerGenerator.js - Generates laser spawners
-└── GameModeManager.js  - Manages free play vs daily challenge
+└── GameModeManager.js  - Manages main game vs daily challenge
 ```
 
 ### State Management

@@ -52,8 +52,9 @@ export class GameRenderer {
                 this.drawHoverGlow(mirror);
             }
 
-            // Draw the mirror
-            mirror.draw(this.ctx);
+            // Draw the mirror (pass placement phase state for glow effect)
+            const isPlacementPhase = !this.game.isPlaying;
+            mirror.draw(this.ctx, isPlacementPhase);
         });
 
         // Draw lasers (handle both real and frozen lasers)

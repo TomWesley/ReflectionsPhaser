@@ -1,16 +1,20 @@
 // Initialize the game when the page loads with error handling
 document.addEventListener('DOMContentLoaded', async () => {
+    // Cache-busting version - increment to force reload of all modules
+    const CACHE_VERSION = 4;
+    const cacheBust = `?v=${CACHE_VERSION}`;
+
     // Show loading indicator
     const statusEl = document.getElementById('status');
     if (statusEl) {
         statusEl.textContent = 'Loading defense systems...';
         statusEl.className = 'status-modern';
     }
-    
+
     try {
-        // Import modules with error handling
-        const { Game } = await import('./classes/Game.js');
-        const { DailyChallenge } = await import('./validation/DailyChallenge.js');
+        // Import modules with cache-busting
+        const { Game } = await import(`./classes/Game.js${cacheBust}`);
+        const { DailyChallenge } = await import(`./validation/DailyChallenge.js${cacheBust}`);
         
         const game = new Game();
         

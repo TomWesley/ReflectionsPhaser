@@ -126,13 +126,15 @@ export class BaseMirror {
 
     /**
      * Shared drawing method - uses canonical vertices
+     * @param {CanvasRenderingContext2D} ctx - Canvas context
+     * @param {boolean} isPlacementPhase - True if mirrors can be moved (before launch)
      */
-    draw(ctx) {
+    draw(ctx, isPlacementPhase = true) {
         ctx.save();
 
         // Draw using the canonical vertices (no rotation transform needed - vertices are already rotated)
-        this.drawMirrorSurface(ctx, this.vertices);
-        this.drawMirrorBorder(ctx, this.vertices);
+        this.drawMirrorSurface(ctx, this.vertices, isPlacementPhase);
+        this.drawMirrorBorder(ctx, this.vertices, isPlacementPhase);
 
         ctx.restore();
     }
@@ -154,23 +156,41 @@ export class BaseMirror {
     /**
      * Shared drawing utilities
      */
-    drawMirrorSurface(ctx, points) {
-        // Add sunset orange glow if dragging
-        if (this.isDragging) {
+    drawMirrorSurface(ctx, points, isPlacementPhase) {
+        // Calculate center for gradient
+        const centerX = points.reduce((sum, p) => sum + p.x, 0) / points.length;
+        const centerY = points.reduce((sum, p) => sum + p.y, 0) / points.length;
+
+        // Find bounds for gradient
+        const minX = Math.min(...points.map(p => p.x));
+        const maxX = Math.max(...points.map(p => p.x));
+        const minY = Math.min(...points.map(p => p.y));
+        const maxY = Math.max(...points.map(p => p.y));
+
+        // Placement phase glow - subtle pulsing to indicate movability
+        if (isPlacementPhase && !this.isDragging) {
+            const pulse = 0.4 + 0.2 * Math.sin(Date.now() / 400);
+            ctx.shadowColor = 'rgba(200, 220, 255, ' + pulse + ')';
+            ctx.shadowBlur = 12;
+        } else if (this.isDragging) {
             ctx.shadowColor = '#FF6B35';
             ctx.shadowBlur = 20;
         } else {
             ctx.shadowBlur = 0;
         }
 
-        // Surface - elegant dark glass with slight gradient
-        const gradient = ctx.createLinearGradient(
-            points[0].x, points[0].y,
-            points[points.length - 1].x, points[points.length - 1].y
-        );
-        gradient.addColorStop(0, '#2a2a2a');
-        gradient.addColorStop(0.5, '#404040');
-        gradient.addColorStop(1, '#2a2a2a');
+        // Silver/chrome reflective gradient - diagonal for shimmer effect
+        const shimmerOffset = Math.sin(Date.now() / 600) * 0.15; // Subtle shimmer animation
+        const gradient = ctx.createLinearGradient(minX, minY, maxX, maxY);
+
+        // Silver/chrome color stops with shimmer
+        gradient.addColorStop(0, '#606875');
+        gradient.addColorStop(0.2 + shimmerOffset, '#8a939e');
+        gradient.addColorStop(0.4, '#b8c0c8');  // Bright silver highlight
+        gradient.addColorStop(0.5, '#d4dce4');  // Peak brightness
+        gradient.addColorStop(0.6, '#b8c0c8');
+        gradient.addColorStop(0.8 - shimmerOffset, '#8a939e');
+        gradient.addColorStop(1, '#606875');
 
         ctx.fillStyle = gradient;
         ctx.beginPath();
@@ -180,22 +200,40 @@ export class BaseMirror {
         }
         ctx.closePath();
         ctx.fill();
+
+        // Add a subtle inner highlight for more reflective look
+        ctx.globalAlpha = 0.3;
+        const highlightGradient = ctx.createLinearGradient(centerX, minY, centerX, maxY);
+        highlightGradient.addColorStop(0, 'rgba(255, 255, 255, 0.4)');
+        highlightGradient.addColorStop(0.3, 'rgba(255, 255, 255, 0.1)');
+        highlightGradient.addColorStop(1, 'rgba(0, 0, 0, 0.1)');
+        ctx.fillStyle = highlightGradient;
+        ctx.fill();
+        ctx.globalAlpha = 1;
     }
 
-    drawMirrorBorder(ctx, points) {
+    drawMirrorBorder(ctx, points, isPlacementPhase) {
         // Reset shadow for border
         ctx.shadowBlur = 0;
 
-        // Border with sunset glow if dragging
+        // Border styling based on state
         if (this.isDragging) {
             ctx.shadowColor = '#FF6B35';
             ctx.shadowBlur = 15;
             ctx.strokeStyle = '#FF6B35';
+            ctx.lineWidth = 2.5;
+        } else if (isPlacementPhase) {
+            // Subtle glow during placement phase
+            ctx.shadowColor = 'rgba(200, 220, 255, 0.5)';
+            ctx.shadowBlur = 8;
+            ctx.strokeStyle = '#c0c8d0'; // Light silver border
+            ctx.lineWidth = 2;
         } else {
-            ctx.strokeStyle = '#FFB627'; // Sunset gold border when not dragging
+            // Clean silver border after launch
+            ctx.strokeStyle = '#9aa0a8';
+            ctx.lineWidth = 1.5;
         }
 
-        ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(points[0].x, points[0].y);
         for (let i = 1; i < points.length; i++) {

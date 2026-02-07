@@ -36,7 +36,7 @@ export class DailyChallenge {
 
         const center = { x: CONFIG.CANVAS_WIDTH / 2, y: CONFIG.CANVAS_HEIGHT / 2 };
 
-        const shapes = ['square', 'rectangle', 'rightTriangle', 'isoscelesTriangle', 'trapezoid', 'parallelogram'];
+        const shapes = ['square', 'rectangle', 'rightTriangle', 'isoscelesTriangle', 'trapezoid', 'parallelogram', 'hexagon'];
 
         console.log(`🎯 Daily Challenge: Generating ${mirrorCount} mirrors (no surface area limit)`);
 
@@ -81,6 +81,8 @@ export class DailyChallenge {
                 if (shape === 'rightTriangle' || shape === 'isoscelesTriangle' ||
                     shape === 'trapezoid' || shape === 'parallelogram') {
                     mirror.rotation = rng.choice([0, 90, 180, 270]);
+                } else if (shape === 'hexagon') {
+                    mirror.rotation = rng.choice([0, 60, 120, 180, 240, 300]);
                 }
 
                 // Set specific properties based on shape

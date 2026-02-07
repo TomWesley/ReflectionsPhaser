@@ -51,6 +51,33 @@ export class RigidSurfaceAreaGenerator {
             return b + 2 * roundedSide; // Base + 2 equal sides
         };
 
+        const calcHexagon = (size) => {
+            // For regular hexagon, side = radius = size/2
+            // Perimeter = 6 * side
+            const side = (size / 2) / gridSize;
+            return Math.round(6 * side);
+        };
+
+        const calcTrapezoid = (width, topWidth, height) => {
+            // Isosceles trapezoid: bottom base + top base + 2 equal sides
+            const w = width / gridSize;
+            const tw = topWidth / gridSize;
+            const h = height / gridSize;
+            // Side length = sqrt(((width - topWidth)/2)^2 + height^2)
+            const sideLen = Math.sqrt(Math.pow((w - tw) / 2, 2) + h * h);
+            return Math.round(w + tw + 2 * sideLen);
+        };
+
+        const calcParallelogram = (width, height, skew) => {
+            // Parallelogram: 2 * (base + slanted side)
+            const w = width / gridSize;
+            const h = height / gridSize;
+            const s = skew / gridSize;
+            // Slanted side = sqrt(skew^2 + height^2)
+            const sideLen = Math.sqrt(s * s + h * h);
+            return Math.round(2 * (w + sideLen));
+        };
+
         // SQUARES - All possible sizes
         const squareSizes = [20, 40, 60, 80, 100, 120];
         squareSizes.forEach(size => {
@@ -128,6 +155,78 @@ export class RigidSurfaceAreaGenerator {
             });
         });
 
+        // HEXAGONS - Regular hexagons with 6 equal sides
+        const hexagonSizes = [40, 60, 80, 100];
+        const hexRotations = [0, 60, 120, 180, 240, 300];
+        hexagonSizes.forEach(size => {
+            hexRotations.forEach(rotation => {
+                catalog.push({
+                    shape: 'hexagon',
+                    size: size,
+                    rotation: rotation,
+                    surfaceArea: calcHexagon(size)
+                });
+            });
+        });
+
+        // TRAPEZOIDS - Isosceles trapezoids with symmetric sides
+        const trapezoidConfigs = [
+            { width: 60, topWidth: 40, height: 40 },
+            { width: 60, topWidth: 40, height: 60 },
+            { width: 80, topWidth: 40, height: 40 },
+            { width: 80, topWidth: 40, height: 60 },
+            { width: 80, topWidth: 60, height: 40 },
+            { width: 80, topWidth: 60, height: 60 },
+            { width: 100, topWidth: 60, height: 40 },
+            { width: 100, topWidth: 60, height: 60 },
+            { width: 100, topWidth: 60, height: 80 },
+            { width: 100, topWidth: 80, height: 40 },
+            { width: 100, topWidth: 80, height: 60 },
+            { width: 120, topWidth: 80, height: 60 },
+            { width: 120, topWidth: 80, height: 80 },
+        ];
+        trapezoidConfigs.forEach(({ width, topWidth, height }) => {
+            rotations.forEach(rotation => {
+                catalog.push({
+                    shape: 'trapezoid',
+                    size: Math.max(width, height),
+                    width: width,
+                    height: height,
+                    topWidth: topWidth,
+                    rotation: rotation,
+                    surfaceArea: calcTrapezoid(width, topWidth, height)
+                });
+            });
+        });
+
+        // PARALLELOGRAMS - Slanted rectangles
+        const parallelogramConfigs = [
+            { width: 40, height: 40, skew: 20 },
+            { width: 40, height: 60, skew: 20 },
+            { width: 60, height: 40, skew: 20 },
+            { width: 60, height: 60, skew: 20 },
+            { width: 60, height: 60, skew: 40 },
+            { width: 80, height: 40, skew: 20 },
+            { width: 80, height: 60, skew: 20 },
+            { width: 80, height: 60, skew: 40 },
+            { width: 100, height: 60, skew: 20 },
+            { width: 100, height: 60, skew: 40 },
+            { width: 100, height: 80, skew: 20 },
+        ];
+        parallelogramConfigs.forEach(({ width, height, skew }) => {
+            rotations.forEach(rotation => {
+                catalog.push({
+                    shape: 'parallelogram',
+                    size: Math.max(width, height),
+                    width: width,
+                    height: height,
+                    skew: skew,
+                    rotation: rotation,
+                    surfaceArea: calcParallelogram(width, height, skew)
+                });
+            });
+        });
+
         console.log(`📦 Mirror catalog: ${catalog.length} total configurations`);
 
         // Group by surface area for easy lookup
@@ -149,85 +248,93 @@ export class RigidSurfaceAreaGenerator {
     /**
      * Generate a configuration that ALWAYS sums to exactly 84
      * GUARANTEED - will not return until it hits 84 exactly
+     *
+     * TRUE RANDOM APPROACH:
+     * - Randomly decide between "few large mirrors" or "many small mirrors" strategies
+     * - Equal probability for all 7 shapes
+     * - Can produce anything from 3 large mirrors to 21 tiny squares
      */
     static generateExact84Configuration() {
         const { catalog, bySurfaceArea, uniqueAreas } = this.getMirrorCatalog();
         const TARGET = this.TARGET_SURFACE_AREA;
 
-        console.log(`🎯 Generating configuration for EXACTLY ${TARGET} surface area...`);
+        // Group catalog by shape for equal shape probability
+        const byShape = {};
+        const ALL_SHAPES = ['square', 'rectangle', 'rightTriangle', 'isoscelesTriangle', 'trapezoid', 'parallelogram', 'hexagon'];
+        ALL_SHAPES.forEach(shape => byShape[shape] = []);
+        catalog.forEach(mirror => {
+            if (byShape[mirror.shape]) {
+                byShape[mirror.shape].push(mirror);
+            }
+        });
+
+        console.log(`🎯 Generating configuration for EXACTLY ${TARGET} surface area (true random)...`);
+
+        // Randomly choose a size bias for this configuration
+        // 0 = prefer small mirrors (many pieces), 1 = prefer large mirrors (few pieces), 0.5 = no preference
+        const sizeBias = Math.random();
+        console.log(`  Size bias: ${sizeBias.toFixed(2)} (${sizeBias < 0.33 ? 'small' : sizeBias > 0.66 ? 'large' : 'mixed'})`);
 
         const selectedMirrors = [];
         let currentTotal = 0;
-
-        // PHASE 1: Add larger random mirrors until we're close to the target
-        // Leave enough room for filler (at least 12 units for safety)
-        const minFillerRoom = 12;
-        const phaseOneTarget = TARGET - minFillerRoom;
-
         let iterations = 0;
-        const maxIterations = 100;
+        const maxIterations = 200;
 
-        while (currentTotal < phaseOneTarget && iterations < maxIterations) {
+        while (currentTotal < TARGET && iterations < maxIterations) {
             iterations++;
-
-            const remaining = phaseOneTarget - currentTotal;
-
-            // Filter to mirrors that fit in remaining space
-            const candidateAreas = uniqueAreas.filter(area => area <= remaining && area >= 4);
-
-            if (candidateAreas.length === 0) {
-                // No more mirrors fit, move to phase 2
-                break;
-            }
-
-            // Pick a random surface area from candidates
-            const randomArea = candidateAreas[Math.floor(Math.random() * candidateAreas.length)];
-
-            // Pick a random mirror with that surface area
-            const mirrorsWithArea = bySurfaceArea[randomArea];
-            const randomMirror = mirrorsWithArea[Math.floor(Math.random() * mirrorsWithArea.length)];
-
-            // Add a deep copy
-            selectedMirrors.push({ ...randomMirror });
-            currentTotal += randomMirror.surfaceArea;
-
-            console.log(`  Added ${randomMirror.shape} (${randomMirror.surfaceArea}) - Total: ${currentTotal}/${TARGET}`);
-        }
-
-        // PHASE 2: Fill to EXACTLY 84 using small mirrors
-        console.log(`📍 Phase 1 complete. Current: ${currentTotal}, Need: ${TARGET - currentTotal} more`);
-
-        let fillIterations = 0;
-        const maxFillIterations = 50;
-
-        while (currentTotal < TARGET && fillIterations < maxFillIterations) {
-            fillIterations++;
-
             const remaining = TARGET - currentTotal;
-            console.log(`  🔧 Filling: need exactly ${remaining} more units`);
 
-            // Try to find exact match first
+            // Check if we can hit exactly the target
             if (bySurfaceArea[remaining] && bySurfaceArea[remaining].length > 0) {
-                const exactMirror = bySurfaceArea[remaining][0];
+                // Pick a random exact match
+                const exactMatches = bySurfaceArea[remaining];
+                const exactMirror = exactMatches[Math.floor(Math.random() * exactMatches.length)];
                 selectedMirrors.push({ ...exactMirror });
                 currentTotal += exactMirror.surfaceArea;
                 console.log(`  ✓ Exact match: ${exactMirror.shape} (${exactMirror.surfaceArea}) - Total: ${currentTotal}/${TARGET}`);
                 break;
             }
 
-            // Otherwise, find largest that fits
-            const fitAreas = uniqueAreas.filter(area => area <= remaining);
-            if (fitAreas.length === 0) {
-                console.error(`❌ CRITICAL: No mirrors fit in ${remaining} units!`);
-                console.error(`Available areas: ${uniqueAreas.join(', ')}`);
-                break;
+            // Pick a random SHAPE (equal probability for all 7 shapes)
+            const randomShape = ALL_SHAPES[Math.floor(Math.random() * ALL_SHAPES.length)];
+
+            // Filter mirrors of this shape that fit
+            const shapeMirrors = byShape[randomShape];
+            const candidates = shapeMirrors.filter(m => m.surfaceArea <= remaining);
+
+            if (candidates.length === 0) {
+                // This shape doesn't have any mirrors that fit, try again
+                continue;
             }
 
-            const bestArea = fitAreas[fitAreas.length - 1]; // Largest that fits
-            const fillerMirror = bySurfaceArea[bestArea][0];
-            selectedMirrors.push({ ...fillerMirror });
-            currentTotal += fillerMirror.surfaceArea;
-            console.log(`  + Filler: ${fillerMirror.shape} (${fillerMirror.surfaceArea}) - Total: ${currentTotal}/${TARGET}`);
+            // Apply size bias to selection
+            let selectedMirror;
+            if (sizeBias < 0.33) {
+                // Prefer smaller mirrors - sort ascending, pick from first half
+                candidates.sort((a, b) => a.surfaceArea - b.surfaceArea);
+                const smallerHalf = candidates.slice(0, Math.max(1, Math.ceil(candidates.length / 2)));
+                selectedMirror = smallerHalf[Math.floor(Math.random() * smallerHalf.length)];
+            } else if (sizeBias > 0.66) {
+                // Prefer larger mirrors - sort descending, pick from first half
+                candidates.sort((a, b) => b.surfaceArea - a.surfaceArea);
+                const largerHalf = candidates.slice(0, Math.max(1, Math.ceil(candidates.length / 2)));
+                selectedMirror = largerHalf[Math.floor(Math.random() * largerHalf.length)];
+            } else {
+                // True random - pick any
+                selectedMirror = candidates[Math.floor(Math.random() * candidates.length)];
+            }
+
+            // Add a deep copy
+            selectedMirrors.push({ ...selectedMirror });
+            currentTotal += selectedMirror.surfaceArea;
+
+            console.log(`  Added ${selectedMirror.shape} (${selectedMirror.surfaceArea}) - Total: ${currentTotal}/${TARGET}`);
+        }
+
+        // If we didn't hit exactly 84, use backtracking to fix
+        if (currentTotal !== TARGET) {
+            console.log(`📍 Adjusting: Current ${currentTotal}, need exactly ${TARGET}`);
+            return this.backtrackToExact84(selectedMirrors, currentTotal, bySurfaceArea, uniqueAreas, byShape, ALL_SHAPES);
         }
 
         // VERIFICATION
@@ -245,6 +352,69 @@ export class RigidSurfaceAreaGenerator {
         console.log(`   Breakdown: ${selectedMirrors.map(m => `${m.shape}(${m.surfaceArea})`).join(', ')}`);
 
         return selectedMirrors;
+    }
+
+    /**
+     * Backtrack and adjust to hit exactly 84
+     * Removes the last mirror and tries different combinations
+     */
+    static backtrackToExact84(mirrors, currentTotal, bySurfaceArea, uniqueAreas, byShape, ALL_SHAPES) {
+        const TARGET = 84;
+        let attempts = 0;
+        const maxAttempts = 50;
+
+        while (currentTotal !== TARGET && attempts < maxAttempts) {
+            attempts++;
+
+            if (currentTotal > TARGET) {
+                // Over target - remove last mirror
+                if (mirrors.length === 0) break;
+                const removed = mirrors.pop();
+                currentTotal -= removed.surfaceArea;
+                console.log(`  - Removed ${removed.shape} (${removed.surfaceArea}), total now ${currentTotal}`);
+            } else {
+                // Under target - try to add exact match or smallest that fits
+                const remaining = TARGET - currentTotal;
+
+                // Check for exact match
+                if (bySurfaceArea[remaining] && bySurfaceArea[remaining].length > 0) {
+                    const match = bySurfaceArea[remaining][Math.floor(Math.random() * bySurfaceArea[remaining].length)];
+                    mirrors.push({ ...match });
+                    currentTotal += match.surfaceArea;
+                    console.log(`  ✓ Exact fill: ${match.shape} (${match.surfaceArea}) - Total: ${currentTotal}`);
+                    break;
+                }
+
+                // Find smallest mirror that fits
+                const fitAreas = uniqueAreas.filter(a => a <= remaining);
+                if (fitAreas.length === 0) {
+                    // No mirrors fit - need to remove one and try again
+                    if (mirrors.length === 0) break;
+                    const removed = mirrors.pop();
+                    currentTotal -= removed.surfaceArea;
+                    continue;
+                }
+
+                // Pick randomly from fitting mirrors for variety
+                const randomArea = fitAreas[Math.floor(Math.random() * fitAreas.length)];
+                const options = bySurfaceArea[randomArea];
+                const pick = options[Math.floor(Math.random() * options.length)];
+                mirrors.push({ ...pick });
+                currentTotal += pick.surfaceArea;
+                console.log(`  + Added ${pick.shape} (${pick.surfaceArea}) - Total: ${currentTotal}`);
+            }
+        }
+
+        // Verify we hit the target
+        const finalTotal = mirrors.reduce((sum, m) => sum + m.surfaceArea, 0);
+        if (finalTotal === TARGET) {
+            console.log(`✅ SUCCESS: Generated ${mirrors.length} mirrors with EXACTLY ${finalTotal} surface area`);
+            console.log(`   Breakdown: ${mirrors.map(m => `${m.shape}(${m.surfaceArea})`).join(', ')}`);
+            return mirrors;
+        }
+
+        // Fall back to emergency fix
+        return this.emergencyFix84(mirrors, finalTotal, bySurfaceArea, uniqueAreas);
     }
 
     /**

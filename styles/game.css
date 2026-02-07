@@ -103,6 +103,34 @@ body {
     min-width: 70px;
 }
 
+/* Daily Info in Navbar - Compact inline display */
+.daily-info-nav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 10px;
+    background: rgba(50, 255, 180, 0.08);
+    border: 1px solid rgba(50, 255, 180, 0.25);
+    border-radius: 6px;
+    font-size: 0.75rem;
+    white-space: nowrap;
+}
+
+.daily-info-nav .daily-date {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 500;
+    color: #32FFB4;
+}
+
+.daily-info-nav .daily-status {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.daily-info-nav .daily-status.completed {
+    color: var(--sunset-gold);
+    font-weight: 600;
+}
+
 /* Navbar Action Buttons - Prominent */
 .navbar-btn-primary,
 .navbar-btn-secondary {
@@ -326,11 +354,22 @@ h1 {
 }
 
 .instruction-item {
-    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 1rem;
     font-weight: 400;
-    padding: 8px 0;
+    padding: 10px 0;
     border-bottom: 1px solid rgba(255, 107, 53, 0.2);
     transition: all 0.3s ease;
+}
+
+.instruction-item i {
+    font-size: 1.2rem;
+    color: var(--sunset-orange);
+    flex-shrink: 0;
+    width: 24px;
+    text-align: center;
 }
 
 .instruction-item:hover {

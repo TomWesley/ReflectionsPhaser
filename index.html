@@ -3,6 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <!-- Disable caching for development -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -24,14 +28,19 @@
             </button>
             <!-- Mode Selector - Less prominent -->
             <div class="mode-selector-nav">
-                <button id="freePlayBtn" class="mode-btn-nav active" title="Free Play">
+                <button id="freePlayBtn" class="mode-btn-nav active" title="Main Game">
                     <i class="iconoir-play"></i>
-                    <span>Free</span>
+                    <span>Main</span>
                 </button>
                 <button id="dailyChallengeBtn" class="mode-btn-nav" title="Daily Challenge">
                     <i class="iconoir-calendar"></i>
                     <span>Daily</span>
                 </button>
+            </div>
+            <!-- Daily Challenge Info (shown when in daily mode) -->
+            <div id="dailyInfo" class="daily-info-nav hidden">
+                <span class="daily-date"></span>
+                <span class="daily-status"></span>
             </div>
         </div>
 
@@ -60,12 +69,6 @@
 
     <!-- Main Content Wrapper -->
     <main class="main-content">
-        <!-- Daily Challenge Info (shown when in daily mode) -->
-        <div id="dailyInfo" class="daily-info hidden">
-            <div class="daily-date"></div>
-            <div class="daily-status"></div>
-        </div>
-
         <!-- Game Canvas Container (Independent Module) -->
         <div id="gameContainer">
             <canvas id="gameCanvas" width="800" height="600"></canvas>
@@ -77,12 +80,11 @@
         <div class="rules-content">
             <div class="instruction-header"><i class="iconoir-flash"></i> MISSION BRIEFING <i class="iconoir-flash"></i></div>
             <div class="instruction-content">
-                <div class="instruction-item"><i class="iconoir-mouse-button-left"></i> Drag mirrors freely to redirect incoming laser threats</div>
-                <div class="instruction-item"><i class="iconoir-prohibition"></i> Mirrors cannot overlap or enter forbidden zones (center circle + edge borders)</div>
-                <div class="instruction-item"><i class="iconoir-shield"></i> Deflect ALL lasers away from the central core to survive</div>
-                <div class="instruction-item"><i class="iconoir-rocket"></i> Launch lasers locks mirrors in place and starts the defense round</div>
-                <div class="instruction-item"><i class="iconoir-timer"></i> Final score determined by survival time - keep the core protected</div>
-                <div class="instruction-item"><i class="iconoir-frame"></i> In Free Play: all configurations have uniform surface area (84 units) for fair scoring</div>
+                <div class="instruction-item"><i class="iconoir-shield"></i><span>Defend the central core from incoming lasers for as long as possible</span></div>
+                <div class="instruction-item"><i class="iconoir-mouse-button-left"></i><span>Drag mirrors to redirect laser threats away from the core</span></div>
+                <div class="instruction-item"><i class="iconoir-prohibition"></i><span>Mirrors cannot overlap or enter forbidden zones (center + edges)</span></div>
+                <div class="instruction-item"><i class="iconoir-rocket"></i><span>Press Launch to lock mirrors and start the defense round</span></div>
+                <div class="instruction-item"><i class="iconoir-timer"></i><span>Survive as long as possible - your time is your score</span></div>
             </div>
             <button class="btn-primary close-rules" onclick="closeRules()">INITIATE DEFENSE</button>
         </div>
@@ -177,7 +179,7 @@
                 <div class="mobile-mode-selector">
                     <button id="mobileFreePlayBtn" class="mobile-mode-btn active" onclick="selectMobileMode('freeplay')">
                         <i class="iconoir-play"></i>
-                        <span>Free Play</span>
+                        <span>Main Game</span>
                     </button>
                     <button id="mobileDailyChallengeBtn" class="mobile-mode-btn" onclick="selectMobileMode('daily')">
                         <i class="iconoir-calendar"></i>
@@ -215,7 +217,20 @@
 
         function closeRules() {
             document.getElementById('rulesModal').classList.add('hidden');
+            // Mark that user has seen the rules
+            localStorage.setItem('reflections_visited', 'true');
         }
+
+        // Show mission briefing for first-time visitors
+        function checkFirstVisit() {
+            const hasVisited = localStorage.getItem('reflections_visited');
+            if (!hasVisited) {
+                openRules();
+            }
+        }
+
+        // Check on page load
+        document.addEventListener('DOMContentLoaded', checkFirstVisit);
 
         function toggleInfoPopup() {
             const popup = document.getElementById('infoPopup');
@@ -391,7 +406,70 @@
         });
     </script>
 
+    <!-- Dev Tools (localhost only) -->
+    <script>
+        (function() {
+            const isLocalhost = window.location.hostname === 'localhost' ||
+                               window.location.hostname === '127.0.0.1' ||
+                               window.location.hostname === '';
+
+            if (isLocalhost) {
+                // Create dev button
+                const devBtn = document.createElement('button');
+                devBtn.id = 'devClearCache';
+                devBtn.innerHTML = '<i class="iconoir-refresh-double"></i> Clear Cache';
+                devBtn.title = 'Clear cache and reload (Dev only)';
+                devBtn.style.cssText = `
+                    position: fixed;
+                    bottom: 10px;
+                    right: 10px;
+                    padding: 8px 12px;
+                    background: rgba(80, 80, 80, 0.9);
+                    border: 1px solid #666;
+                    border-radius: 6px;
+                    color: #ccc;
+                    font-family: 'Space Grotesk', sans-serif;
+                    font-size: 12px;
+                    cursor: pointer;
+                    z-index: 9999;
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    transition: all 0.2s ease;
+                `;
+
+                devBtn.addEventListener('mouseenter', function() {
+                    this.style.background = 'rgba(255, 107, 53, 0.9)';
+                    this.style.borderColor = '#FF6B35';
+                    this.style.color = '#fff';
+                });
+
+                devBtn.addEventListener('mouseleave', function() {
+                    this.style.background = 'rgba(80, 80, 80, 0.9)';
+                    this.style.borderColor = '#666';
+                    this.style.color = '#ccc';
+                });
+
+                devBtn.addEventListener('click', async function() {
+                    // Clear all caches
+                    if ('caches' in window) {
+                        const cacheNames = await caches.keys();
+                        await Promise.all(cacheNames.map(name => caches.delete(name)));
+                    }
+
+                    // Clear localStorage if needed (optional)
+                    // localStorage.clear();
+
+                    // Force reload bypassing cache
+                    window.location.reload(true);
+                });
+
+                document.body.appendChild(devBtn);
+            }
+        })();
+    </script>
+
     <!-- Main Game Module -->
-    <script type="module" src="js/main.js"></script>
+    <script type="module" src="js/main.js?v=2"></script>
 </body>
 </html>
