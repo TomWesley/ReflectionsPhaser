@@ -22,25 +22,36 @@
             <button class="nav-icon-btn" onclick="openRules()" title="How to Play">
                 <i class="iconoir-info-circle"></i>
             </button>
-        </div>
-
-        <div class="navbar-center">
-            <h1 class="navbar-title">REFLECTIONS</h1>
-
-            <!-- Mode Selector in Navbar -->
+            <!-- Mode Selector - Less prominent -->
             <div class="mode-selector-nav">
-                <button id="freePlayBtn" class="mode-btn-nav active">
+                <button id="freePlayBtn" class="mode-btn-nav active" title="Free Play">
                     <i class="iconoir-play"></i>
-                    <span>Free Play</span>
+                    <span>Free</span>
                 </button>
-                <button id="dailyChallengeBtn" class="mode-btn-nav">
+                <button id="dailyChallengeBtn" class="mode-btn-nav" title="Daily Challenge">
                     <i class="iconoir-calendar"></i>
-                    <span>Daily Challenge</span>
+                    <span>Daily</span>
                 </button>
             </div>
         </div>
 
+        <div class="navbar-center">
+            <!-- Timer - Centered focal point -->
+            <div class="navbar-timer">
+                <i class="iconoir-timer"></i>
+                <span id="timer" class="navbar-timer-value">0:00</span>
+            </div>
+        </div>
+
         <div class="navbar-right">
+            <button id="launchBtn" class="navbar-btn-primary">
+                <i class="iconoir-rocket"></i>
+                <span>Launch</span>
+            </button>
+            <button id="resetBtn" class="navbar-btn-secondary">
+                <i class="iconoir-refresh"></i>
+                <span>New Config</span>
+            </button>
             <a href="about.html" class="nav-icon-btn" title="About">
                 <i class="iconoir-book"></i>
             </a>
@@ -49,37 +60,10 @@
 
     <!-- Main Content Wrapper -->
     <main class="main-content">
-        <!-- Game Header Section -->
-        <div class="game-header-section">
-            <!-- Daily Challenge Info -->
-            <div id="dailyInfo" class="daily-info hidden">
-                <div class="daily-date"></div>
-                <div class="daily-status"></div>
-            </div>
-
-            <!-- Game Controls Bar -->
-            <div class="game-controls-bar">
-                <div class="control-group">
-                    <div class="timer-display">
-                        <i class="iconoir-timer"></i>
-                        <div class="timer-content">
-                            <div class="timer-label">SURVIVAL TIME</div>
-                            <div id="timer" class="timer-value">0:00</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="control-group control-group-actions">
-                    <button id="launchBtn" class="btn-primary">
-                        <i class="iconoir-rocket"></i>
-                        <span>Launch Lasers</span>
-                    </button>
-                    <button id="resetBtn" class="btn-secondary">
-                        <i class="iconoir-refresh"></i>
-                        <span>New Config</span>
-                    </button>
-                </div>
-            </div>
+        <!-- Daily Challenge Info (shown when in daily mode) -->
+        <div id="dailyInfo" class="daily-info hidden">
+            <div class="daily-date"></div>
+            <div class="daily-status"></div>
         </div>
 
         <!-- Game Canvas Container (Independent Module) -->

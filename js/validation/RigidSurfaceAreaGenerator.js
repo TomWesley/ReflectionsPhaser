@@ -36,10 +36,11 @@ export class RigidSurfaceAreaGenerator {
             return 2 * (w + h); // Perimeter = 2 * (width + height)
         };
 
-        const calcRightTriangle = (size) => {
-            const s = size / gridSize;
-            const hyp = Math.round(s * Math.sqrt(2));
-            return s + s + hyp; // Two sides + hypotenuse
+        const calcRightTriangle = (width, height) => {
+            const w = width / gridSize;
+            const h = height / gridSize;
+            const hyp = Math.round(Math.sqrt(w * w + h * h));
+            return w + h + hyp; // Two legs + hypotenuse
         };
 
         const calcIsoscelesTriangle = (base, height) => {
@@ -79,30 +80,50 @@ export class RigidSurfaceAreaGenerator {
             });
         });
 
-        // RIGHT TRIANGLES - All sizes
-        const triangleSizes = [40, 60, 80];
-        triangleSizes.forEach(size => {
-            catalog.push({
-                shape: 'rightTriangle',
-                size: size,
-                width: size,
-                height: size,
-                rotation: 0,
-                surfaceArea: calcRightTriangle(size)
+        // RIGHT TRIANGLES - Various width/height combinations with all rotations
+        // Favor non-symmetric triangles (different leg lengths) for variety
+        const rightTriangleDimensions = [
+            // Symmetric (only one of each for balance)
+            { width: 60, height: 60 },
+            // Non-symmetric - many more options for variety
+            { width: 40, height: 60 },
+            { width: 60, height: 40 },
+            { width: 40, height: 80 },
+            { width: 80, height: 40 },
+            { width: 60, height: 80 },
+            { width: 80, height: 60 },
+            { width: 40, height: 100 },
+            { width: 100, height: 40 },
+            { width: 60, height: 100 },
+            { width: 100, height: 60 },
+        ];
+        const rotations = [0, 90, 180, 270];
+        rightTriangleDimensions.forEach(({ width, height }) => {
+            rotations.forEach(rotation => {
+                catalog.push({
+                    shape: 'rightTriangle',
+                    size: Math.max(width, height),
+                    width: width,
+                    height: height,
+                    rotation: rotation,
+                    surfaceArea: calcRightTriangle(width, height)
+                });
             });
         });
 
-        // ISOSCELES TRIANGLES - Base must be even grid units
+        // ISOSCELES TRIANGLES - Base must be even grid units, with all rotations
         const evenBases = [40, 60, 80, 100, 120];
-        const heights = [40, 60, 80, 100];
+        const isoHeights = [40, 60, 80, 100];
         evenBases.forEach(base => {
-            heights.forEach(height => {
-                catalog.push({
-                    shape: 'isoscelesTriangle',
-                    width: base,
-                    height: height,
-                    rotation: 0,
-                    surfaceArea: calcIsoscelesTriangle(base, height)
+            isoHeights.forEach(height => {
+                rotations.forEach(rotation => {
+                    catalog.push({
+                        shape: 'isoscelesTriangle',
+                        width: base,
+                        height: height,
+                        rotation: rotation,
+                        surfaceArea: calcIsoscelesTriangle(base, height)
+                    });
                 });
             });
         });

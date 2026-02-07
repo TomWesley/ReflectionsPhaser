@@ -90,6 +90,16 @@ export class DailyChallenge {
                     if (mirror.width === mirror.height) {
                         mirror.height = this.getMirrorSize(rng, shape, remainingSurfaceArea);
                     }
+                } else if (shape === 'rightTriangle') {
+                    // 85% chance of non-isoceles right triangle (different leg lengths)
+                    if (rng.nextFloat(0, 1) < 0.85) {
+                        mirror.height = this.getMirrorSize(rng, shape, remainingSurfaceArea);
+                        // Ensure legs are actually different
+                        if (mirror.height === mirror.width) {
+                            const sizes = [20, 40, 60, 80, 100, 120].filter(s => s !== mirror.width);
+                            mirror.height = rng.choice(sizes);
+                        }
+                    }
                 } else if (shape === 'trapezoid') {
                     mirror.height = this.getMirrorSize(rng, shape, remainingSurfaceArea);
                     mirror.topWidth = rng.choice([20, 40]); // Smaller top base

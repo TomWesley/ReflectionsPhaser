@@ -19,13 +19,15 @@ export class RightTriangleMirror extends BaseMirror {
      * Calculate vertices - CANONICAL SOURCE OF TRUTH
      */
     calculateVertices() {
-        const halfSize = this.size / 2;
+        const halfWidth = (this.width || this.size) / 2;
+        const halfHeight = (this.height || this.size) / 2;
 
         // Create right triangle vertices in clockwise order
+        // Right angle is at bottom-left
         let vertices = [
-            { x: this.x - halfSize, y: this.y + halfSize }, // bottom-left (right angle)
-            { x: this.x + halfSize, y: this.y + halfSize }, // bottom-right
-            { x: this.x - halfSize, y: this.y - halfSize }  // top-left
+            { x: this.x - halfWidth, y: this.y + halfHeight }, // bottom-left (right angle)
+            { x: this.x + halfWidth, y: this.y + halfHeight }, // bottom-right
+            { x: this.x - halfWidth, y: this.y - halfHeight }  // top-left
         ];
 
         // Apply rotation if needed

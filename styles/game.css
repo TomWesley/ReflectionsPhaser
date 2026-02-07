@@ -44,13 +44,13 @@ body {
 /* Professional Navigation Bar */
 .navbar {
     width: 100%;
-    height: 55px;
+    height: 60px;
     background: var(--card-bg);
     border-bottom: 1px solid var(--border-glow);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0 25px;
+    padding: 0 20px;
     position: sticky;
     top: 0;
     z-index: 100;
@@ -62,7 +62,7 @@ body {
 .navbar-right {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
     flex: 1;
 }
 
@@ -71,25 +71,93 @@ body {
 }
 
 .navbar-center {
-    flex: 3;
+    flex: 0;
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 30px;
 }
 
-.navbar-title {
-    font-family: 'Space Grotesk', sans-serif;
+/* Navbar Timer - Centered Focal Point */
+.navbar-timer {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 20px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255, 182, 39, 0.5);
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(255, 182, 39, 0.2);
+}
+
+.navbar-timer i {
+    font-size: 20px;
+    color: var(--sunset-gold);
+}
+
+.navbar-timer-value {
+    font-family: 'JetBrains Mono', monospace;
     font-size: 1.6rem;
     font-weight: 700;
-    margin: 0;
-    background: linear-gradient(135deg, var(--sunset-orange), var(--sunset-pink), var(--sunset-purple));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    letter-spacing: 5px;
+    color: var(--sunset-gold);
+    text-shadow: 0 0 20px rgba(255, 182, 39, 0.6);
+    min-width: 70px;
+}
+
+/* Navbar Action Buttons - Prominent */
+.navbar-btn-primary,
+.navbar-btn-secondary {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 8px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
     text-transform: uppercase;
+    letter-spacing: 0.5px;
     white-space: nowrap;
+}
+
+.navbar-btn-primary {
+    background: linear-gradient(135deg, var(--sunset-orange), var(--sunset-red));
+    color: #ffffff;
+    box-shadow: 0 3px 12px rgba(255, 107, 53, 0.4);
+}
+
+.navbar-btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 18px rgba(255, 107, 53, 0.6);
+}
+
+.navbar-btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.navbar-btn-secondary {
+    background: rgba(131, 56, 236, 0.3);
+    color: var(--text-primary);
+    border: 1px solid rgba(131, 56, 236, 0.5);
+}
+
+.navbar-btn-secondary:hover {
+    background: rgba(131, 56, 236, 0.5);
+    transform: translateY(-2px);
+}
+
+.navbar-btn-primary i,
+.navbar-btn-secondary i {
+    font-size: 16px;
+}
+
+/* Legacy - hidden */
+.navbar-title {
+    display: none;
 }
 
 .nav-icon-btn {
@@ -120,37 +188,46 @@ body {
     transform: translateY(0);
 }
 
-/* Mode Selector in Navbar */
+/* Mode Selector in Navbar - Compact/Less Prominent */
 .mode-selector-nav {
     display: flex;
-    gap: 8px;
-    background: rgba(0, 0, 0, 0.4);
-    border: 1px solid rgba(255, 107, 53, 0.2);
-    border-radius: 10px;
-    padding: 5px;
+    gap: 4px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 107, 53, 0.15);
+    border-radius: 8px;
+    padding: 3px;
 }
 
 .mode-btn-nav {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 8px 16px;
+    gap: 4px;
+    padding: 5px 10px;
     background: transparent;
     border: none;
-    border-radius: 7px;
+    border-radius: 6px;
     color: var(--text-secondary);
     font-family: 'Space Grotesk', sans-serif;
-    font-weight: 600;
-    font-size: 0.85rem;
+    font-weight: 500;
+    font-size: 0.7rem;
     cursor: pointer;
     transition: all 0.3s ease;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 0.5px;
     white-space: nowrap;
+    opacity: 0.7;
+}
+
+.mode-btn-nav:hover {
+    opacity: 1;
+}
+
+.mode-btn-nav.active {
+    opacity: 1;
 }
 
 .mode-btn-nav i {
-    font-size: 16px;
+    font-size: 14px;
 }
 
 .mode-btn-nav:hover {
@@ -302,7 +379,11 @@ h1 {
     padding: 10px 20px;
     display: flex;
     flex-direction: column;
-    gap: 10px; /* Compact spacing between header and game */
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    /* Fill available vertical space and center content */
+    min-height: calc(100vh - 60px);
     /* Ensure no z-index/stacking issues */
     position: relative;
     z-index: auto;
@@ -433,38 +514,27 @@ h1 {
 /* Game Container - Self-contained, independent module */
 #gameContainer {
     position: relative;
-    background: linear-gradient(135deg, rgba(10, 5, 5, 0.95), rgba(0, 0, 0, 0.98));
-    border: 2px solid var(--border-glow);
-    border-radius: 12px;
-    box-shadow:
-        0 8px 32px rgba(255, 107, 53, 0.3),
-        inset 0 1px 0 rgba(255, 255, 255, 0.05),
-        0 0 40px rgba(255, 107, 53, 0.2);
-    overflow: hidden;
-    /* Self-contained - spacing controlled by parent .main-content */
-    width: 100%;
-    margin: 0;
-    padding: 0;
-    /* Ensure it doesn't interfere with mouse events */
-    z-index: 1;
+    /* No visual styling - just a positioning wrapper */
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 #gameCanvas {
     display: block;
-    border-radius: 10px;
+    border: 2px solid var(--border-glow);
+    border-radius: 12px;
+    box-shadow:
+        0 8px 32px rgba(255, 107, 53, 0.3),
+        0 0 40px rgba(255, 107, 53, 0.2);
     cursor: crosshair;
-    transition: all 0.3s ease;
-    width: 100%;
+    max-width: 100%;
     height: auto;
     /* Ensure canvas is fully interactive */
     pointer-events: auto;
     touch-action: none;
     /* Prevent any transform issues affecting coordinates */
     transform: translateZ(0);
-}
-
-#gameCanvas:hover {
-    box-shadow: inset 0 0 20px rgba(255, 107, 53, 0.1);
 }
 
 /* Legacy UI Controls - now integrated into game header */
@@ -1017,17 +1087,19 @@ h1 {
         height: calc(100vh * 0.85 * 0.75);
         max-width: calc(100vw - 40px);
         max-height: calc(100vh - 80px);
-        border: 2px solid var(--border-glow);
-        border-radius: 8px;
-        box-shadow: 0 8px 32px rgba(255, 107, 53, 0.3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
-    
+
     #gameCanvas {
         width: 100%;
         height: 100%;
         touch-action: none;
         display: block;
-        border-radius: 6px;
+        border: 2px solid var(--border-glow);
+        border-radius: 8px;
+        box-shadow: 0 8px 32px rgba(255, 107, 53, 0.3);
     }
     
     #ui {
@@ -1177,12 +1249,7 @@ h1 {
         align-items: center;
         justify-content: center;
     }
-    
-    .btn-primary, .btn-secondary, .btn-debug, .btn-info {
-        font-size: 1rem;
-        padding: 10px 20px;
-    }
-    
+
     /* Hide any remaining mission briefing elements on desktop */
     #instructions {
         display: none !important;
@@ -1248,13 +1315,14 @@ h1 {
 
 /* Daily Challenge Info */
 .daily-info {
-    margin: 0 auto 20px auto;
-    padding: 12px 20px;
-    background: rgba(255, 107, 53, 0.1);
-    border: 1px solid rgba(255, 107, 53, 0.3);
-    border-radius: 10px;
+    margin: 0 auto;
+    padding: 8px 16px;
+    background: rgba(50, 255, 180, 0.1);
+    border: 1px solid rgba(50, 255, 180, 0.3);
+    border-radius: 8px;
     text-align: center;
-    max-width: 600px;
+    max-width: 400px;
+    font-size: 0.85rem;
 }
 
 .daily-date {
