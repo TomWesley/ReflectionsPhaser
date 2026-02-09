@@ -8,9 +8,9 @@ export class Spawner {
     draw(ctx, showPreview = true) {
         ctx.save();
 
-        // Choose colors based on daily challenge mode
-        const outerColor = this.isDailyChallenge ? '#32FFB4' : '#8338EC';  // Mint green or sunset purple
-        const innerColor = this.isDailyChallenge ? '#7FFFD4' : '#FF8FA3';  // Aquamarine or sunset coral/pink
+        // Neon Crypt colors - Arc blue for arrows, Pink for spawner
+        const outerColor = '#4E78E8';  // Arc blue
+        const innerColor = '#E87ADC';  // Pink
 
         // Draw glowing spawner body
         ctx.shadowColor = outerColor;
@@ -29,12 +29,12 @@ export class Spawner {
 
         // Draw laser preview path only during setup phase
         if (showPreview) {
-            const pathLength = 30; // Shorter preview path
+            const pathLength = 30;
             const endX = this.x + Math.cos(this.angle) * pathLength;
             const endY = this.y + Math.sin(this.angle) * pathLength;
 
-            // Colors for preview path
-            const pathOuterColor = this.isDailyChallenge ? 'rgba(50, 255, 180, 0.4)' : 'rgba(131, 56, 236, 0.4)';
+            // Arc blue for preview path
+            const pathOuterColor = 'rgba(78, 120, 232, 0.4)';
 
             // Outer glow for path
             ctx.shadowColor = outerColor;
@@ -56,7 +56,7 @@ export class Spawner {
             ctx.lineTo(endX, endY);
             ctx.stroke();
 
-            // Bright arrowhead
+            // Bright arrowhead - Arc blue
             const arrowSize = 12;
             const arrowAngle1 = this.angle + Math.PI * 0.8;
             const arrowAngle2 = this.angle - Math.PI * 0.8;

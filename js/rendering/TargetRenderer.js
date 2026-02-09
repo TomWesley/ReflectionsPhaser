@@ -24,9 +24,10 @@ export class TargetRenderer {
     }
 
     static drawChipBody(ctx, centerX, centerY, chipSize, gameOver) {
-        // Dark base with sunset/danger colors
-        ctx.fillStyle = gameOver ? '#2a0a0a' : '#1a0a00';
-        ctx.strokeStyle = gameOver ? '#E63946' : '#FFB627';
+        // Dark base - deep color (#1B1B2F)
+        ctx.fillStyle = gameOver ? '#2a1020' : '#1B1B2F';
+        // Ghost outline (#D4D4E8), flare when game over (#E84E6A)
+        ctx.strokeStyle = gameOver ? '#E84E6A' : '#D4D4E8';
         ctx.lineWidth = 3;
         ctx.shadowBlur = 0;
 
@@ -43,14 +44,14 @@ export class TargetRenderer {
         ctx.fill();
         ctx.stroke();
 
-        // Inner chip core - bright sunset colors with contained glow
+        // Inner chip core - flare color (#E84E6A) with contained glow
         const pulseIntensity = 0.7 + 0.3 * Math.sin(Date.now() / 300);
         const coreRadius = chipSize * 0.4;
 
         // Subtle inner glow that stays within the core area
-        ctx.shadowColor = gameOver ? '#E63946' : '#FFB627';
-        ctx.shadowBlur = coreRadius * 0.5; // Glow contained to roughly core size
-        ctx.fillStyle = gameOver ? '#E63946' : '#FF6B35';
+        ctx.shadowColor = '#E84E6A';
+        ctx.shadowBlur = coreRadius * 0.5;
+        ctx.fillStyle = gameOver ? '#E84E6A' : '#c43a54';
         ctx.globalAlpha = pulseIntensity;
         ctx.beginPath();
         ctx.arc(centerX, centerY, coreRadius, 0, Math.PI * 2);
@@ -60,15 +61,16 @@ export class TargetRenderer {
     }
 
     static drawCircuitPattern(ctx, centerX, centerY, chipSize, gameOver) {
-        ctx.shadowBlur = 0; // No glow on circuits
-        ctx.strokeStyle = gameOver ? '#FF8FA3' : '#FFB627';
+        ctx.shadowBlur = 0;
+        // Ghost circuits, pink when game over
+        ctx.strokeStyle = gameOver ? '#E87ADC' : '#D4D4E8';
         ctx.lineWidth = 2;
         ctx.lineCap = 'round';
 
         for (let i = 0; i < 8; i++) {
             const angle = (i * Math.PI * 2) / 8;
             const innerRadius = chipSize * 0.5;
-            const outerRadius = chipSize * 0.75; // Slightly shorter to stay within hexagon
+            const outerRadius = chipSize * 0.75;
 
             ctx.beginPath();
             ctx.moveTo(
@@ -84,11 +86,12 @@ export class TargetRenderer {
     }
 
     static drawChipPins(ctx, centerX, centerY, chipSize, gameOver) {
-        ctx.shadowBlur = 0; // No glow on pins
-        ctx.fillStyle = gameOver ? '#FF006E' : '#FF6B35';
+        ctx.shadowBlur = 0;
+        // Flare pins (#E84E6A), pink when game over
+        ctx.fillStyle = gameOver ? '#E87ADC' : '#E84E6A';
         for (let i = 0; i < 6; i++) {
             const angle = (i * Math.PI * 2) / 6;
-            const x = centerX + Math.cos(angle) * chipSize * 0.85; // Slightly inward
+            const x = centerX + Math.cos(angle) * chipSize * 0.85;
             const y = centerY + Math.sin(angle) * chipSize * 0.85;
 
             ctx.beginPath();

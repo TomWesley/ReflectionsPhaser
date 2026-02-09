@@ -3,7 +3,6 @@ import { Mirror } from './Mirror.js';
 import { MirrorFactory } from '../mirrors/MirrorFactory.js';
 import { Laser } from './Laser.js';
 import { Spawner } from './Spawner.js';
-import { DailyChallenge } from '../validation/DailyChallenge.js';
 import { SurfaceAreaManager } from '../validation/SurfaceAreaManager.js';
 import { PerformanceRating } from '../validation/PerformanceRating.js';
 import { MirrorPlacementValidation } from '../validation/MirrorPlacementValidation.js';
@@ -14,7 +13,6 @@ import { CollisionSystem } from '../core/CollisionSystem.js';
 import { LaserCollisionHandler } from '../core/LaserCollisionHandler.js';
 import { ShapeGeometry } from '../geometry/ShapeGeometry.js';
 import { GameRenderer } from '../rendering/GameRenderer.js';
-import { GameModeManager } from '../managers/GameModeManager.js';
 import { MirrorGenerator } from '../generators/MirrorGenerator.js';
 import { SpawnerGenerator } from '../generators/SpawnerGenerator.js';
 import { GridAlignmentSystem } from '../systems/GridAlignmentSystem.js';
@@ -51,9 +49,6 @@ export class Game {
         // Initialize renderer
         this.renderer = new GameRenderer(this.ctx, this);
 
-        // Initialize mode manager
-        this.modeManager = new GameModeManager(this);
-
         // Initialize mirror generator
         this.mirrorGenerator = new MirrorGenerator(this);
 
@@ -65,14 +60,12 @@ export class Game {
 
         this.init();
     }
-    
+
     init() {
         // Initialize the validation system first
         MirrorPlacementValidation.initialize();
 
         this.setupEventListeners();
-        this.modeManager.setupModeButtons();
-        this.modeManager.updateDailyInfo();
         this.generateMirrors();
         this.generateSpawners();
         this.gameLoop();
@@ -125,11 +118,6 @@ export class Game {
 
     onTouchStart(e) {
         if (this.isPlaying) return;
-
-        // Prevent interaction in completed Daily Challenges
-        if (this.modeManager.isDailyChallenge() && this.modeManager.isDailyChallengeCompleted()) {
-            return;
-        }
 
         const coords = this.getCanvasCoordinates(e);
 
@@ -271,11 +259,6 @@ export class Game {
     launchLasers() {
         if (this.isPlaying) return;
 
-        // Prevent launching in completed Daily Challenges
-        if (this.modeManager.isDailyChallenge() && this.modeManager.isDailyChallengeCompleted()) {
-            return;
-        }
-
         // Skip validation check - player has manually positioned mirrors
         // Let them play with their chosen configuration
 
@@ -320,7 +303,7 @@ export class Game {
         document.getElementById('launchBtn').disabled = true;
     }
     
-    async resetGame() {
+    resetGame() {
         this.isPlaying = false;
         this.gameOver = false;
         this.startTime = 0;
@@ -328,74 +311,15 @@ export class Game {
         this.lasers = [];
         document.getElementById('timer').textContent = '0:00';
 
-        // Use daily puzzle data if in daily challenge mode
-        if (this.modeManager.isDailyChallenge()) {
-            // Check if already completed
-            if (this.modeManager.isDailyChallengeCompleted()) {
-                // Load saved mirror and laser positions from completed challenge
-                const DailyChallenge = (await import('../validation/DailyChallenge.js')).DailyChallenge;
-                const savedMirrorState = DailyChallenge.getTodayMirrorState();
-                const savedLaserState = DailyChallenge.getTodayLaserState();
-
-                if (savedMirrorState) {
-                    // Reconstruct mirrors from saved state
-                    this.mirrors = DailyChallenge.reconstructMirrors(savedMirrorState);
-                    console.log('Loaded completed daily challenge mirror state');
-                } else {
-                    // Fallback: generate the puzzle
-                    const dailyPuzzle = this.modeManager.generateDailyPuzzle();
-                    this.mirrors = dailyPuzzle.mirrors;
-                }
-
-                // Reconstruct frozen lasers from saved state
-                if (savedLaserState) {
-                    this.lasers = DailyChallenge.reconstructLasers(savedLaserState);
-                    console.log('Loaded completed daily challenge laser freeze frame');
-                } else {
-                    this.lasers = [];
-                }
-
-                // Generate spawners
-                this.generateSpawners();
-
-                // Mark as completed freeze frame state
-                this.isPlaying = false;
-                this.gameOver = true;  // Freeze frame state
-
-                // Disable launch button
-                document.getElementById('launchBtn').disabled = true;
-                const statusEl = document.getElementById('status');
-                if (statusEl) {
-                    statusEl.textContent = 'Daily Challenge Complete! This is your final solution. Come back tomorrow for a new puzzle.';
-                    statusEl.className = 'status-modern status-success';
-                }
-                return;
-            } else {
-                // Not completed yet - generate fresh puzzle
-                const dailyPuzzle = this.modeManager.generateDailyPuzzle();
-                this.mirrors = dailyPuzzle.mirrors;
-
-                // Update vertices for all mirrors
-                this.mirrors.forEach(mirror => this.safeUpdateVertices(mirror));
-
-                // Generate spawners
-                this.generateSpawners();
-            }
-        } else {
-            // Free play mode
-            this.generateMirrors();
-            this.generateSpawners();
-        }
+        // Generate new mirrors and spawners
+        this.generateMirrors();
+        this.generateSpawners();
 
         document.getElementById('launchBtn').disabled = false;
         const statusEl = document.getElementById('status');
 
         if (statusEl) {
-            if (this.modeManager.isDailyChallenge()) {
-                statusEl.textContent = 'Daily Challenge: Position mirrors to protect the center!';
-            } else {
-                statusEl.textContent = 'Position your mirrors to protect the center!';
-            }
+            statusEl.textContent = 'Position your mirrors to protect the center!';
             statusEl.className = 'status-modern';
         }
     }
@@ -404,13 +328,6 @@ export class Game {
         // Only detect hover when not playing and not dragging
         if (this.isPlaying || this.draggedMirror) {
             this.hoveredMirror = null;
-            return;
-        }
-
-        // No hover effects for completed daily challenges
-        if (this.modeManager.isDailyChallenge() && this.modeManager.isDailyChallengeCompleted()) {
-            this.hoveredMirror = null;
-            this.canvas.style.cursor = 'default';
             return;
         }
 
@@ -444,11 +361,6 @@ export class Game {
 
     onMouseDown(e) {
         if (this.isPlaying) return;
-
-        // Prevent interaction in completed Daily Challenges
-        if (this.modeManager.isDailyChallenge() && this.modeManager.isDailyChallengeCompleted()) {
-            return;
-        }
 
         const rect = this.canvas.getBoundingClientRect();
         const scaleX = this.canvas.width / rect.width;
@@ -1224,13 +1136,6 @@ export class Game {
         const centiseconds = Math.floor((this.gameTime % 1) * 100);
         const finalTimeString = `${minutes}:${seconds.toString().padStart(2, '0')}.${centiseconds.toString().padStart(2, '0')}`;
 
-        // Mark daily challenge as completed if in daily challenge mode
-        if (this.modeManager.isDailyChallenge() && !this.modeManager.isDailyChallengeCompleted()) {
-            const DailyChallenge = (await import('../validation/DailyChallenge.js')).DailyChallenge;
-            DailyChallenge.markCompleted(this.gameTime, finalTimeString, this.mirrors, this.lasers);
-            console.log('Daily Challenge completed and marked with mirror + laser positions saved!');
-        }
-
         // Update modal content
         document.getElementById('finalTime').textContent = finalTimeString;
 
@@ -1241,12 +1146,12 @@ export class Game {
             performanceElement.textContent = performanceData.rating;
             performanceElement.style.color = performanceData.color;
             performanceElement.style.textShadow = `0 0 10px ${performanceData.color}`;
-            performanceElement.title = performanceData.description; // Tooltip on hover
+            performanceElement.title = performanceData.description;
         } catch (error) {
             console.error('Error loading performance rating:', error);
             const performanceElement = document.getElementById('missionPerformance');
             performanceElement.textContent = 'Failed';
-            performanceElement.style.color = '#ff3366';
+            performanceElement.style.color = '#E84E6A';
         }
 
         // Show modal
@@ -1275,12 +1180,6 @@ export class Game {
         const centiseconds = Math.floor((this.gameTime % 1) * 100);
         const finalTimeString = `${minutes}:${seconds.toString().padStart(2, '0')}.${centiseconds.toString().padStart(2, '0')}`;
 
-        // Mark daily challenge as completed if in daily challenge mode
-        if (this.modeManager.isDailyChallenge() && !this.modeManager.isDailyChallengeCompleted()) {
-            DailyChallenge.markCompleted(this.gameTime, finalTimeString, this.mirrors, this.lasers);
-            console.log('Daily Challenge completed with PERFECT SCORE! Mirror + laser positions saved.');
-        }
-
         // Update modal content
         document.getElementById('victoryTime').textContent = finalTimeString;
 
@@ -1299,12 +1198,6 @@ export class Game {
         // Allow player to continue playing after game over
         this.gameOver = false;
         this.isPlaying = false;
-
-        // Update mode UI if in daily challenge mode (show completion status)
-        if (this.modeManager.isDailyChallenge()) {
-            this.modeManager.updateModeButtons();
-            this.modeManager.updateDailyInfo();
-        }
 
         // Reset the game state
         this.resetGame();

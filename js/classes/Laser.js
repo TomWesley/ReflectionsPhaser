@@ -65,6 +65,7 @@ export class Laser {
     
     draw(ctx) {
         // Draw trail with dramatic fade - bright at head, dim at tail
+        // Using PINK color (#E87ADC) from Neon Crypt palette
         if (this.trail.length > 1) {
             ctx.save();
             ctx.lineCap = 'round';
@@ -80,31 +81,31 @@ export class Laser {
                 const prev = this.trail[i - 1];
                 const curr = this.trail[i];
 
-                // Outer glow - very faint at tail, visible near head
+                // Outer glow - pink (#E87ADC)
                 ctx.beginPath();
                 ctx.moveTo(prev.x, prev.y);
                 ctx.lineTo(curr.x, curr.y);
-                ctx.lineWidth = 6 + intensity * 6; // 6-12px width
-                ctx.strokeStyle = `rgba(255, 100, 150, ${intensity * 0.3})`;
+                ctx.lineWidth = 6 + intensity * 6;
+                ctx.strokeStyle = `rgba(232, 122, 220, ${intensity * 0.3})`;
                 ctx.stroke();
 
                 // Middle glow
                 ctx.beginPath();
                 ctx.moveTo(prev.x, prev.y);
                 ctx.lineTo(curr.x, curr.y);
-                ctx.lineWidth = 3 + intensity * 4; // 3-7px width
-                ctx.strokeStyle = `rgba(255, 50, 120, ${intensity * 0.6})`;
+                ctx.lineWidth = 3 + intensity * 4;
+                ctx.strokeStyle = `rgba(232, 100, 200, ${intensity * 0.6})`;
                 ctx.stroke();
 
                 // Core trail - bright pink/white gradient
                 ctx.beginPath();
                 ctx.moveTo(prev.x, prev.y);
                 ctx.lineTo(curr.x, curr.y);
-                ctx.lineWidth = 1 + intensity * 3; // 1-4px width
+                ctx.lineWidth = 1 + intensity * 3;
                 // Interpolate from dim pink to bright white-pink
-                const r = Math.round(255);
-                const g = Math.round(50 + intensity * 200); // 50-250
-                const b = Math.round(110 + intensity * 145); // 110-255
+                const r = Math.round(232 + intensity * 23);
+                const g = Math.round(122 + intensity * 133);
+                const b = Math.round(220 + intensity * 35);
                 ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${0.3 + intensity * 0.7})`;
                 ctx.stroke();
             }
@@ -112,31 +113,31 @@ export class Laser {
             ctx.restore();
         }
 
-        // Draw laser head with intense pulsing glow
+        // Draw laser head with intense pulsing glow - Pink theme
         ctx.save();
 
         // Pulsing effect using time
-        const pulse = 0.8 + Math.sin(Date.now() * 0.01) * 0.2; // 0.6-1.0 pulse
+        const pulse = 0.8 + Math.sin(Date.now() * 0.01) * 0.2;
 
-        // Large outer glow
-        ctx.shadowColor = '#FF69B4';
+        // Large outer glow - pink
+        ctx.shadowColor = '#E87ADC';
         ctx.shadowBlur = 30 * pulse;
-        ctx.fillStyle = `rgba(255, 105, 180, ${0.3 * pulse})`;
+        ctx.fillStyle = `rgba(232, 122, 220, ${0.3 * pulse})`;
         ctx.beginPath();
         ctx.arc(this.x, this.y, CONFIG.LASER_RADIUS * 5, 0, Math.PI * 2);
         ctx.fill();
 
         // Medium glow
-        ctx.shadowColor = '#FF1493';
+        ctx.shadowColor = '#E87ADC';
         ctx.shadowBlur = 20 * pulse;
-        ctx.fillStyle = `rgba(255, 20, 147, ${0.5 * pulse})`;
+        ctx.fillStyle = `rgba(232, 100, 200, ${0.5 * pulse})`;
         ctx.beginPath();
         ctx.arc(this.x, this.y, CONFIG.LASER_RADIUS * 3, 0, Math.PI * 2);
         ctx.fill();
 
         // Inner bright glow
         ctx.shadowBlur = 15 * pulse;
-        ctx.fillStyle = `rgba(255, 100, 180, ${0.8 * pulse})`;
+        ctx.fillStyle = `rgba(240, 150, 230, ${0.8 * pulse})`;
         ctx.beginPath();
         ctx.arc(this.x, this.y, CONFIG.LASER_RADIUS * 2, 0, Math.PI * 2);
         ctx.fill();

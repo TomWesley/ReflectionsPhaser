@@ -167,13 +167,14 @@ export class BaseMirror {
         const minY = Math.min(...points.map(p => p.y));
         const maxY = Math.max(...points.map(p => p.y));
 
-        // Placement phase glow - subtle pulsing to indicate movability
+        // Placement phase glow - subtle pulsing to indicate movability (arc blue tint)
         if (isPlacementPhase && !this.isDragging) {
             const pulse = 0.4 + 0.2 * Math.sin(Date.now() / 400);
-            ctx.shadowColor = 'rgba(200, 220, 255, ' + pulse + ')';
+            ctx.shadowColor = 'rgba(78, 120, 232, ' + pulse + ')';
             ctx.shadowBlur = 12;
         } else if (this.isDragging) {
-            ctx.shadowColor = '#FF6B35';
+            // Flare color when dragging (#E84E6A)
+            ctx.shadowColor = '#E84E6A';
             ctx.shadowBlur = 20;
         } else {
             ctx.shadowBlur = 0;
@@ -218,15 +219,16 @@ export class BaseMirror {
 
         // Border styling based on state
         if (this.isDragging) {
-            ctx.shadowColor = '#FF6B35';
+            // Flare color when dragging (#E84E6A)
+            ctx.shadowColor = '#E84E6A';
             ctx.shadowBlur = 15;
-            ctx.strokeStyle = '#FF6B35';
+            ctx.strokeStyle = '#E84E6A';
             ctx.lineWidth = 2.5;
         } else if (isPlacementPhase) {
-            // Subtle glow during placement phase
-            ctx.shadowColor = 'rgba(200, 220, 255, 0.5)';
+            // Subtle arc blue glow during placement phase
+            ctx.shadowColor = 'rgba(78, 120, 232, 0.5)';
             ctx.shadowBlur = 8;
-            ctx.strokeStyle = '#c0c8d0'; // Light silver border
+            ctx.strokeStyle = '#c0c8d0';
             ctx.lineWidth = 2;
         } else {
             // Clean silver border after launch

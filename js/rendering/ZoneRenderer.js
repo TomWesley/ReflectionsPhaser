@@ -5,8 +5,8 @@ import { CONFIG } from '../config.js';
  */
 export class ZoneRenderer {
     static drawForbiddenZones(ctx) {
-        // Use sunset red with transparency for forbidden zones
-        ctx.fillStyle = 'rgba(230, 57, 70, 0.2)';
+        // Use ghost color (#D4D4E8) with transparency for forbidden zones
+        ctx.fillStyle = 'rgba(212, 212, 232, 0.15)';
 
         // Center forbidden zone - circle matching validation
         const centerX = CONFIG.CANVAS_WIDTH / 2;

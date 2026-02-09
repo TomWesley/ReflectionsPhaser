@@ -1,4 +1,3 @@
-import { DailyChallenge } from '../validation/DailyChallenge.js';
 import { CONFIG } from '../config.js';
 
 /**
@@ -28,11 +27,6 @@ export class InputHandler {
 
     onMouseDown(e) {
         if (this.game.isPlaying) return;
-
-        // Prevent interaction in completed Daily Challenges
-        if (this.game.gameMode === 'dailyChallenge' && DailyChallenge.hasCompletedToday()) {
-            return;
-        }
 
         const rect = this.game.canvas.getBoundingClientRect();
         const mouseX = e.clientX - rect.left;

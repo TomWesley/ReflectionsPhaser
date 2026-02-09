@@ -4,8 +4,7 @@ import { Spawner } from '../classes/Spawner.js';
 /**
  * SpawnerGenerator - Handles spawner generation
  * Responsibilities:
- * - Generating spawners for free play mode
- * - Generating spawners for daily challenge mode
+ * - Generating spawners for the game
  * - Calculating random angles for spawners
  */
 export class SpawnerGenerator {
@@ -14,25 +13,12 @@ export class SpawnerGenerator {
     }
 
     /**
-     * Generate all spawners for the current game mode
+     * Generate all spawners for the game
      */
     generateSpawners() {
         const spawners = [];
 
-        if (this.game.modeManager.isDailyChallenge()) {
-            const dailyPuzzle = this.game.modeManager.getDailyPuzzle();
-            if (dailyPuzzle) {
-                // Create spawners from daily puzzle data
-                dailyPuzzle.spawners.forEach(spawnerData => {
-                    const spawner = new Spawner(spawnerData.x, spawnerData.y, spawnerData.angle);
-                    spawner.isDailyChallenge = spawnerData.isDailyChallenge || true;
-                    spawners.push(spawner);
-                });
-                return spawners;
-            }
-        }
-
-        // Free play mode - generate exactly 5 spawners for fair scoring
+        // Generate exactly 5 spawners for fair scoring
         const spawnerCount = 5;
         const allPositions = this.generateRandomPositions();
 

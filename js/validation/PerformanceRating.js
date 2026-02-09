@@ -12,16 +12,16 @@ export class PerformanceRating {
                 this.ratings = data.performanceRatings;
             } catch (error) {
                 console.error('Failed to load performance ratings:', error);
-                // Fallback ratings if JSON fails to load
+                // Fallback ratings if JSON fails to load - Neon Crypt palette
                 this.ratings = [
-                    { maxTime: 10, rating: "Dissatisfactory", color: "#ff3366", description: "Core breach occurred too quickly" },
-                    { maxTime: 30, rating: "Inadequate", color: "#ff6633", description: "Defense systems failed early" },
-                    { maxTime: 60, rating: "Marginal", color: "#ffaa33", description: "Basic defensive capability shown" },
-                    { maxTime: 120, rating: "Satisfactory", color: "#ffff33", description: "Acceptable defense duration" },
-                    { maxTime: 180, rating: "Good", color: "#aaffaa", description: "Solid defensive performance" },
-                    { maxTime: 300, rating: "Excellent", color: "#66ff66", description: "Superior tactical defense" },
-                    { maxTime: 600, rating: "Outstanding", color: "#33ff88", description: "Elite defensive mastery" },
-                    { maxTime: 999999, rating: "Legendary", color: "#00ffff", description: "Unprecedented defense achievement" }
+                    { maxTime: 10, rating: "Dissatisfactory", color: "#E84E6A", description: "Core breach occurred too quickly" },
+                    { maxTime: 30, rating: "Inadequate", color: "#E87ADC", description: "Defense systems failed early" },
+                    { maxTime: 60, rating: "Marginal", color: "#B080E8", description: "Basic defensive capability shown" },
+                    { maxTime: 120, rating: "Satisfactory", color: "#4E78E8", description: "Acceptable defense duration" },
+                    { maxTime: 180, rating: "Good", color: "#60A0F0", description: "Solid defensive performance" },
+                    { maxTime: 300, rating: "Excellent", color: "#88C8FF", description: "Superior tactical defense" },
+                    { maxTime: 600, rating: "Outstanding", color: "#A8E0FF", description: "Elite defensive mastery" },
+                    { maxTime: 999999, rating: "Transcendent", color: "#D4D4E8", description: "Unprecedented defense achievement" }
                 ];
             }
         }

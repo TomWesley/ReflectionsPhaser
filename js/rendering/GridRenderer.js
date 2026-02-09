@@ -5,7 +5,8 @@ import { CONFIG } from '../config.js';
  */
 export class GridRenderer {
     static drawGrid(ctx) {
-        ctx.strokeStyle = 'rgba(255, 107, 53, 0.15)'; // Subtle sunset orange grid
+        // Ghost gridlines (#D4D4E8) - fully opaque
+        ctx.strokeStyle = '#D4D4E8';
         ctx.lineWidth = 1;
 
         // Vertical lines
@@ -24,8 +25,8 @@ export class GridRenderer {
             ctx.stroke();
         }
 
-        // Draw visible border around the entire playable area
-        ctx.strokeStyle = 'rgba(255, 107, 53, 0.6)';
+        // Draw visible border around the entire playable area - Arc blue (#4E78E8)
+        ctx.strokeStyle = 'rgba(78, 120, 232, 0.7)';
         ctx.lineWidth = 2;
         ctx.strokeRect(1, 1, CONFIG.CANVAS_WIDTH - 2, CONFIG.CANVAS_HEIGHT - 2);
     }

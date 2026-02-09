@@ -7,8 +7,7 @@ import { RigidSurfaceAreaGenerator } from '../validation/RigidSurfaceAreaGenerat
 /**
  * MirrorGenerator - Handles mirror generation and placement
  * Responsibilities:
- * - Generating mirrors for free play mode
- * - Generating mirrors for daily challenge mode
+ * - Generating mirrors for the game
  * - Validating mirror placement
  * - Finding valid positions for mirrors
  */
@@ -18,35 +17,15 @@ export class MirrorGenerator {
     }
 
     /**
-     * Generate all mirrors for the current game mode
+     * Generate all mirrors for the game
      */
     generateMirrors() {
         const mirrors = [];
-
-        if (this.game.modeManager.isDailyChallenge()) {
-            return this.generateDailyChallengeMirrors(mirrors);
-        }
-
         return this.generateFreePlayMirrors(mirrors);
     }
 
     /**
-     * Generate mirrors for daily challenge mode
-     */
-    generateDailyChallengeMirrors(mirrors) {
-        const dailyPuzzle = this.game.modeManager.generateDailyPuzzle();
-
-        for (let mirrorData of dailyPuzzle.mirrors) {
-            let mirror = this.createValidatedMirror(mirrorData, mirrors);
-            if (mirror) {
-                mirrors.push(mirror);
-            }
-        }
-        return mirrors;
-    }
-
-    /**
-     * Generate mirrors for free play mode
+     * Generate mirrors for the game
      * CRITICAL: Must maintain exactly TARGET_SURFACE_AREA (84) for fair scoring
      *
      * NEW RIGID APPROACH:

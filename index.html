@@ -17,7 +17,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <!-- Iconoir Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/iconoir-icons/iconoir@main/css/iconoir.css">
-    <link rel="stylesheet" href="styles/game.css">
+    <link rel="stylesheet" href="styles/game.css?v=7">
 </head>
 <body>
     <!-- Professional Navigation Bar -->
@@ -26,22 +26,6 @@
             <button class="nav-icon-btn" onclick="openRules()" title="How to Play">
                 <i class="iconoir-info-circle"></i>
             </button>
-            <!-- Mode Selector - Less prominent -->
-            <div class="mode-selector-nav">
-                <button id="freePlayBtn" class="mode-btn-nav active" title="Main Game">
-                    <i class="iconoir-play"></i>
-                    <span>Main</span>
-                </button>
-                <button id="dailyChallengeBtn" class="mode-btn-nav" title="Daily Challenge">
-                    <i class="iconoir-calendar"></i>
-                    <span>Daily</span>
-                </button>
-            </div>
-            <!-- Daily Challenge Info (shown when in daily mode) -->
-            <div id="dailyInfo" class="daily-info-nav hidden">
-                <span class="daily-date"></span>
-                <span class="daily-status"></span>
-            </div>
         </div>
 
         <div class="navbar-center">
@@ -173,27 +157,6 @@
             </button>
         </div>
         <div class="mobile-menu-content">
-            <!-- Mode Selector -->
-            <div class="mobile-menu-section">
-                <div class="mobile-menu-label">GAME MODE</div>
-                <div class="mobile-mode-selector">
-                    <button id="mobileFreePlayBtn" class="mobile-mode-btn active" onclick="selectMobileMode('freeplay')">
-                        <i class="iconoir-play"></i>
-                        <span>Main Game</span>
-                    </button>
-                    <button id="mobileDailyChallengeBtn" class="mobile-mode-btn" onclick="selectMobileMode('daily')">
-                        <i class="iconoir-calendar"></i>
-                        <span>Daily Challenge</span>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Daily Info (shown when daily challenge active) -->
-            <div id="mobileDailyInfo" class="mobile-daily-info hidden">
-                <div class="mobile-daily-date"></div>
-                <div class="mobile-daily-status"></div>
-            </div>
-
             <!-- Menu Links -->
             <div class="mobile-menu-section">
                 <button class="mobile-menu-item" onclick="openMobileRules()">
@@ -275,44 +238,6 @@
             document.body.classList.remove('menu-open');
         }
 
-        function selectMobileMode(mode) {
-            const freePlayBtn = document.getElementById('mobileFreePlayBtn');
-            const dailyBtn = document.getElementById('mobileDailyChallengeBtn');
-            const mobileDailyInfo = document.getElementById('mobileDailyInfo');
-
-            if (mode === 'freeplay') {
-                freePlayBtn.classList.add('active');
-                dailyBtn.classList.remove('active');
-                mobileDailyInfo.classList.add('hidden');
-                // Trigger the desktop button to sync state
-                document.getElementById('freePlayBtn').click();
-            } else {
-                dailyBtn.classList.add('active');
-                freePlayBtn.classList.remove('active');
-                mobileDailyInfo.classList.remove('hidden');
-                // Trigger the desktop button to sync state
-                document.getElementById('dailyChallengeBtn').click();
-                // Update mobile daily info
-                updateMobileDailyInfo();
-            }
-            closeMobileMenu();
-        }
-
-        function updateMobileDailyInfo() {
-            const desktopDate = document.querySelector('.daily-date');
-            const desktopStatus = document.querySelector('.daily-status');
-            const mobileDate = document.querySelector('.mobile-daily-date');
-            const mobileStatus = document.querySelector('.mobile-daily-status');
-
-            if (desktopDate && mobileDate) {
-                mobileDate.textContent = desktopDate.textContent;
-            }
-            if (desktopStatus && mobileStatus) {
-                mobileStatus.textContent = desktopStatus.textContent;
-                mobileStatus.className = desktopStatus.className.replace('daily-status', 'mobile-daily-status');
-            }
-        }
-
         function openMobileRules() {
             closeMobileMenu();
             openRules();
@@ -336,34 +261,6 @@
                 mobileResetBtn.addEventListener('click', function() {
                     desktopResetBtn.click();
                 });
-            }
-
-            // Sync mobile mode buttons with desktop state
-            const observer = new MutationObserver(function(mutations) {
-                mutations.forEach(function(mutation) {
-                    if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
-                        const freePlayActive = document.getElementById('freePlayBtn').classList.contains('active');
-                        const mobileFreePlay = document.getElementById('mobileFreePlayBtn');
-                        const mobileDaily = document.getElementById('mobileDailyChallengeBtn');
-                        const mobileDailyInfo = document.getElementById('mobileDailyInfo');
-
-                        if (freePlayActive) {
-                            mobileFreePlay.classList.add('active');
-                            mobileDaily.classList.remove('active');
-                            mobileDailyInfo.classList.add('hidden');
-                        } else {
-                            mobileDaily.classList.add('active');
-                            mobileFreePlay.classList.remove('active');
-                            mobileDailyInfo.classList.remove('hidden');
-                            updateMobileDailyInfo();
-                        }
-                    }
-                });
-            });
-
-            const freePlayBtn = document.getElementById('freePlayBtn');
-            if (freePlayBtn) {
-                observer.observe(freePlayBtn, { attributes: true });
             }
 
             // Sync launch button disabled state
@@ -470,6 +367,6 @@
     </script>
 
     <!-- Main Game Module -->
-    <script type="module" src="js/main.js?v=2"></script>
+    <script type="module" src="js/main.js?v=8"></script>
 </body>
 </html>

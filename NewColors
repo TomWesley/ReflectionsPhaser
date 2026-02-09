@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0a0a12;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Press Start 2P', monospace;
+    padding: 40px 20px;
+  }
+  h1 {
+    color: #e87adc;
+    font-size: 18px;
+    text-align: center;
+    margin-bottom: 10px;
+    text-shadow: 0 0 20px rgba(232,122,220,0.4);
+    letter-spacing: 2px;
+  }
+  .sub {
+    color: #5a5a7a;
+    font-size: 9px;
+    margin-bottom: 40px;
+    letter-spacing: 1px;
+  }
+  .palette {
+    display: flex;
+    gap: 0;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 0 60px rgba(78,120,232,0.15), 0 20px 40px rgba(0,0,0,0.5);
+    margin-bottom: 40px;
+  }
+  .swatch {
+    width: 100px;
+    height: 180px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: 12px;
+    transition: transform 0.2s, height 0.2s;
+    cursor: pointer;
+    position: relative;
+  }
+  .swatch:hover {
+    transform: scaleY(1.08);
+    z-index: 2;
+  }
+  .swatch span {
+    font-size: 7px;
+    color: rgba(0,0,0,0.5);
+    text-align: center;
+    line-height: 1.6;
+  }
+  .swatch.light span { color: rgba(0,0,0,0.45); }
+  .swatch.dark span { color: rgba(255,255,255,0.35); }
+
+  .details {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    max-width: 660px;
+    width: 100%;
+  }
+  @media (max-width: 600px) {
+    .details { grid-template-columns: repeat(2, 1fr); }
+    .swatch { width: 70px; height: 140px; }
+  }
+  .card {
+    background: #12121e;
+    border-radius: 10px;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    border: 1px solid #1e1e30;
+  }
+  .dot {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    flex-shrink: 0;
+  }
+  .card .name {
+    font-size: 8px;
+    color: #b0b0cc;
+    margin-bottom: 4px;
+  }
+  .card .hex {
+    font-size: 7px;
+    color: #5a5a7a;
+  }
+  .card .rgb {
+    font-size: 7px;
+    color: #3a3a5a;
+    margin-top: 2px;
+  }
+</style>
+</head>
+<body>
+
+<h1>NEON CRYPT</h1>
+<div class="sub">VINTAGE ARCADE PALETTE — 6 COLORS</div>
+
+<div class="palette">
+  <div class="swatch dark" style="background:#0a0a12"><span>VOID<br>#0A0A12</span></div>
+  <div class="swatch dark" style="background:#1b1b2f"><span>DEEP<br>#1B1B2F</span></div>
+  <div class="swatch dark" style="background:#4e78e8"><span>ARC<br>#4E78E8</span></div>
+  <div class="swatch dark" style="background:#e87adc"><span>PINK<br>#E87ADC</span></div>
+  <div class="swatch dark" style="background:#e84e6a"><span>FLARE<br>#E84E6A</span></div>
+  <div class="swatch light" style="background:#d4d4e8"><span>GHOST<br>#D4D4E8</span></div>
+</div>
+
+<div class="details">
+  <div class="card">
+    <div class="dot" style="background:#0a0a12"></div>
+    <div>
+      <div class="name">VOID</div>
+      <div class="hex">#0A0A12</div>
+      <div class="rgb">RGB(10, 10, 18)</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="dot" style="background:#1b1b2f"></div>
+    <div>
+      <div class="name">DEEP</div>
+      <div class="hex">#1B1B2F</div>
+      <div class="rgb">RGB(27, 27, 47)</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="dot" style="background:#4e78e8"></div>
+    <div>
+      <div class="name">ARC</div>
+      <div class="hex">#4E78E8</div>
+      <div class="rgb">RGB(78, 120, 232)</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="dot" style="background:#e87adc"></div>
+    <div>
+      <div class="name">PINK</div>
+      <div class="hex">#E87ADC</div>
+      <div class="rgb">RGB(232, 122, 220)</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="dot" style="background:#e84e6a"></div>
+    <div>
+      <div class="name">FLARE</div>
+      <div class="hex">#E84E6A</div>
+      <div class="rgb">RGB(232, 78, 106)</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="dot" style="background:#d4d4e8"></div>
+    <div>
+      <div class="name">GHOST</div>
+      <div class="hex">#D4D4E8</div>
+      <div class="rgb">RGB(212, 212, 232)</div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

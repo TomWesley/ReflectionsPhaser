@@ -156,7 +156,8 @@ export class RigidSurfaceAreaGenerator {
         });
 
         // HEXAGONS - Regular hexagons with 6 equal sides
-        const hexagonSizes = [40, 60, 80, 100];
+        // More sizes for better variety (surface areas: 6, 9, 12, 15, 18, 21)
+        const hexagonSizes = [40, 60, 80, 100, 120, 140];
         const hexRotations = [0, 60, 120, 180, 240, 300];
         hexagonSizes.forEach(size => {
             hexRotations.forEach(rotation => {
@@ -270,15 +271,14 @@ export class RigidSurfaceAreaGenerator {
 
         console.log(`🎯 Generating configuration for EXACTLY ${TARGET} surface area (true random)...`);
 
-        // Randomly choose a size bias for this configuration
-        // 0 = prefer small mirrors (many pieces), 1 = prefer large mirrors (few pieces), 0.5 = no preference
-        const sizeBias = Math.random();
-        console.log(`  Size bias: ${sizeBias.toFixed(2)} (${sizeBias < 0.33 ? 'small' : sizeBias > 0.66 ? 'large' : 'mixed'})`);
-
         const selectedMirrors = [];
         let currentTotal = 0;
         let iterations = 0;
         const maxIterations = 200;
+
+        // Track shape usage to log diversity
+        const shapeCount = {};
+        ALL_SHAPES.forEach(s => shapeCount[s] = 0);
 
         while (currentTotal < TARGET && iterations < maxIterations) {
             iterations++;
@@ -291,6 +291,7 @@ export class RigidSurfaceAreaGenerator {
                 const exactMirror = exactMatches[Math.floor(Math.random() * exactMatches.length)];
                 selectedMirrors.push({ ...exactMirror });
                 currentTotal += exactMirror.surfaceArea;
+                shapeCount[exactMirror.shape]++;
                 console.log(`  ✓ Exact match: ${exactMirror.shape} (${exactMirror.surfaceArea}) - Total: ${currentTotal}/${TARGET}`);
                 break;
             }
@@ -307,29 +308,19 @@ export class RigidSurfaceAreaGenerator {
                 continue;
             }
 
-            // Apply size bias to selection
-            let selectedMirror;
-            if (sizeBias < 0.33) {
-                // Prefer smaller mirrors - sort ascending, pick from first half
-                candidates.sort((a, b) => a.surfaceArea - b.surfaceArea);
-                const smallerHalf = candidates.slice(0, Math.max(1, Math.ceil(candidates.length / 2)));
-                selectedMirror = smallerHalf[Math.floor(Math.random() * smallerHalf.length)];
-            } else if (sizeBias > 0.66) {
-                // Prefer larger mirrors - sort descending, pick from first half
-                candidates.sort((a, b) => b.surfaceArea - a.surfaceArea);
-                const largerHalf = candidates.slice(0, Math.max(1, Math.ceil(candidates.length / 2)));
-                selectedMirror = largerHalf[Math.floor(Math.random() * largerHalf.length)];
-            } else {
-                // True random - pick any
-                selectedMirror = candidates[Math.floor(Math.random() * candidates.length)];
-            }
+            // TRUE RANDOM - pick any mirror of this shape that fits
+            const selectedMirror = candidates[Math.floor(Math.random() * candidates.length)];
 
             // Add a deep copy
             selectedMirrors.push({ ...selectedMirror });
             currentTotal += selectedMirror.surfaceArea;
+            shapeCount[selectedMirror.shape]++;
 
             console.log(`  Added ${selectedMirror.shape} (${selectedMirror.surfaceArea}) - Total: ${currentTotal}/${TARGET}`);
         }
+
+        // Log shape diversity
+        console.log(`  Shape distribution:`, Object.entries(shapeCount).filter(([k,v]) => v > 0).map(([k,v]) => `${k}:${v}`).join(', '));
 
         // If we didn't hit exactly 84, use backtracking to fix
         if (currentTotal !== TARGET) {
