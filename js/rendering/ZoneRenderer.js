@@ -5,8 +5,8 @@ import { CONFIG } from '../config.js';
  */
 export class ZoneRenderer {
     static drawForbiddenZones(ctx) {
-        // Use ghost color (#D4D4E8) with transparency for forbidden zones
-        ctx.fillStyle = 'rgba(212, 212, 232, 0.15)';
+        // Use flare color (#E84E6A) with transparency for forbidden zones
+        ctx.fillStyle = 'rgba(232, 78, 106, 0.3)';
 
         // Center forbidden zone - circle matching validation
         const centerX = CONFIG.CANVAS_WIDTH / 2;
@@ -18,18 +18,19 @@ export class ZoneRenderer {
         ctx.fill();
 
         // Edge forbidden zones - rectangles matching validation
+        // Horizontals go full width, verticals are shortened to avoid corner overlap
         const edgeMargin = CONFIG.EDGE_MARGIN;
 
-        // Top edge
+        // Top edge (full width)
         ctx.fillRect(0, 0, CONFIG.CANVAS_WIDTH, edgeMargin);
 
-        // Bottom edge
+        // Bottom edge (full width)
         ctx.fillRect(0, CONFIG.CANVAS_HEIGHT - edgeMargin, CONFIG.CANVAS_WIDTH, edgeMargin);
 
-        // Left edge
-        ctx.fillRect(0, 0, edgeMargin, CONFIG.CANVAS_HEIGHT);
+        // Left edge (shortened to avoid corners)
+        ctx.fillRect(0, edgeMargin, edgeMargin, CONFIG.CANVAS_HEIGHT - edgeMargin * 2);
 
-        // Right edge
-        ctx.fillRect(CONFIG.CANVAS_WIDTH - edgeMargin, 0, edgeMargin, CONFIG.CANVAS_HEIGHT);
+        // Right edge (shortened to avoid corners)
+        ctx.fillRect(CONFIG.CANVAS_WIDTH - edgeMargin, edgeMargin, edgeMargin, CONFIG.CANVAS_HEIGHT - edgeMargin * 2);
     }
 }

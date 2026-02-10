@@ -7,7 +7,7 @@ export class GridRenderer {
     static drawGrid(ctx) {
         // Ghost gridlines (#D4D4E8) - fully opaque
         ctx.strokeStyle = '#D4D4E8';
-        ctx.lineWidth = 1;
+        ctx.lineWidth = 0.5;
 
         // Vertical lines
         for (let x = 0; x <= CONFIG.CANVAS_WIDTH; x += CONFIG.GRID_SIZE) {
