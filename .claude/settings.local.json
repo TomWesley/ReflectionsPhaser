@@ -5,7 +5,11 @@
       "Bash(kill:*)",
       "Bash(npm test)",
       "Bash(chmod:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git pull:*)"
     ],
     "deny": [],
     "ask": []
