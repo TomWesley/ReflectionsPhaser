@@ -1742,9 +1742,30 @@ h1 {
    REPLAY FEATURE STYLES
    ========================================== */
 
-/* Replay and Save Buttons */
+/* Platform-specific visibility */
+.desktop-only {
+    display: inline-flex !important;
+}
+
+.mobile-only {
+    display: none !important;
+}
+
+@media screen and (max-width: 768px),
+       screen and (max-width: 932px) and (orientation: landscape) {
+    .desktop-only {
+        display: none !important;
+    }
+
+    .mobile-only {
+        display: inline-flex !important;
+    }
+}
+
+/* Replay, Save, and Share Buttons */
 .btn-replay,
-.btn-save {
+.btn-save,
+.btn-share {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -1780,8 +1801,35 @@ h1 {
     box-shadow: 0 4px 12px rgba(232, 122, 220, 0.4);
 }
 
+.btn-share {
+    background: linear-gradient(135deg, #34C759 0%, #5AC778 100%);
+    color: white;
+}
+
+.btn-share:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(52, 199, 89, 0.4);
+}
+
+.btn-share:disabled,
+.btn-share.converting {
+    background: linear-gradient(135deg, #666 0%, #888 100%);
+    cursor: wait;
+    transform: none;
+}
+
+.btn-share.converting .share-text {
+    animation: pulse-text 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-text {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
 .btn-replay i,
-.btn-save i {
+.btn-save i,
+.btn-share i {
     font-size: 14px;
 }
 
@@ -1872,7 +1920,8 @@ h1 {
 
 /* Modal buttons with replay */
 .snapshot-modal .modal-buttons .btn-replay,
-.snapshot-modal .modal-buttons .btn-save {
+.snapshot-modal .modal-buttons .btn-save,
+.snapshot-modal .modal-buttons .btn-share {
     font-size: 0.65rem;
     padding: 6px 12px;
 }
@@ -1894,7 +1943,8 @@ h1 {
     }
 
     .btn-replay,
-    .btn-save {
+    .btn-save,
+    .btn-share {
         font-size: 0.7rem;
         padding: 6px 12px;
     }

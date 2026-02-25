@@ -1,6 +1,7 @@
 /**
  * ReplayRecorder - Records canvas gameplay as video for replay and download
  * Uses MediaRecorder API to capture canvas stream
+ * Supports MP4 conversion and native sharing on mobile
  */
 export class ReplayRecorder {
     constructor(canvas) {
@@ -11,6 +12,26 @@ export class ReplayRecorder {
         this.videoURL = null;
         this.isRecording = false;
         this.stream = null;
+
+        // MP4 conversion state
+        this.mp4Blob = null;
+        this.mp4URL = null;
+        this.isConverting = false;
+        this.ffmpegLoaded = false;
+    }
+
+    /**
+     * Check if running on mobile device
+     */
+    static isMobile() {
+        return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    }
+
+    /**
+     * Check if Web Share API is supported with files
+     */
+    static canShare() {
+        return navigator.share && navigator.canShare;
     }
 
     /**
@@ -166,6 +187,174 @@ export class ReplayRecorder {
     }
 
     /**
+     * Load FFmpeg for MP4 conversion
+     */
+    async loadFFmpeg() {
+        if (this.ffmpegLoaded) return true;
+
+        try {
+            // FFmpeg is loaded via script tag, access via window
+            if (typeof FFmpeg === 'undefined') {
+                console.error('FFmpeg not loaded. Make sure the script is included.');
+                return false;
+            }
+
+            this.ffmpeg = new FFmpeg.FFmpeg();
+
+            // Set up logging
+            this.ffmpeg.on('log', ({ message }) => {
+                console.log('FFmpeg:', message);
+            });
+
+            this.ffmpeg.on('progress', ({ progress }) => {
+                console.log('FFmpeg progress:', Math.round(progress * 100) + '%');
+            });
+
+            console.log('Loading FFmpeg core...');
+            await this.ffmpeg.load({
+                coreURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js',
+                wasmURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm'
+            });
+
+            this.ffmpegLoaded = true;
+            console.log('FFmpeg loaded successfully');
+            return true;
+        } catch (error) {
+            console.error('Failed to load FFmpeg:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Convert WebM to MP4 for mobile compatibility
+     * @returns {Promise<Blob>} MP4 video blob
+     */
+    async getMP4Blob() {
+        // Return cached version if available
+        if (this.mp4Blob) {
+            return this.mp4Blob;
+        }
+
+        if (!this.videoBlob) {
+            console.warn('No WebM video to convert');
+            return null;
+        }
+
+        if (this.isConverting) {
+            console.warn('Conversion already in progress');
+            return null;
+        }
+
+        this.isConverting = true;
+
+        try {
+            // Load FFmpeg if not already loaded
+            const loaded = await this.loadFFmpeg();
+            if (!loaded) {
+                throw new Error('Failed to load FFmpeg');
+            }
+
+            console.log('Converting WebM to MP4...');
+
+            // Write WebM to virtual filesystem
+            const webmData = new Uint8Array(await this.videoBlob.arrayBuffer());
+            await this.ffmpeg.writeFile('input.webm', webmData);
+
+            // Convert to MP4 with H.264 codec
+            await this.ffmpeg.exec([
+                '-i', 'input.webm',
+                '-c:v', 'libx264',
+                '-preset', 'fast',
+                '-crf', '23',
+                '-c:a', 'aac',
+                '-b:a', '128k',
+                '-movflags', '+faststart',
+                'output.mp4'
+            ]);
+
+            // Read the output
+            const mp4Data = await this.ffmpeg.readFile('output.mp4');
+            this.mp4Blob = new Blob([mp4Data], { type: 'video/mp4' });
+            this.mp4URL = URL.createObjectURL(this.mp4Blob);
+
+            // Clean up virtual filesystem
+            await this.ffmpeg.deleteFile('input.webm');
+            await this.ffmpeg.deleteFile('output.mp4');
+
+            console.log('MP4 conversion complete:', this.mp4Blob.size, 'bytes');
+            return this.mp4Blob;
+        } catch (error) {
+            console.error('MP4 conversion failed:', error);
+            return null;
+        } finally {
+            this.isConverting = false;
+        }
+    }
+
+    /**
+     * Share video using native share API (mobile)
+     * @param {string} filename - Name for the shared file
+     * @returns {Promise<boolean>} Whether share was successful
+     */
+    async shareVideo(filename = 'reflections-replay.mp4') {
+        if (!ReplayRecorder.canShare()) {
+            console.warn('Web Share API not supported');
+            return false;
+        }
+
+        try {
+            // Convert to MP4 for mobile compatibility
+            const mp4Blob = await this.getMP4Blob();
+            if (!mp4Blob) {
+                throw new Error('Failed to get MP4 video');
+            }
+
+            // Create file for sharing
+            const file = new File([mp4Blob], filename, { type: 'video/mp4' });
+
+            // Check if we can share this file type
+            if (!navigator.canShare({ files: [file] })) {
+                console.warn('Cannot share MP4 files on this device');
+                return false;
+            }
+
+            // Share with only files property for iOS compatibility
+            await navigator.share({ files: [file] });
+
+            console.log('Video shared successfully');
+            return true;
+        } catch (error) {
+            if (error.name === 'AbortError') {
+                console.log('Share cancelled by user');
+            } else {
+                console.error('Share failed:', error);
+            }
+            return false;
+        }
+    }
+
+    /**
+     * Download MP4 version (for mobile fallback)
+     * @param {string} filename - Name for the downloaded file
+     */
+    async downloadMP4(filename = 'reflections-replay.mp4') {
+        const mp4Blob = await this.getMP4Blob();
+        if (!mp4Blob) {
+            console.warn('No MP4 video to download');
+            return;
+        }
+
+        const url = this.mp4URL;
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }
+
+    /**
      * Clean up resources
      */
     cleanup() {
@@ -178,9 +367,17 @@ export class ReplayRecorder {
             URL.revokeObjectURL(this.videoURL);
             this.videoURL = null;
         }
+
+        if (this.mp4URL) {
+            URL.revokeObjectURL(this.mp4URL);
+            this.mp4URL = null;
+        }
+
         this.videoBlob = null;
+        this.mp4Blob = null;
         this.recordedChunks = [];
         this.mediaRecorder = null;
         this.isRecording = false;
+        this.isConverting = false;
     }
 }

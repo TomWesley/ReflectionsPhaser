@@ -17,7 +17,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <!-- Iconoir Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/iconoir-icons/iconoir@main/css/iconoir.css">
-    <link rel="stylesheet" href="styles/game.css?v=12">
+    <link rel="stylesheet" href="styles/game.css?v=17">
+    <!-- FFmpeg.wasm for video conversion (loaded on-demand) -->
+    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js"></script>
 </head>
 <body>
     <!-- Professional Navigation Bar -->
@@ -88,8 +90,11 @@
                 <button class="btn-replay" onclick="watchReplay()">
                     <i class="iconoir-play"></i> REPLAY
                 </button>
-                <button class="btn-save" onclick="saveReplay()">
+                <button class="btn-save desktop-only" onclick="saveReplay()">
                     <i class="iconoir-download"></i> SAVE
+                </button>
+                <button class="btn-share mobile-only" onclick="shareReplay()">
+                    <i class="iconoir-share-ios"></i> <span class="share-text">SHARE</span>
                 </button>
                 <button class="btn-primary" onclick="closeGameOver()">RETRY</button>
             </div>
@@ -110,8 +115,11 @@
                 <button class="btn-replay" onclick="watchReplay()">
                     <i class="iconoir-play"></i> REPLAY
                 </button>
-                <button class="btn-save" onclick="saveReplay()">
+                <button class="btn-save desktop-only" onclick="saveReplay()">
                     <i class="iconoir-download"></i> SAVE
+                </button>
+                <button class="btn-share mobile-only" onclick="shareReplay()">
+                    <i class="iconoir-share-ios"></i> <span class="share-text">SHARE</span>
                 </button>
                 <button class="btn-primary" onclick="closeVictory()">RETRY</button>
             </div>
@@ -134,8 +142,11 @@
                 <button class="btn-replay-control" onclick="toggleReplayPlayback()">
                     <i id="replayPlayIcon" class="iconoir-play"></i>
                 </button>
-                <button class="btn-save" onclick="saveReplay()">
+                <button class="btn-save desktop-only" onclick="saveReplay()">
                     <i class="iconoir-download"></i> SAVE
+                </button>
+                <button class="btn-share mobile-only" onclick="shareReplay()">
+                    <i class="iconoir-share-ios"></i> <span class="share-text">SHARE</span>
                 </button>
                 <button class="btn-secondary" onclick="closeReplay()">CLOSE</button>
             </div>
@@ -312,6 +323,50 @@
 
             const time = document.getElementById('finalTime').textContent.replace(/:/g, '-').replace(/\./g, '-');
             window.game.replayRecorder.downloadVideo(`reflections-${time}.webm`);
+        }
+
+        async function shareReplay() {
+            if (!window.game || !window.game.replayRecorder.hasReplay()) {
+                console.warn('No replay available');
+                alert('No replay available to share.');
+                return;
+            }
+
+            // Get all share buttons and update their state
+            const shareButtons = document.querySelectorAll('.btn-share');
+            const originalContents = [];
+
+            // Show loading state
+            shareButtons.forEach((btn, i) => {
+                originalContents[i] = btn.innerHTML;
+                btn.innerHTML = '<i class="iconoir-hourglass"></i> <span class="share-text">Converting...</span>';
+                btn.disabled = true;
+                btn.classList.add('converting');
+            });
+
+            try {
+                const time = document.getElementById('finalTime').textContent.replace(/:/g, '-').replace(/\./g, '-');
+                const filename = `reflections-${time}.mp4`;
+
+                // Try to share using native share API
+                const shared = await window.game.replayRecorder.shareVideo(filename);
+
+                if (!shared) {
+                    // Fallback: try to download MP4 instead
+                    console.log('Share not supported, falling back to MP4 download');
+                    await window.game.replayRecorder.downloadMP4(filename);
+                }
+            } catch (error) {
+                console.error('Share failed:', error);
+                alert('Unable to share video. Try using the download option on desktop.');
+            } finally {
+                // Restore button state
+                shareButtons.forEach((btn, i) => {
+                    btn.innerHTML = originalContents[i];
+                    btn.disabled = false;
+                    btn.classList.remove('converting');
+                });
+            }
         }
 
         function closeReplay() {
