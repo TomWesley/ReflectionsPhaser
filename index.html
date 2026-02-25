@@ -17,7 +17,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <!-- Iconoir Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/iconoir-icons/iconoir@main/css/iconoir.css">
-    <link rel="stylesheet" href="styles/game.css?v=7">
+    <link rel="stylesheet" href="styles/game.css?v=12">
 </head>
 <body>
     <!-- Professional Navigation Bar -->
@@ -85,8 +85,13 @@
                 <img id="gameOverSnapshot" class="game-snapshot" alt="Game Over State">
             </div>
             <div class="modal-buttons">
+                <button class="btn-replay" onclick="watchReplay()">
+                    <i class="iconoir-play"></i> REPLAY
+                </button>
+                <button class="btn-save" onclick="saveReplay()">
+                    <i class="iconoir-download"></i> SAVE
+                </button>
                 <button class="btn-primary" onclick="closeGameOver()">RETRY</button>
-                <button class="btn-secondary" onclick="openLeaderboard()">RANKS</button>
             </div>
         </div>
     </div>
@@ -102,8 +107,37 @@
                 <img id="victorySnapshot" class="game-snapshot" alt="Victory State">
             </div>
             <div class="modal-buttons">
+                <button class="btn-replay" onclick="watchReplay()">
+                    <i class="iconoir-play"></i> REPLAY
+                </button>
+                <button class="btn-save" onclick="saveReplay()">
+                    <i class="iconoir-download"></i> SAVE
+                </button>
                 <button class="btn-primary" onclick="closeVictory()">RETRY</button>
-                <button class="btn-secondary" onclick="openLeaderboard()">RANKS</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Replay Viewer Modal -->
+    <div id="replayModal" class="rules-modal hidden">
+        <div class="rules-content replay-modal">
+            <div class="replay-header">
+                <span class="replay-title">REPLAY</span>
+                <button class="replay-close" onclick="closeReplay()">
+                    <i class="iconoir-xmark"></i>
+                </button>
+            </div>
+            <div class="replay-container">
+                <video id="replayVideo" playsinline></video>
+            </div>
+            <div class="replay-controls">
+                <button class="btn-replay-control" onclick="toggleReplayPlayback()">
+                    <i id="replayPlayIcon" class="iconoir-play"></i>
+                </button>
+                <button class="btn-save" onclick="saveReplay()">
+                    <i class="iconoir-download"></i> SAVE
+                </button>
+                <button class="btn-secondary" onclick="closeReplay()">CLOSE</button>
             </div>
         </div>
     </div>
@@ -214,6 +248,80 @@
             if (window.game) {
                 window.game.continueAfterGameOver();
             }
+        }
+
+        // Replay Functions
+        function watchReplay() {
+            if (!window.game || !window.game.replayRecorder.hasReplay()) {
+                console.warn('No replay available');
+                alert('No replay available. Try playing a game first.');
+                return;
+            }
+
+            const video = document.getElementById('replayVideo');
+            const videoURL = window.game.replayRecorder.getVideoURL();
+
+            console.log('Loading replay from:', videoURL);
+            console.log('Video blob size:', window.game.replayRecorder.videoBlob?.size);
+
+            // Hide game over/victory modals
+            document.getElementById('gameOverModal').classList.add('hidden');
+            document.getElementById('victoryModal').classList.add('hidden');
+
+            // Show replay modal
+            document.getElementById('replayModal').classList.remove('hidden');
+
+            // Set up video event handlers before loading
+            video.onloadeddata = function() {
+                console.log('Video loaded, duration:', video.duration);
+                document.getElementById('replayPlayIcon').className = 'iconoir-pause';
+                video.play().catch(e => console.error('Play failed:', e));
+            };
+
+            video.onerror = function(e) {
+                console.error('Video error:', video.error);
+            };
+
+            video.onended = function() {
+                document.getElementById('replayPlayIcon').className = 'iconoir-play';
+            };
+
+            // Load the video
+            video.src = videoURL;
+            video.load();
+        }
+
+        function toggleReplayPlayback() {
+            const video = document.getElementById('replayVideo');
+            const icon = document.getElementById('replayPlayIcon');
+
+            if (video.paused) {
+                video.play();
+                icon.className = 'iconoir-pause';
+            } else {
+                video.pause();
+                icon.className = 'iconoir-play';
+            }
+        }
+
+        function saveReplay() {
+            if (!window.game || !window.game.replayRecorder.hasReplay()) {
+                console.warn('No replay available');
+                return;
+            }
+
+            const time = document.getElementById('finalTime').textContent.replace(/:/g, '-').replace(/\./g, '-');
+            window.game.replayRecorder.downloadVideo(`reflections-${time}.webm`);
+        }
+
+        function closeReplay() {
+            const video = document.getElementById('replayVideo');
+            video.pause();
+            video.src = '';
+            document.getElementById('replayModal').classList.add('hidden');
+
+            // Show game over modal again
+            document.getElementById('gameOverModal').classList.remove('hidden');
         }
 
         function openLeaderboard() {
@@ -367,6 +475,6 @@
     </script>
 
     <!-- Main Game Module -->
-    <script type="module" src="js/main.js?v=11"></script>
+    <script type="module" src="js/main.js?v=15"></script>
 </body>
 </html>

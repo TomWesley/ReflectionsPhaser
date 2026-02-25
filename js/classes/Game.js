@@ -18,6 +18,7 @@ import { SpawnerGenerator } from '../generators/SpawnerGenerator.js';
 import { GridAlignmentSystem } from '../systems/GridAlignmentSystem.js';
 import { MirrorPlacementHelper } from '../generators/MirrorPlacementHelper.js';
 import { MirrorDragAndSnapHandler } from '../handlers/MirrorDragAndSnapHandler.js';
+import { ReplayRecorder } from './ReplayRecorder.js';
 
 export class Game {
     constructor() {
@@ -57,6 +58,9 @@ export class Game {
 
         // Initialize drag and snap handler
         this.dragAndSnapHandler = new MirrorDragAndSnapHandler(this);
+
+        // Initialize replay recorder
+        this.replayRecorder = new ReplayRecorder(this.canvas);
 
         this.init();
     }
@@ -280,6 +284,9 @@ export class Game {
             this.startTime = Date.now();
             this.gameTime = 0;
             this.lasers = [];
+
+            // Start recording for replay
+            this.replayRecorder.startRecording();
 
             console.log('✅ Collision system ready');
 
@@ -1124,6 +1131,9 @@ export class Game {
     async showGameOverModal() {
         this.gameOver = true;
 
+        // Stop recording for replay
+        await this.replayRecorder.stopRecording();
+
         // Capture canvas snapshot before any modal overlay
         const snapshotImg = document.getElementById('gameOverSnapshot');
         if (snapshotImg) {
@@ -1167,6 +1177,9 @@ export class Game {
 
     async showVictoryModal() {
         this.gameOver = true;
+
+        // Stop recording for replay
+        await this.replayRecorder.stopRecording();
 
         // Capture canvas snapshot before any modal overlay
         const snapshotImg = document.getElementById('victorySnapshot');

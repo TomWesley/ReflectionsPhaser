@@ -1,7 +1,7 @@
 // Initialize the game when the page loads with error handling
 document.addEventListener('DOMContentLoaded', async () => {
     // Cache-busting version - increment to force reload of all modules
-    const CACHE_VERSION = 11;
+    const CACHE_VERSION = 15;
     const cacheBust = `?v=${CACHE_VERSION}`;
 
     // Show loading indicator
