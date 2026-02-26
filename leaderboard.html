@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Leaderboard - REFLECTIONS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/iconoir-icons/iconoir@main/css/iconoir.css">
+    <link rel="stylesheet" href="styles/game.css">
+    <style>
+        body {
+            padding: 0;
+        }
+
+        .leaderboard-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px 20px 60px 20px;
+        }
+
+        .page-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 2.2rem;
+            font-weight: 700;
+            text-align: center;
+            margin: 25px 0 20px 0;
+            background: linear-gradient(135deg, var(--arc), var(--pink));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+        }
+
+        /* Time Period Tabs */
+        .period-tabs {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+
+        .period-tab {
+            padding: 10px 20px;
+            background: rgba(78, 120, 232, 0.1);
+            border: 1px solid rgba(78, 120, 232, 0.3);
+            border-radius: 25px;
+            color: var(--text-secondary);
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .period-tab:hover {
+            background: rgba(78, 120, 232, 0.2);
+            border-color: var(--arc);
+            color: var(--text-primary);
+        }
+
+        .period-tab.active {
+            background: linear-gradient(135deg, var(--arc), var(--pink));
+            border-color: transparent;
+            color: white;
+            box-shadow: 0 4px 15px rgba(78, 120, 232, 0.4);
+        }
+
+        /* Leaderboard Card */
+        .leaderboard-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-glow);
+            border-radius: 15px;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(78, 120, 232, 0.2);
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Table Header */
+        .leaderboard-header {
+            display: grid;
+            grid-template-columns: 60px 1fr 120px;
+            padding: 15px 20px;
+            background: rgba(0, 0, 0, 0.4);
+            border-bottom: 1px solid rgba(78, 120, 232, 0.3);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+        }
+
+        /* Leaderboard Row */
+        .leaderboard-row {
+            display: grid;
+            grid-template-columns: 60px 1fr 120px;
+            padding: 16px 20px;
+            border-bottom: 1px solid rgba(78, 120, 232, 0.1);
+            align-items: center;
+            transition: all 0.2s ease;
+        }
+
+        .leaderboard-row:last-child {
+            border-bottom: none;
+        }
+
+        .leaderboard-row:hover {
+            background: rgba(78, 120, 232, 0.08);
+        }
+
+        /* Rank Styles */
+        .rank {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+        }
+
+        .rank-1 .rank {
+            color: #FFD700;
+            text-shadow: 0 0 15px rgba(255, 215, 0, 0.6);
+        }
+
+        .rank-2 .rank {
+            color: #C0C0C0;
+            text-shadow: 0 0 15px rgba(192, 192, 192, 0.5);
+        }
+
+        .rank-3 .rank {
+            color: #CD7F32;
+            text-shadow: 0 0 15px rgba(205, 127, 50, 0.5);
+        }
+
+        /* Trophy Icons for Top 3 */
+        .rank-1 .rank::before,
+        .rank-2 .rank::before,
+        .rank-3 .rank::before {
+            margin-right: 6px;
+        }
+
+        /* Player Info */
+        .player-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .player-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--arc), var(--pink));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .player-name {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        /* Score */
+        .score {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--arc);
+            text-align: right;
+            text-shadow: 0 0 10px rgba(78, 120, 232, 0.4);
+        }
+
+        .rank-1 .score {
+            color: #FFD700;
+            text-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+        }
+
+        /* Your Score Highlight */
+        .leaderboard-row.you {
+            background: rgba(232, 122, 220, 0.15);
+            border-left: 3px solid var(--pink);
+        }
+
+        .leaderboard-row.you .player-name::after {
+            content: ' (You)';
+            color: var(--pink);
+            font-size: 0.85rem;
+        }
+
+        /* Coming Soon Overlay */
+        .coming-soon-overlay {
+            position: relative;
+        }
+
+        .coming-soon-banner {
+            background: linear-gradient(135deg, rgba(78, 120, 232, 0.9), rgba(232, 122, 220, 0.9));
+            padding: 20px;
+            text-align: center;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .coming-soon-banner h3 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: white;
+            margin: 0 0 8px 0;
+            letter-spacing: 2px;
+        }
+
+        .coming-soon-banner p {
+            font-size: 0.95rem;
+            color: rgba(255, 255, 255, 0.9);
+            margin: 0;
+        }
+
+        /* Stats Section */
+        .stats-section {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 25px;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-glow);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .stat-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--arc);
+            text-shadow: 0 0 15px rgba(78, 120, 232, 0.5);
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 600px) {
+            .page-title {
+                font-size: 1.8rem;
+            }
+
+            .period-tabs {
+                gap: 6px;
+            }
+
+            .period-tab {
+                padding: 8px 14px;
+                font-size: 0.8rem;
+            }
+
+            .leaderboard-header {
+                grid-template-columns: 45px 1fr 90px;
+                padding: 12px 15px;
+                font-size: 0.65rem;
+            }
+
+            .leaderboard-row {
+                grid-template-columns: 45px 1fr 90px;
+                padding: 12px 15px;
+            }
+
+            .player-avatar {
+                width: 30px;
+                height: 30px;
+                font-size: 0.75rem;
+            }
+
+            .player-name {
+                font-size: 0.9rem;
+            }
+
+            .score {
+                font-size: 0.95rem;
+            }
+
+            .stats-section {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+
+            .stat-card {
+                padding: 15px;
+            }
+
+            .stat-value {
+                font-size: 1.5rem;
+            }
+        }
+
+        /* Mobile landscape */
+        @media screen and (max-width: 932px) and (orientation: landscape) {
+            .navbar {
+                display: flex !important;
+                height: 50px;
+            }
+
+            .mobile-hud {
+                display: none !important;
+            }
+
+            .leaderboard-container {
+                padding-top: 10px;
+            }
+
+            .page-title {
+                font-size: 1.5rem;
+                margin: 10px 0 15px 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="navbar-left">
+            <a href="index.html" class="nav-icon-btn" title="Back to Game">
+                <i class="iconoir-arrow-left"></i>
+            </a>
+        </div>
+
+        <div class="navbar-center">
+            <div class="navbar-timer">
+                <i class="iconoir-trophy"></i>
+                <span class="navbar-timer-value" style="min-width: auto;">TOP SCORES</span>
+            </div>
+        </div>
+
+        <div class="navbar-right">
+            <a href="index.html" class="nav-icon-btn" title="Play Game">
+                <i class="iconoir-play"></i>
+            </a>
+            <a href="about.html" class="nav-icon-btn" title="About">
+                <i class="iconoir-book"></i>
+            </a>
+        </div>
+    </nav>
+
+    <h1 class="page-title"><i class="iconoir-trophy"></i> Leaderboard</h1>
+
+    <div class="leaderboard-container">
+        <!-- Coming Soon Banner -->
+        <div class="coming-soon-banner">
+            <h3><i class="iconoir-tools"></i> Coming Soon</h3>
+            <p>Global leaderboards are under construction. Check back soon!</p>
+        </div>
+
+        <!-- Time Period Tabs -->
+        <div class="period-tabs">
+            <button class="period-tab active" data-period="all">All Time</button>
+            <button class="period-tab" data-period="weekly">This Week</button>
+            <button class="period-tab" data-period="daily">Today</button>
+        </div>
+
+        <!-- Leaderboard Table -->
+        <div class="leaderboard-card">
+            <div class="leaderboard-header">
+                <span>Rank</span>
+                <span>Player</span>
+                <span style="text-align: right;">Time</span>
+            </div>
+
+            <!-- Placeholder Data -->
+            <div class="leaderboard-row rank-1">
+                <span class="rank">#1</span>
+                <div class="player-info">
+                    <div class="player-avatar">L</div>
+                    <span class="player-name">LaserMaster</span>
+                </div>
+                <span class="score">4:59.99</span>
+            </div>
+
+            <div class="leaderboard-row rank-2">
+                <span class="rank">#2</span>
+                <div class="player-info">
+                    <div class="player-avatar">M</div>
+                    <span class="player-name">MirrorPro</span>
+                </div>
+                <span class="score">4:32.15</span>
+            </div>
+
+            <div class="leaderboard-row rank-3">
+                <span class="rank">#3</span>
+                <div class="player-info">
+                    <div class="player-avatar">R</div>
+                    <span class="player-name">ReflexKing</span>
+                </div>
+                <span class="score">4:18.42</span>
+            </div>
+
+            <div class="leaderboard-row">
+                <span class="rank">#4</span>
+                <div class="player-info">
+                    <div class="player-avatar">G</div>
+                    <span class="player-name">GeoWizard</span>
+                </div>
+                <span class="score">3:55.88</span>
+            </div>
+
+            <div class="leaderboard-row">
+                <span class="rank">#5</span>
+                <div class="player-info">
+                    <div class="player-avatar">A</div>
+                    <span class="player-name">AngleSniper</span>
+                </div>
+                <span class="score">3:41.23</span>
+            </div>
+
+            <div class="leaderboard-row you">
+                <span class="rank">#6</span>
+                <div class="player-info">
+                    <div class="player-avatar">Y</div>
+                    <span class="player-name">You</span>
+                </div>
+                <span class="score">3:22.50</span>
+            </div>
+
+            <div class="leaderboard-row">
+                <span class="rank">#7</span>
+                <div class="player-info">
+                    <div class="player-avatar">P</div>
+                    <span class="player-name">PhotonDodger</span>
+                </div>
+                <span class="score">3:15.67</span>
+            </div>
+
+            <div class="leaderboard-row">
+                <span class="rank">#8</span>
+                <div class="player-info">
+                    <div class="player-avatar">C</div>
+                    <span class="player-name">CoreDefender</span>
+                </div>
+                <span class="score">2:58.94</span>
+            </div>
+
+            <div class="leaderboard-row">
+                <span class="rank">#9</span>
+                <div class="player-info">
+                    <div class="player-avatar">B</div>
+                    <span class="player-name">BeamBender</span>
+                </div>
+                <span class="score">2:44.31</span>
+            </div>
+
+            <div class="leaderboard-row">
+                <span class="rank">#10</span>
+                <div class="player-info">
+                    <div class="player-avatar">S</div>
+                    <span class="player-name">ShieldMaster</span>
+                </div>
+                <span class="score">2:30.08</span>
+            </div>
+        </div>
+
+        <!-- Stats Section -->
+        <div class="stats-section">
+            <div class="stat-card">
+                <div class="stat-value">1,247</div>
+                <div class="stat-label">Total Players</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">3:22</div>
+                <div class="stat-label">Your Best</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">#6</div>
+                <div class="stat-label">Your Rank</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Tab switching (visual only for now)
+        document.querySelectorAll('.period-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.period-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+            });
+        });
+    </script>
+</body>
+</html>
