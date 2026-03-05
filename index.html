@@ -18,8 +18,8 @@
     <!-- Iconoir Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/iconoir-icons/iconoir@main/css/iconoir.css">
     <link rel="stylesheet" href="styles/game.css?v=20">
-    <!-- FFmpeg.wasm for video conversion (loaded on-demand) -->
-    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js"></script>
+    <!-- mp4-muxer for native MP4 recording via WebCodecs -->
+    <script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5/build/mp4-muxer.min.js"></script>
 </head>
 <body>
     <!-- Professional Navigation Bar -->
@@ -350,7 +350,7 @@
             return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
         }
 
-        // Save replay video - MP4 to camera roll on mobile, WebM download on desktop
+        // Save replay video - MP4 on both desktop and mobile
         async function saveReplay() {
             if (!window.game || !window.game.replayRecorder.hasReplay()) {
                 console.warn('No replay available');
@@ -358,54 +358,30 @@
             }
 
             const time = document.getElementById('finalTime').textContent.replace(/:/g, '-').replace(/\./g, '-');
+            const ext = window.game.replayRecorder.isMP4() ? 'mp4' : 'webm';
+            const filename = `reflections-replay-${time}.${ext}`;
 
-            // On mobile, convert to MP4 and save to camera roll via share API
             if (isMobile()) {
-                const saveButtons = document.querySelectorAll('.btn-save');
-                const originalContents = [];
-
-                // Show loading state
-                saveButtons.forEach((btn, i) => {
-                    originalContents[i] = btn.innerHTML;
-                    btn.innerHTML = '<i class="iconoir-hourglass"></i> Saving...';
-                    btn.disabled = true;
-                    btn.classList.add('converting');
-                });
-
+                // Mobile: use share API to save to camera roll
                 try {
-                    const filename = `reflections-replay-${time}.mp4`;
-
-                    // Convert to MP4
-                    const mp4Blob = await window.game.replayRecorder.getMP4Blob();
-                    if (!mp4Blob) {
-                        throw new Error('Failed to convert video');
-                    }
-
-                    // Use share API to save to camera roll (only files, no text)
-                    const file = new File([mp4Blob], filename, { type: 'video/mp4' });
+                    const blob = window.game.replayRecorder.videoBlob;
+                    const file = new File([blob], filename, { type: blob.type });
 
                     if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
                         await navigator.share({ files: [file] });
                     } else {
-                        // Fallback: download the MP4
-                        await window.game.replayRecorder.downloadMP4(filename);
+                        // Fallback: direct download
+                        window.game.replayRecorder.downloadVideo(filename);
                     }
                 } catch (error) {
                     if (error.name !== 'AbortError') {
                         console.error('Save failed:', error);
                         alert('Unable to save video. Please try again.');
                     }
-                } finally {
-                    // Restore button state
-                    saveButtons.forEach((btn, i) => {
-                        btn.innerHTML = originalContents[i];
-                        btn.disabled = false;
-                        btn.classList.remove('converting');
-                    });
                 }
             } else {
-                // Desktop: download WebM directly
-                window.game.replayRecorder.downloadVideo(`reflections-replay-${time}.webm`);
+                // Desktop: direct download
+                window.game.replayRecorder.downloadVideo(filename);
             }
         }
 

@@ -274,7 +274,7 @@ export class Game {
         }
 
         // Allow UI to update before heavy computation
-        setTimeout(() => {
+        setTimeout(async () => {
             // Initialize collision boundaries for all mirrors (iron-clad system)
             this.collisionSystem.initializeCollisionBoundaries(this.mirrors);
             this.laserCollisionHandler.initialize(this.mirrors);
@@ -286,7 +286,7 @@ export class Game {
             this.lasers = [];
 
             // Start recording for replay
-            this.replayRecorder.startRecording();
+            await this.replayRecorder.startRecording();
 
             console.log('✅ Collision system ready');
 
@@ -1229,6 +1229,12 @@ export class Game {
 
         this.update();
         this.render();
+
+        // Capture frame for MP4 replay (throttled to 30fps internally)
+        if (this.isPlaying && !this.gameOver) {
+            this.replayRecorder.captureFrame(timestamp);
+        }
+
         requestAnimationFrame((t) => this.gameLoop(t));
     }
 }
