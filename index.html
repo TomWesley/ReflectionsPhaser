@@ -20,6 +20,8 @@
     <link rel="stylesheet" href="styles/game.css?v=20">
     <!-- mp4-muxer for native MP4 recording via WebCodecs -->
     <script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5/build/mp4-muxer.min.js"></script>
+    <!-- h264-mp4-encoder for WASM-based MP4 generation (mobile fallback) -->
+    <script src="https://cdn.jsdelivr.net/npm/h264-mp4-encoder@1.0.12/embuild/dist/h264-mp4-encoder.web.js"></script>
 </head>
 <body>
     <!-- Professional Navigation Bar -->
@@ -93,8 +95,8 @@
                 <button class="btn-replay" onclick="watchReplay()">
                     <i class="iconoir-play"></i> REPLAY
                 </button>
-                <button class="btn-save desktop-only" onclick="saveReplay()">
-                    <i class="iconoir-download"></i> SAVE
+                <button class="btn-save" onclick="saveReplay()">
+                    <i class="iconoir-download"></i> <span class="share-text">SAVE</span>
                 </button>
                 <button class="btn-share mobile-only" onclick="shareReplay()">
                     <i class="iconoir-share-ios"></i> <span class="share-text">SHARE</span>
@@ -118,8 +120,8 @@
                 <button class="btn-replay" onclick="watchReplay()">
                     <i class="iconoir-play"></i> REPLAY
                 </button>
-                <button class="btn-save desktop-only" onclick="saveReplay()">
-                    <i class="iconoir-download"></i> SAVE
+                <button class="btn-save" onclick="saveReplay()">
+                    <i class="iconoir-download"></i> <span class="share-text">SAVE</span>
                 </button>
                 <button class="btn-share mobile-only" onclick="shareReplay()">
                     <i class="iconoir-share-ios"></i> <span class="share-text">SHARE</span>
@@ -145,8 +147,8 @@
                 <button class="btn-replay-control" onclick="toggleReplayPlayback()">
                     <i id="replayPlayIcon" class="iconoir-play"></i>
                 </button>
-                <button class="btn-save desktop-only" onclick="saveReplay()">
-                    <i class="iconoir-download"></i> SAVE
+                <button class="btn-save" onclick="saveReplay()">
+                    <i class="iconoir-download"></i> <span class="share-text">SAVE</span>
                 </button>
                 <button class="btn-share mobile-only" onclick="shareReplay()">
                     <i class="iconoir-share-ios"></i> <span class="share-text">SHARE</span>
@@ -299,11 +301,17 @@
                 return;
             }
 
+            // Canvas replay: re-simulate on the game canvas (mobile fallback)
+            if (window.game.replayRecorder.hasCanvasReplay()) {
+                document.getElementById('gameOverModal').classList.add('hidden');
+                document.getElementById('victoryModal').classList.add('hidden');
+                window.game.startCanvasReplay();
+                return;
+            }
+
+            // Video replay: play recorded MP4/WebM in modal
             const video = document.getElementById('replayVideo');
             const videoURL = window.game.replayRecorder.getVideoURL();
-
-            console.log('Loading replay from:', videoURL);
-            console.log('Video blob size:', window.game.replayRecorder.videoBlob?.size);
 
             // Hide game over/victory modals
             document.getElementById('gameOverModal').classList.add('hidden');
@@ -314,7 +322,6 @@
 
             // Set up video event handlers before loading
             video.onloadeddata = function() {
-                console.log('Video loaded, duration:', video.duration);
                 document.getElementById('replayPlayIcon').className = 'iconoir-pause';
                 video.play().catch(e => console.error('Play failed:', e));
             };
@@ -352,26 +359,64 @@
 
         // Save replay video - MP4 on both desktop and mobile
         async function saveReplay() {
-            if (!window.game || !window.game.replayRecorder.hasReplay()) {
-                console.warn('No replay available');
+            if (!window.game) return;
+
+            const recorder = window.game.replayRecorder;
+            const time = document.getElementById('finalTime').textContent.replace(/:/g, '-').replace(/\./g, '-');
+            const filename = `reflections-replay-${time}.mp4`;
+
+            // If no video yet but we can generate one, do it now
+            if (!recorder.hasVideoReplay() && recorder.canGenerateMP4()) {
+                const saveButtons = document.querySelectorAll('.btn-save');
+                const originalContents = [];
+
+                saveButtons.forEach((btn, i) => {
+                    originalContents[i] = btn.innerHTML;
+                    btn.innerHTML = '<i class="iconoir-hourglass"></i> <span class="share-text">0%</span>';
+                    btn.disabled = true;
+                });
+
+                try {
+                    await window.game.generateReplayMP4((percent) => {
+                        saveButtons.forEach(btn => {
+                            const span = btn.querySelector('.share-text');
+                            if (span) span.textContent = percent + '%';
+                        });
+                    });
+                } catch (error) {
+                    console.error('MP4 generation failed:', error);
+                    saveButtons.forEach((btn, i) => {
+                        btn.innerHTML = originalContents[i];
+                        btn.disabled = false;
+                    });
+                    alert('Unable to generate video. Please try again.');
+                    return;
+                } finally {
+                    saveButtons.forEach((btn, i) => {
+                        btn.innerHTML = originalContents[i];
+                        btn.disabled = false;
+                    });
+                }
+            }
+
+            if (!recorder.hasVideoReplay()) {
+                console.warn('No video replay available');
                 return;
             }
 
-            const time = document.getElementById('finalTime').textContent.replace(/:/g, '-').replace(/\./g, '-');
-            const ext = window.game.replayRecorder.isMP4() ? 'mp4' : 'webm';
-            const filename = `reflections-replay-${time}.${ext}`;
+            const ext = recorder.isMP4() ? 'mp4' : 'webm';
+            const finalFilename = `reflections-replay-${time}.${ext}`;
 
             if (isMobile()) {
                 // Mobile: use share API to save to camera roll
                 try {
-                    const blob = window.game.replayRecorder.videoBlob;
-                    const file = new File([blob], filename, { type: blob.type });
+                    const blob = recorder.videoBlob;
+                    const file = new File([blob], finalFilename, { type: blob.type });
 
                     if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
                         await navigator.share({ files: [file] });
                     } else {
-                        // Fallback: direct download
-                        window.game.replayRecorder.downloadVideo(filename);
+                        recorder.downloadVideo(finalFilename);
                     }
                 } catch (error) {
                     if (error.name !== 'AbortError') {
@@ -381,7 +426,7 @@
                 }
             } else {
                 // Desktop: direct download
-                window.game.replayRecorder.downloadVideo(filename);
+                recorder.downloadVideo(finalFilename);
             }
         }
 

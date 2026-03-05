@@ -1,7 +1,10 @@
 /**
  * ReplayRecorder - Records canvas gameplay as MP4 video
- * Uses WebCodecs VideoEncoder + mp4-muxer for native H.264/MP4 output
- * Falls back to MediaRecorder (WebM) if WebCodecs unavailable
+ *
+ * Strategy (in priority order):
+ * 1. WebCodecs VideoEncoder + mp4-muxer: Real-time H.264 encoding during gameplay (desktop)
+ * 2. MediaRecorder: Browser-native recording during gameplay (Safari MP4, Chrome WebM)
+ * 3. Canvas replay + h264-mp4-encoder: Post-hoc re-simulation with WASM encoding (mobile fallback)
  */
 export class ReplayRecorder {
     constructor(canvas) {
@@ -23,6 +26,9 @@ export class ReplayRecorder {
         this.mediaRecorder = null;
         this.recordedChunks = [];
         this.stream = null;
+
+        // Canvas replay fallback (for devices without video recording support)
+        this.savedGameState = null;
     }
 
     static isMobile() {
@@ -76,7 +82,6 @@ export class ReplayRecorder {
 
             const support = await VideoEncoder.isConfigSupported(codecConfig);
             if (!support.supported) {
-                console.warn('H.264 Baseline not supported, trying Main profile');
                 codecConfig.codec = 'avc1.4d001f'; // Main profile
                 const support2 = await VideoEncoder.isConfigSupported(codecConfig);
                 if (!support2.supported) {
@@ -185,19 +190,23 @@ export class ReplayRecorder {
         }
     }
 
-    // ─── MediaRecorder Fallback (WebM) ───────────────────────────
+    // ─── MediaRecorder Fallback ──────────────────────────────────
 
     startMediaRecorderFallback() {
         if (typeof MediaRecorder === 'undefined' ||
             typeof HTMLCanvasElement.prototype.captureStream !== 'function') {
-            console.warn('Neither WebCodecs nor MediaRecorder supported');
+            console.warn('Neither WebCodecs nor MediaRecorder+captureStream supported');
             return false;
         }
 
         try {
             this.stream = this.canvas.captureStream(30);
             const options = {};
-            if (MediaRecorder.isTypeSupported('video/webm')) {
+
+            // Safari records MP4 natively; Chrome/Firefox use WebM
+            if (MediaRecorder.isTypeSupported('video/mp4')) {
+                options.mimeType = 'video/mp4';
+            } else if (MediaRecorder.isTypeSupported('video/webm')) {
                 options.mimeType = 'video/webm';
             }
 
@@ -212,7 +221,7 @@ export class ReplayRecorder {
 
             this.isRecording = true;
             this.useWebCodecs = false;
-            console.log('MediaRecorder fallback started (WebM)');
+            console.log('MediaRecorder fallback started, mimeType:', options.mimeType || 'default');
             return true;
         } catch (error) {
             console.error('MediaRecorder fallback failed:', error);
@@ -248,6 +257,64 @@ export class ReplayRecorder {
         });
     }
 
+    // ─── Game State for Canvas Replay ────────────────────────────
+
+    /**
+     * Save mirror/spawner state for deterministic canvas replay and MP4 generation
+     * Called when gameplay starts
+     */
+    saveGameState(mirrors, spawners) {
+        this.savedGameState = {
+            mirrors: mirrors.map(m => ({
+                x: m.x,
+                y: m.y,
+                shape: m.shape,
+                size: m.size,
+                width: m.width,
+                height: m.height,
+                rotation: m.rotation,
+                isDailyChallenge: m.isDailyChallenge || false,
+            })),
+            spawners: spawners.map(s => ({
+                x: s.x,
+                y: s.y,
+                angle: s.angle,
+            })),
+        };
+    }
+
+    /**
+     * Store the final game time so re-simulation knows when to stop
+     */
+    saveGameDuration(gameTime) {
+        if (this.savedGameState) {
+            this.savedGameState.duration = gameTime;
+        }
+    }
+
+    /**
+     * Whether a canvas-based replay is available (no video, re-simulates on canvas)
+     */
+    hasCanvasReplay() {
+        return this.savedGameState !== null && !this.hasVideoReplay();
+    }
+
+    /**
+     * Whether a video replay is available
+     */
+    hasVideoReplay() {
+        return this.videoBlob !== null && this.videoBlob.size > 0;
+    }
+
+    /**
+     * Whether MP4 can be generated via re-simulation (h264-mp4-encoder available)
+     */
+    canGenerateMP4() {
+        return this.savedGameState !== null &&
+               this.savedGameState.duration > 0 &&
+               typeof HME !== 'undefined';
+    }
+
     // ─── Playback & Export ───────────────────────────────────────
 
     getVideoURL() {
@@ -255,14 +322,14 @@ export class ReplayRecorder {
     }
 
     hasReplay() {
-        return this.videoBlob !== null && this.videoBlob.size > 0;
+        return this.hasVideoReplay() || this.hasCanvasReplay();
     }
 
     /**
      * Whether the recording is MP4 (vs WebM fallback)
      */
     isMP4() {
-        return this.videoBlob && this.videoBlob.type === 'video/mp4';
+        return this.videoBlob && (this.videoBlob.type === 'video/mp4' || this.videoBlob.type === 'video/x-m4v');
     }
 
     /**

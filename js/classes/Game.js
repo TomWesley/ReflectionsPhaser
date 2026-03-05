@@ -26,6 +26,8 @@ export class Game {
         this.ctx = this.canvas.getContext('2d');
         this.isPlaying = false;
         this.gameOver = false;
+        this.isReplayMode = false;
+        this.isGeneratingMP4 = false;
         this.startTime = 0;
         this.gameTime = 0;
         this.lastTimestamp = null;
@@ -285,7 +287,8 @@ export class Game {
             this.gameTime = 0;
             this.lasers = [];
 
-            // Start recording for replay
+            // Save game state for canvas replay fallback, then start recording
+            this.replayRecorder.saveGameState(this.mirrors, this.spawners);
             await this.replayRecorder.startRecording();
 
             console.log('✅ Collision system ready');
@@ -864,7 +867,7 @@ export class Game {
     }
     
     update() {
-        if (!this.isPlaying || this.gameOver) return;
+        if (!this.isPlaying || this.gameOver || this.isGeneratingMP4) return;
 
         // Update game time
         this.gameTime = (Date.now() - this.startTime) / 1000;
@@ -1131,7 +1134,16 @@ export class Game {
     async showGameOverModal() {
         this.gameOver = true;
 
-        // Stop recording for replay
+        // If this is a canvas replay finishing, just show the modal again
+        if (this.isReplayMode) {
+            this.isReplayMode = false;
+            this.isPlaying = false;
+            document.getElementById('gameOverModal').classList.remove('hidden');
+            return;
+        }
+
+        // Save duration and stop recording for replay
+        this.replayRecorder.saveGameDuration(this.gameTime);
         await this.replayRecorder.stopRecording();
 
         // Capture canvas snapshot before any modal overlay
@@ -1178,7 +1190,16 @@ export class Game {
     async showVictoryModal() {
         this.gameOver = true;
 
-        // Stop recording for replay
+        // If this is a canvas replay finishing, just show the modal again
+        if (this.isReplayMode) {
+            this.isReplayMode = false;
+            this.isPlaying = false;
+            document.getElementById('victoryModal').classList.remove('hidden');
+            return;
+        }
+
+        // Save duration and stop recording for replay
+        this.replayRecorder.saveGameDuration(this.gameTime);
         await this.replayRecorder.stopRecording();
 
         // Capture canvas snapshot before any modal overlay
@@ -1211,11 +1232,200 @@ export class Game {
         // Allow player to continue playing after game over
         this.gameOver = false;
         this.isPlaying = false;
+        this.isReplayMode = false;
 
         // Reset the game state
         this.resetGame();
     }
-    
+
+    /**
+     * Start a canvas-based replay by restoring saved game state and re-simulating
+     * Used on mobile when video recording is unavailable
+     */
+    startCanvasReplay() {
+        const state = this.replayRecorder.savedGameState;
+        if (!state) return false;
+
+        this.isReplayMode = true;
+
+        // Recreate mirrors from saved state
+        this.mirrors = state.mirrors.map(saved => {
+            const mirror = MirrorFactory.createMirror(saved.x, saved.y, saved.shape);
+            mirror.size = saved.size;
+            mirror.width = saved.width;
+            mirror.height = saved.height;
+            mirror.rotation = saved.rotation;
+            mirror.isDailyChallenge = saved.isDailyChallenge;
+            mirror.updateVertices();
+            return mirror;
+        });
+
+        // Recreate spawners from saved state
+        this.spawners = state.spawners.map(saved => new Spawner(saved.x, saved.y, saved.angle));
+
+        // Re-initialize collision system and launch
+        this.collisionSystem.initializeCollisionBoundaries(this.mirrors);
+        this.laserCollisionHandler.initialize(this.mirrors);
+
+        this.isPlaying = true;
+        this.gameOver = false;
+        this.startTime = Date.now();
+        this.gameTime = 0;
+        this.lasers = [];
+
+        // Create lasers from spawners
+        this.spawners.forEach(spawner => {
+            this.lasers.push(new Laser(spawner.x, spawner.y, spawner.angle));
+        });
+
+        return true;
+    }
+
+    /**
+     * Generate MP4 by re-simulating the game and encoding frames with h264-mp4-encoder
+     * Used on mobile when real-time video recording wasn't available
+     * @param {function} onProgress - callback(percent) for progress updates
+     * @returns {Promise<Blob>} MP4 video blob
+     */
+    async generateReplayMP4(onProgress) {
+        const state = this.replayRecorder.savedGameState;
+        if (!state || !state.duration || typeof HME === 'undefined') return null;
+
+        const fps = 30;
+        const fixedDt = 1 / fps;
+        const totalFrames = Math.ceil(state.duration * fps);
+        const width = this.canvas.width;
+        const height = this.canvas.height;
+
+        // Save current game state
+        const savedMirrors = this.mirrors;
+        const savedSpawners = this.spawners;
+        const savedLasers = this.lasers;
+        const savedIsPlaying = this.isPlaying;
+        const savedGameOver = this.gameOver;
+        const savedGameTime = this.gameTime;
+        const savedDeltaTime = this.deltaTime;
+        const savedStartTime = this.startTime;
+
+        this.isGeneratingMP4 = true;
+
+        try {
+            // Initialize h264-mp4-encoder
+            const encoder = await HME.createH264MP4Encoder();
+            encoder.width = width;
+            encoder.height = height;
+            encoder.frameRate = fps;
+            encoder.quantizationParameter = 28;
+            encoder.initialize();
+
+            // Set up simulation state from saved game
+            this.mirrors = state.mirrors.map(saved => {
+                const mirror = MirrorFactory.createMirror(saved.x, saved.y, saved.shape);
+                mirror.size = saved.size;
+                mirror.width = saved.width;
+                mirror.height = saved.height;
+                mirror.rotation = saved.rotation;
+                mirror.isDailyChallenge = saved.isDailyChallenge;
+                mirror.updateVertices();
+                return mirror;
+            });
+
+            this.spawners = state.spawners.map(s => new Spawner(s.x, s.y, s.angle));
+            this.lasers = [];
+            this.spawners.forEach(s => {
+                this.lasers.push(new Laser(s.x, s.y, s.angle));
+            });
+
+            this.collisionSystem.initializeCollisionBoundaries(this.mirrors);
+            this.laserCollisionHandler.initialize(this.mirrors);
+
+            this.isPlaying = true;
+            this.gameOver = false;
+            this.deltaTime = fixedDt;
+            this.startTime = Date.now();
+
+            // Process frames in batches to avoid blocking the UI
+            const BATCH_SIZE = 5;
+            let frameIndex = 0;
+
+            const processBatch = () => {
+                return new Promise((resolve) => {
+                    const endFrame = Math.min(frameIndex + BATCH_SIZE, totalFrames);
+
+                    for (; frameIndex < endFrame; frameIndex++) {
+                        // Step simulation
+                        this.gameTime = frameIndex * fixedDt;
+
+                        for (let i = this.lasers.length - 1; i >= 0; i--) {
+                            const laser = this.lasers[i];
+                            laser.update(fixedDt);
+                            this.laserCollisionHandler.checkAndHandleCollisions(laser, this.mirrors);
+
+                            if (this.laserCollisionHandler.checkTargetCollision(laser)) {
+                                // Game over - encode this final frame and stop
+                                this.gameOver = true;
+                            }
+
+                            if (this.laserCollisionHandler.isOutOfBounds(laser)) {
+                                this.lasers.splice(i, 1);
+                            }
+                        }
+
+                        // Render frame
+                        this.renderer.render();
+
+                        // Capture pixels and encode
+                        const imageData = this.ctx.getImageData(0, 0, width, height);
+                        encoder.addFrameRgba(imageData.data);
+
+                        if (this.gameOver) {
+                            frameIndex = totalFrames; // exit
+                            break;
+                        }
+                    }
+
+                    if (onProgress) {
+                        onProgress(Math.min(100, Math.round((frameIndex / totalFrames) * 100)));
+                    }
+
+                    // Yield to UI thread
+                    requestAnimationFrame(resolve);
+                });
+            };
+
+            while (frameIndex < totalFrames) {
+                await processBatch();
+            }
+
+            // Finalize encoding
+            encoder.finalize();
+            const mp4Data = encoder.FS.readFile(encoder.outputFilename);
+            const mp4Blob = new Blob([mp4Data], { type: 'video/mp4' });
+            encoder.delete();
+
+            // Store the generated MP4
+            this.replayRecorder.videoBlob = mp4Blob;
+            this.replayRecorder.videoURL = URL.createObjectURL(mp4Blob);
+
+            return mp4Blob;
+        } finally {
+            this.isGeneratingMP4 = false;
+
+            // Restore original game state
+            this.mirrors = savedMirrors;
+            this.spawners = savedSpawners;
+            this.lasers = savedLasers;
+            this.isPlaying = savedIsPlaying;
+            this.gameOver = savedGameOver;
+            this.gameTime = savedGameTime;
+            this.deltaTime = savedDeltaTime;
+            this.startTime = savedStartTime;
+
+            // Re-render original state
+            this.renderer.render();
+        }
+    }
+
     gameLoop(timestamp) {
         // Calculate delta time
         if (this.lastTimestamp !== null && timestamp !== undefined) {
@@ -1230,8 +1440,8 @@ export class Game {
         this.update();
         this.render();
 
-        // Capture frame for MP4 replay (throttled to 30fps internally)
-        if (this.isPlaying && !this.gameOver) {
+        // Capture frame for MP4 replay (throttled to 30fps internally, skip during replay)
+        if (this.isPlaying && !this.gameOver && !this.isReplayMode) {
             this.replayRecorder.captureFrame(timestamp);
         }
 
