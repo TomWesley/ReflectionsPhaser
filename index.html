@@ -345,56 +345,128 @@
             }
         }
 
-        function saveReplay() {
+        // Check if on mobile device
+        function isMobile() {
+            return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        }
+
+        // Save replay video - MP4 to camera roll on mobile, WebM download on desktop
+        async function saveReplay() {
             if (!window.game || !window.game.replayRecorder.hasReplay()) {
                 console.warn('No replay available');
                 return;
             }
 
             const time = document.getElementById('finalTime').textContent.replace(/:/g, '-').replace(/\./g, '-');
-            window.game.replayRecorder.downloadVideo(`reflections-${time}.webm`);
+
+            // On mobile, convert to MP4 and save to camera roll via share API
+            if (isMobile()) {
+                const saveButtons = document.querySelectorAll('.btn-save');
+                const originalContents = [];
+
+                // Show loading state
+                saveButtons.forEach((btn, i) => {
+                    originalContents[i] = btn.innerHTML;
+                    btn.innerHTML = '<i class="iconoir-hourglass"></i> Saving...';
+                    btn.disabled = true;
+                    btn.classList.add('converting');
+                });
+
+                try {
+                    const filename = `reflections-replay-${time}.mp4`;
+
+                    // Convert to MP4
+                    const mp4Blob = await window.game.replayRecorder.getMP4Blob();
+                    if (!mp4Blob) {
+                        throw new Error('Failed to convert video');
+                    }
+
+                    // Use share API to save to camera roll (only files, no text)
+                    const file = new File([mp4Blob], filename, { type: 'video/mp4' });
+
+                    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+                        await navigator.share({ files: [file] });
+                    } else {
+                        // Fallback: download the MP4
+                        await window.game.replayRecorder.downloadMP4(filename);
+                    }
+                } catch (error) {
+                    if (error.name !== 'AbortError') {
+                        console.error('Save failed:', error);
+                        alert('Unable to save video. Please try again.');
+                    }
+                } finally {
+                    // Restore button state
+                    saveButtons.forEach((btn, i) => {
+                        btn.innerHTML = originalContents[i];
+                        btn.disabled = false;
+                        btn.classList.remove('converting');
+                    });
+                }
+            } else {
+                // Desktop: download WebM directly
+                window.game.replayRecorder.downloadVideo(`reflections-replay-${time}.webm`);
+            }
         }
 
+        // Share screenshot with score
         async function shareReplay() {
-            if (!window.game || !window.game.replayRecorder.hasReplay()) {
-                console.warn('No replay available');
-                alert('No replay available to share.');
+            const snapshotImg = document.getElementById('gameOverSnapshot') || document.getElementById('victorySnapshot');
+
+            if (!snapshotImg || !snapshotImg.src) {
+                console.warn('No snapshot available');
+                alert('No screenshot available to share.');
                 return;
             }
 
-            // Get all share buttons and update their state
             const shareButtons = document.querySelectorAll('.btn-share');
             const originalContents = [];
 
             // Show loading state
             shareButtons.forEach((btn, i) => {
                 originalContents[i] = btn.innerHTML;
-                btn.innerHTML = '<i class="iconoir-hourglass"></i> <span class="share-text">Converting...</span>';
+                btn.innerHTML = '<i class="iconoir-hourglass"></i> Sharing...';
                 btn.disabled = true;
-                btn.classList.add('converting');
             });
 
             try {
-                const time = document.getElementById('finalTime').textContent.replace(/:/g, '-').replace(/\./g, '-');
-                const filename = `reflections-${time}.mp4`;
+                // Get the score
+                const scoreEl = document.getElementById('finalTime') || document.getElementById('victoryTime');
+                const score = scoreEl ? scoreEl.textContent : 'Unknown';
+                const time = score.replace(/:/g, '-').replace(/\./g, '-');
 
-                // Try to share using native share API
-                const shared = await window.game.replayRecorder.shareVideo(filename);
+                // Convert the snapshot image to a blob
+                const response = await fetch(snapshotImg.src);
+                const blob = await response.blob();
+                const file = new File([blob], `reflections-score-${time}.png`, { type: 'image/png' });
 
-                if (!shared) {
-                    // Fallback: try to download MP4 instead
-                    console.log('Share not supported, falling back to MP4 download');
-                    await window.game.replayRecorder.downloadMP4(filename);
+                // Share with image and text
+                if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+                    await navigator.share({
+                        files: [file],
+                        title: 'REFLECTIONS',
+                        text: `I survived ${score} in REFLECTIONS! Can you beat my score?`
+                    });
+                } else if (navigator.share) {
+                    // Fallback: share without file
+                    await navigator.share({
+                        title: 'REFLECTIONS',
+                        text: `I survived ${score} in REFLECTIONS! Can you beat my score?`,
+                        url: window.location.href
+                    });
+                } else {
+                    alert('Sharing is not supported on this device.');
                 }
             } catch (error) {
-                console.error('Share failed:', error);
-                alert('Unable to share video. Try using the download option on desktop.');
+                if (error.name !== 'AbortError') {
+                    console.error('Share failed:', error);
+                    alert('Unable to share. Please try again.');
+                }
             } finally {
                 // Restore button state
                 shareButtons.forEach((btn, i) => {
                     btn.innerHTML = originalContents[i];
                     btn.disabled = false;
-                    btn.classList.remove('converting');
                 });
             }
         }
