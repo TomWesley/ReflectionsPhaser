@@ -1391,8 +1391,8 @@ export class Game {
             const BATCH_SIZE = 5;
             let frameIndex = 0;
             let breachFrame = -1;
-            // Only render 75% of breach animation - end at peak visual intensity
-            const breachFrameCount = Math.ceil(this.breachDuration * fps * 0.75);
+            // Only render 70% of breach animation - end at same frame as screenshot
+            const breachFrameCount = Math.ceil(this.breachDuration * fps * 0.7);
 
             const processBatch = () => {
                 return new Promise((resolve) => {
