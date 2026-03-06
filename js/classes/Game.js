@@ -28,6 +28,12 @@ export class Game {
         this.gameOver = false;
         this.isReplayMode = false;
         this.isGeneratingMP4 = false;
+        this.isBreach = false;
+        this.breachProgress = 0;
+        this.breachStartTime = 0;
+        this.breachDuration = 1.5; // seconds
+        this.breachSnapshotCaptured = false;
+        this.breachSnapshotDataUrl = null;
         this.startTime = 0;
         this.gameTime = 0;
         this.lastTimestamp = null;
@@ -316,6 +322,10 @@ export class Game {
     resetGame() {
         this.isPlaying = false;
         this.gameOver = false;
+        this.isBreach = false;
+        this.breachProgress = 0;
+        this.breachSnapshotCaptured = false;
+        this.breachSnapshotDataUrl = null;
         this.startTime = 0;
         this.gameTime = 0;
         this.lasers = [];
@@ -869,6 +879,24 @@ export class Game {
     update() {
         if (!this.isPlaying || this.gameOver || this.isGeneratingMP4) return;
 
+        // Handle breach animation phase
+        if (this.isBreach) {
+            this.breachProgress = (Date.now() - this.breachStartTime) / (this.breachDuration * 1000);
+
+            // Capture snapshot at peak visual intensity (~0.7 progress)
+            if (!this.breachSnapshotCaptured && this.breachProgress >= 0.7) {
+                this.breachSnapshotDataUrl = this.canvas.toDataURL('image/png');
+                this.breachSnapshotCaptured = true;
+            }
+
+            if (this.breachProgress >= 1) {
+                this.breachProgress = 1;
+                this.isBreach = false;
+                this.showGameOverModal();
+            }
+            return;
+        }
+
         // Update game time
         this.gameTime = (Date.now() - this.startTime) / 1000;
         this.updateTimerDisplay();
@@ -890,7 +918,7 @@ export class Game {
 
             // Check collision with center target
             if (this.laserCollisionHandler.checkTargetCollision(laser)) {
-                this.showGameOverModal();
+                this.startBreach();
                 return;
             }
 
@@ -899,6 +927,17 @@ export class Game {
                 this.lasers.splice(i, 1);
             }
         }
+    }
+
+    /**
+     * Start the core breach animation - laser has hit the center
+     * Freezes the timer but continues rendering for ~1.5s before showing game over
+     */
+    startBreach() {
+        this.isBreach = true;
+        this.breachStartTime = Date.now();
+        this.breachProgress = 0;
+        // gameTime is frozen at the moment of impact (no more updates)
     }
     
     
@@ -1146,10 +1185,10 @@ export class Game {
         this.replayRecorder.saveGameDuration(this.gameTime);
         await this.replayRecorder.stopRecording();
 
-        // Capture canvas snapshot before any modal overlay
+        // Use the snapshot captured at peak breach intensity
         const snapshotImg = document.getElementById('gameOverSnapshot');
         if (snapshotImg) {
-            snapshotImg.src = this.canvas.toDataURL('image/png');
+            snapshotImg.src = this.breachSnapshotDataUrl || this.canvas.toDataURL('image/png');
         }
 
         // Format final time with centiseconds
@@ -1269,6 +1308,8 @@ export class Game {
 
         this.isPlaying = true;
         this.gameOver = false;
+        this.isBreach = false;
+        this.breachProgress = 0;
         this.startTime = Date.now();
         this.gameTime = 0;
         this.lasers = [];
@@ -1341,33 +1382,54 @@ export class Game {
 
             this.isPlaying = true;
             this.gameOver = false;
+            this.isBreach = false;
+            this.breachProgress = 0;
             this.deltaTime = fixedDt;
             this.startTime = Date.now();
 
             // Process frames in batches to avoid blocking the UI
             const BATCH_SIZE = 5;
             let frameIndex = 0;
+            let breachFrame = -1;
+            // Only render 75% of breach animation - end at peak visual intensity
+            const breachFrameCount = Math.ceil(this.breachDuration * fps * 0.75);
 
             const processBatch = () => {
                 return new Promise((resolve) => {
-                    const endFrame = Math.min(frameIndex + BATCH_SIZE, totalFrames);
+                    const endFrame = Math.min(frameIndex + BATCH_SIZE, totalFrames + breachFrameCount);
 
                     for (; frameIndex < endFrame; frameIndex++) {
-                        // Step simulation
-                        this.gameTime = frameIndex * fixedDt;
-
-                        for (let i = this.lasers.length - 1; i >= 0; i--) {
-                            const laser = this.lasers[i];
-                            laser.update(fixedDt);
-                            this.laserCollisionHandler.checkAndHandleCollisions(laser, this.mirrors);
-
-                            if (this.laserCollisionHandler.checkTargetCollision(laser)) {
-                                // Game over - encode this final frame and stop
-                                this.gameOver = true;
+                        if (breachFrame >= 0) {
+                            // Playing breach animation
+                            this.breachProgress = breachFrame / breachFrameCount;
+                            breachFrame++;
+                            if (breachFrame >= breachFrameCount) {
+                                // Render final frame and stop
+                                this.breachProgress = 1;
+                                this.renderer.render();
+                                const imageData = this.ctx.getImageData(0, 0, width, height);
+                                encoder.addFrameRgba(imageData.data);
+                                frameIndex = totalFrames + breachFrameCount; // exit
+                                break;
                             }
+                        } else {
+                            // Normal simulation
+                            this.gameTime = frameIndex * fixedDt;
 
-                            if (this.laserCollisionHandler.isOutOfBounds(laser)) {
-                                this.lasers.splice(i, 1);
+                            for (let i = this.lasers.length - 1; i >= 0; i--) {
+                                const laser = this.lasers[i];
+                                laser.update(fixedDt);
+                                this.laserCollisionHandler.checkAndHandleCollisions(laser, this.mirrors);
+
+                                if (this.laserCollisionHandler.checkTargetCollision(laser)) {
+                                    this.gameOver = true;
+                                    breachFrame = 0;
+                                    this.breachProgress = 0;
+                                }
+
+                                if (this.laserCollisionHandler.isOutOfBounds(laser)) {
+                                    this.lasers.splice(i, 1);
+                                }
                             }
                         }
 
@@ -1378,14 +1440,15 @@ export class Game {
                         const imageData = this.ctx.getImageData(0, 0, width, height);
                         encoder.addFrameRgba(imageData.data);
 
-                        if (this.gameOver) {
-                            frameIndex = totalFrames; // exit
+                        if (breachFrame >= breachFrameCount) {
+                            frameIndex = totalFrames + breachFrameCount; // exit
                             break;
                         }
                     }
 
                     if (onProgress) {
-                        onProgress(Math.min(100, Math.round((frameIndex / totalFrames) * 100)));
+                        const maxFrames = totalFrames + breachFrameCount;
+                        onProgress(Math.min(100, Math.round((frameIndex / maxFrames) * 100)));
                     }
 
                     // Yield to UI thread
@@ -1393,7 +1456,8 @@ export class Game {
                 });
             };
 
-            while (frameIndex < totalFrames) {
+            const maxFrames = totalFrames + breachFrameCount;
+            while (frameIndex < maxFrames) {
                 await processBatch();
             }
 

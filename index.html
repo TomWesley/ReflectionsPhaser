@@ -466,14 +466,13 @@
                     await navigator.share({
                         files: [file],
                         title: 'REFLECTIONS',
-                        text: `I survived ${score} in REFLECTIONS! Can you beat my score?`
+                        text: `Try to beat my score @ wesleyarcade.com/reflections`
                     });
                 } else if (navigator.share) {
                     // Fallback: share without file
                     await navigator.share({
                         title: 'REFLECTIONS',
-                        text: `I survived ${score} in REFLECTIONS! Can you beat my score?`,
-                        url: window.location.href
+                        text: `Try to beat my score @ wesleyarcade.com/reflections`
                     });
                 } else {
                     alert('Sharing is not supported on this device.');
