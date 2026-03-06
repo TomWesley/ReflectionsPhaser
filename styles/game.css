@@ -1586,17 +1586,32 @@ h1 {
         max-height: 45dvh;
     }
 
-    /* Mobile modal buttons - same sizing as desktop, just tighter padding */
+    /* Mobile modal buttons - icon only, no text labels */
     .snapshot-modal .modal-buttons {
         padding: 8px 10px !important;
         gap: 6px !important;
     }
 
-    .snapshot-modal .modal-buttons .btn-replay i,
-    .snapshot-modal .modal-buttons .btn-save i,
-    .snapshot-modal .modal-buttons .btn-share i,
-    .snapshot-modal .modal-buttons .btn-primary i {
-        font-size: 11px !important;
+    .modal-buttons .btn-label {
+        display: none !important;
+    }
+
+    .modal-buttons button,
+    .modal-buttons .btn-primary,
+    .modal-buttons .btn-secondary,
+    .modal-buttons .btn-replay,
+    .modal-buttons .btn-save,
+    .modal-buttons .btn-share {
+        max-width: 52px !important;
+        padding: 10px !important;
+    }
+
+    .modal-buttons button i,
+    .modal-buttons .btn-primary i,
+    .modal-buttons .btn-replay i,
+    .modal-buttons .btn-save i,
+    .modal-buttons .btn-share i {
+        font-size: 16px !important;
     }
 
     /* Replay modal on mobile */
