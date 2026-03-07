@@ -31,19 +31,22 @@ export class GameRenderer {
         TargetRenderer.drawTarget(this.ctx, this.game.gameOver, breachProgress);
 
         // Draw game objects
-        this.game.spawners.forEach(spawner => spawner.draw(this.ctx));
+        this.game.spawners.forEach(spawner => spawner.draw(this.ctx, !this.game.isPlaying));
 
-        // Draw mirrors with hover effect
+        // Draw mirrors
         this.game.mirrors.forEach(mirror => {
-            // Draw hover glow if this mirror is being hovered (only if not playing)
-            if (mirror === this.game.hoveredMirror && !this.game.isPlaying) {
+            if (!this.game.isPlaying && mirror !== this.game.selectedMirror && mirror === this.game.hoveredMirror) {
                 this.drawHoverGlow(mirror);
             }
 
-            // Draw the mirror (pass placement phase state for glow effect)
             const isPlacementPhase = !this.game.isPlaying;
             mirror.draw(this.ctx, isPlacementPhase);
         });
+
+        // Draw selection glow ON TOP of the selected mirror so it's always visible
+        if (this.game.selectedMirror && !this.game.isPlaying) {
+            this.drawSelectionGlow(this.game.selectedMirror);
+        }
 
         // Draw lasers
         this.game.lasers.forEach(laser => laser.draw(this.ctx));
@@ -52,6 +55,15 @@ export class GameRenderer {
         if (!this.game.isPlaying) {
             ZoneRenderer.drawForbiddenZones(this.ctx);
             ValidationRenderer.drawValidationViolations(this.ctx, this.game.mirrors, this.game.isPlaying);
+
+            // Draw spawner angle tooltip on top of everything
+            const activeSpawner = this.game.hoveredSpawner || this.game.selectedSpawner;
+            if (activeSpawner) {
+                const pathLength = 30;
+                const tipX = activeSpawner.x + Math.cos(activeSpawner.angle) * pathLength;
+                const tipY = activeSpawner.y + Math.sin(activeSpawner.angle) * pathLength;
+                activeSpawner.drawAngleTooltip(this.ctx, tipX, tipY);
+            }
         }
 
         // Draw full-screen breach overlay effects (glitch, flash, scanlines)
@@ -59,7 +71,7 @@ export class GameRenderer {
             this.drawBreachOverlay(breachProgress);
         }
 
-        // Draw timer HUD on canvas (visible in screenshots and video)
+        // Draw timer HUD on canvas - only after launch
         if (this.game.isPlaying || this.game.gameOver) {
             this.drawTimerHUD();
         }
@@ -262,16 +274,16 @@ export class GameRenderer {
 
         // Position: top center of canvas
         const x = CONFIG.CANVAS_WIDTH / 2;
-        const y = 32;
+        const y = 28;
 
         // Background pill
-        ctx.fillStyle = 'rgba(10, 10, 18, 0.7)';
-        const pillWidth = 120;
-        const pillHeight = 30;
-        const pillRadius = 8;
+        const pillWidth = 160;
+        const pillHeight = 38;
+        const pillRadius = 10;
         const px = x - pillWidth / 2;
         const py = y - pillHeight / 2;
 
+        ctx.fillStyle = 'rgba(6, 6, 14, 0.8)';
         ctx.beginPath();
         if (ctx.roundRect) {
             ctx.roundRect(px, py, pillWidth, pillHeight, pillRadius);
@@ -280,9 +292,12 @@ export class GameRenderer {
         }
         ctx.fill();
 
-        // Border
-        ctx.strokeStyle = 'rgba(212, 212, 232, 0.25)';
-        ctx.lineWidth = 1;
+        // Border with subtle glow
+        const isBreach = this.game.breachProgress > 0;
+        ctx.strokeStyle = isBreach ? 'rgba(232, 78, 106, 0.6)' : 'rgba(78, 120, 232, 0.4)';
+        ctx.lineWidth = 1.5;
+        ctx.shadowColor = isBreach ? '#E84E6A' : 'rgba(78, 120, 232, 0.3)';
+        ctx.shadowBlur = 8;
         ctx.beginPath();
         if (ctx.roundRect) {
             ctx.roundRect(px, py, pillWidth, pillHeight, pillRadius);
@@ -290,20 +305,20 @@ export class GameRenderer {
             ctx.rect(px, py, pillWidth, pillHeight);
         }
         ctx.stroke();
+        ctx.shadowBlur = 0;
 
         // Timer text
-        ctx.font = '600 16px "JetBrains Mono", "SF Mono", monospace';
+        ctx.font = '700 22px "JetBrains Mono", "SF Mono", monospace';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
 
-        // Glow effect during breach
-        if (this.game.breachProgress > 0) {
+        if (isBreach) {
             ctx.shadowColor = '#E84E6A';
-            ctx.shadowBlur = 10;
+            ctx.shadowBlur = 14;
             ctx.fillStyle = '#E84E6A';
         } else {
-            ctx.shadowColor = 'rgba(212, 212, 232, 0.3)';
-            ctx.shadowBlur = 4;
+            ctx.shadowColor = 'rgba(78, 120, 232, 0.5)';
+            ctx.shadowBlur = 6;
             ctx.fillStyle = '#D4D4E8';
         }
 
@@ -355,5 +370,50 @@ export class GameRenderer {
 
         this.ctx.stroke();
         this.ctx.restore();
+    }
+
+    /**
+     * Draw a persistent selection glow around a selected mirror - flare red (#E84E6A)
+     */
+    drawSelectionGlow(mirror) {
+        const ctx = this.ctx;
+        const vertices = mirror.vertices || mirror.getVertices();
+        if (!vertices || vertices.length === 0) return;
+
+        ctx.save();
+
+        const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 200);
+
+        // Outer aura glow — draw multiple passes for a wide, soft glow
+        for (let pass = 0; pass < 3; pass++) {
+            ctx.shadowColor = '#E84E6A';
+            ctx.shadowBlur = 20 + pass * 10;
+            ctx.strokeStyle = `rgba(232, 78, 106, ${(0.15 + pulse * 0.1) / (pass + 1)})`;
+            ctx.lineWidth = 4 + pass * 4;
+
+            ctx.beginPath();
+            ctx.moveTo(vertices[0].x, vertices[0].y);
+            for (let i = 1; i < vertices.length; i++) {
+                ctx.lineTo(vertices[i].x, vertices[i].y);
+            }
+            ctx.closePath();
+            ctx.stroke();
+        }
+
+        // Sharp inner outline
+        ctx.shadowColor = '#E84E6A';
+        ctx.shadowBlur = 12;
+        ctx.strokeStyle = `rgba(232, 78, 106, ${0.6 + pulse * 0.4})`;
+        ctx.lineWidth = 2.5;
+
+        ctx.beginPath();
+        ctx.moveTo(vertices[0].x, vertices[0].y);
+        for (let i = 1; i < vertices.length; i++) {
+            ctx.lineTo(vertices[i].x, vertices[i].y);
+        }
+        ctx.closePath();
+        ctx.stroke();
+
+        ctx.restore();
     }
 }

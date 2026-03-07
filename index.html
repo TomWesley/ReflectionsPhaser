@@ -33,11 +33,6 @@
         </div>
 
         <div class="navbar-center">
-            <!-- Timer - Centered focal point -->
-            <div class="navbar-timer">
-                <i class="iconoir-timer"></i>
-                <span id="timer" class="navbar-timer-value">0:00</span>
-            </div>
         </div>
 
         <div class="navbar-right">
@@ -63,6 +58,11 @@
         <!-- Game Canvas Container (Independent Module) -->
         <div id="gameContainer">
             <canvas id="gameCanvas" width="800" height="600"></canvas>
+        </div>
+        <!-- Rotation Control - appears when a mirror is selected -->
+        <div id="rotationControl" class="rotation-control hidden">
+            <div class="rotation-control-label">ROTATE</div>
+            <canvas id="rotationCanvas" width="130" height="160"></canvas>
         </div>
     </main>
 
@@ -178,27 +178,17 @@
         </div>
     </div>
 
-    <!-- Mobile Landscape HUD -->
+    <!-- Mobile Sidebar HUD -->
     <div class="mobile-hud">
-        <div class="mobile-hud-left">
-            <button class="hamburger-btn" onclick="toggleMobileMenu()" aria-label="Menu">
-                <i class="iconoir-menu"></i>
-            </button>
-        </div>
-        <div class="mobile-hud-center">
-            <div class="mobile-timer">
-                <i class="iconoir-timer"></i>
-                <span id="mobileTimer">0:00</span>
-            </div>
-        </div>
-        <div class="mobile-hud-right">
-            <button id="mobileLaunchBtn" class="mobile-launch-btn">
-                <i class="iconoir-rocket"></i>
-            </button>
-            <button id="mobileResetBtn" class="mobile-reset-btn">
-                <i class="iconoir-refresh"></i>
-            </button>
-        </div>
+        <button id="mobileLaunchBtn" class="mobile-launch-btn" title="Launch">
+            <i class="iconoir-rocket"></i>
+        </button>
+        <button id="mobileResetBtn" class="mobile-reset-btn" title="New Config">
+            <i class="iconoir-refresh"></i>
+        </button>
+        <button class="hamburger-btn" onclick="toggleMobileMenu()" aria-label="Menu">
+            <i class="iconoir-menu"></i>
+        </button>
     </div>
 
     <!-- Mobile Slide-out Menu -->

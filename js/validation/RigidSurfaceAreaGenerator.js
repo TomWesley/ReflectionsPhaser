@@ -308,8 +308,19 @@ export class RigidSurfaceAreaGenerator {
                 continue;
             }
 
-            // TRUE RANDOM - pick any mirror of this shape that fits
-            const selectedMirror = candidates[Math.floor(Math.random() * candidates.length)];
+            // Bias toward smaller mirrors: weight inversely by surface area
+            // Smaller mirrors get higher weight, but large ones are still possible
+            const weights = candidates.map(m => 1 / (m.surfaceArea * m.surfaceArea));
+            const totalWeight = weights.reduce((a, b) => a + b, 0);
+            let roll = Math.random() * totalWeight;
+            let selectedMirror = candidates[candidates.length - 1];
+            for (let i = 0; i < candidates.length; i++) {
+                roll -= weights[i];
+                if (roll <= 0) {
+                    selectedMirror = candidates[i];
+                    break;
+                }
+            }
 
             // Add a deep copy
             selectedMirrors.push({ ...selectedMirror });

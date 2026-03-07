@@ -84,31 +84,7 @@ body {
     align-items: center;
 }
 
-/* Navbar Timer - Centered Focal Point */
-.navbar-timer {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 8px 20px;
-    background: rgba(0, 0, 0, 0.5);
-    border: 1px solid rgba(78, 120, 232, 0.5);
-    border-radius: 10px;
-    box-shadow: 0 0 20px rgba(78, 120, 232, 0.2);
-}
-
-.navbar-timer i {
-    font-size: 20px;
-    color: var(--arc);
-}
-
-.navbar-timer-value {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 1.6rem;
-    font-weight: 700;
-    color: var(--arc);
-    text-shadow: 0 0 20px rgba(78, 120, 232, 0.6);
-    min-width: 70px;
-}
+/* Navbar Timer - REMOVED (timer now rendered on canvas) */
 
 /* Daily Info in Navbar - REMOVED (keeping for cleanup) */
 
@@ -475,6 +451,44 @@ h1 {
     display: flex;
     align-items: center;
     justify-content: center;
+}
+
+/* Rotation Control - sci-fi dial, absolutely positioned so it never shifts the grid */
+.rotation-control {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 50;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.rotation-control.hidden {
+    display: none;
+}
+
+.rotation-control-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    font-weight: 700;
+    color: rgba(78, 120, 232, 0.5);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+}
+
+#rotationCanvas {
+    cursor: grab;
+    touch-action: none;
+}
+
+#rotationCanvas:active {
+    cursor: grabbing;
 }
 
 #gameCanvas {
@@ -1259,11 +1273,11 @@ h1 {
         display: none !important;
     }
 
-    /* Main content - simple absolute positioning */
+    /* Main content - fills screen beside sidebar */
     .main-content {
         position: absolute !important;
-        top: 40px !important;
-        left: 0 !important;
+        top: 0 !important;
+        left: 48px !important;
         right: 0 !important;
         bottom: 0 !important;
         width: auto !important;
@@ -1278,42 +1292,31 @@ h1 {
         overflow: hidden !important;
     }
 
-    /* Mobile HUD - fixed at top */
+    /* Mobile HUD - vertical sidebar on left */
     .mobile-hud {
         display: flex !important;
-        position: absolute !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 12px !important;
+        position: fixed !important;
         top: 0 !important;
         left: 0 !important;
-        right: 0 !important;
-        height: 40px !important;
-        background: rgba(0, 0, 0, 0.95) !important;
-        border-bottom: 1px solid rgba(78, 120, 232, 0.3) !important;
+        bottom: 0 !important;
+        width: 48px !important;
+        background: rgba(6, 6, 14, 0.95) !important;
+        border-right: 1px solid rgba(78, 120, 232, 0.25) !important;
         z-index: 100 !important;
-        justify-content: space-between !important;
-        align-items: center !important;
-        padding: 0 10px !important;
-    }
-
-    .mobile-hud-left,
-    .mobile-hud-right {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-    }
-
-    .mobile-hud-center {
-        flex: 1;
-        display: flex;
-        justify-content: center;
+        padding: 0 !important;
     }
 
     /* Hamburger Button */
     .hamburger-btn {
-        width: 32px;
-        height: 32px;
+        width: 34px;
+        height: 34px;
         background: rgba(78, 120, 232, 0.15);
-        border: 1px solid rgba(78, 120, 232, 0.4);
-        border-radius: 6px;
+        border: 1px solid rgba(78, 120, 232, 0.35);
+        border-radius: 8px;
         color: var(--arc);
         font-size: 18px;
         cursor: pointer;
@@ -1322,36 +1325,12 @@ h1 {
         justify-content: center;
     }
 
-    /* Mobile Timer */
-    .mobile-timer {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        padding: 4px 10px;
-        background: rgba(0, 0, 0, 0.6);
-        border: 1px solid rgba(78, 120, 232, 0.4);
-        border-radius: 16px;
-    }
-
-    .mobile-timer i {
-        color: var(--arc);
-        font-size: 14px;
-    }
-
-    .mobile-timer span {
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 0.95rem;
-        font-weight: 700;
-        color: var(--arc);
-        min-width: 45px;
-    }
-
     /* Mobile Launch & Reset Buttons */
     .mobile-launch-btn,
     .mobile-reset-btn {
-        width: 32px;
-        height: 32px;
-        border-radius: 6px;
+        width: 34px;
+        height: 34px;
+        border-radius: 8px;
         border: none;
         font-size: 16px;
         cursor: pointer;
@@ -1371,7 +1350,7 @@ h1 {
         color: var(--arc);
     }
 
-    /* Game Container - centered in remaining space */
+    /* Game Container - fills remaining space */
     #gameContainer {
         position: relative !important;
         width: auto !important;
@@ -1392,11 +1371,26 @@ h1 {
         display: block !important;
         width: auto !important;
         height: 100% !important;
-        max-width: calc(100vw - 8px) !important;
+        max-width: calc(100vw - 56px) !important;
         max-height: calc(100% - 8px) !important;
         border: 1px solid rgba(78, 120, 232, 0.5) !important;
         border-radius: 4px !important;
         box-shadow: none !important;
+    }
+
+    /* Rotation control on mobile - floating overlay on right edge */
+    .rotation-control {
+        position: fixed !important;
+        right: 4px !important;
+        top: 50% !important;
+        transform: translateY(-50%) !important;
+        margin: 0 !important;
+        z-index: 90 !important;
+    }
+
+    .rotation-control #rotationCanvas {
+        width: 90px !important;
+        height: 110px !important;
     }
 
     /* Mobile Menu Overlay */

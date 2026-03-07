@@ -19,6 +19,8 @@ import { GridAlignmentSystem } from '../systems/GridAlignmentSystem.js';
 import { MirrorPlacementHelper } from '../generators/MirrorPlacementHelper.js';
 import { MirrorDragAndSnapHandler } from '../handlers/MirrorDragAndSnapHandler.js';
 import { ReplayRecorder } from './ReplayRecorder.js';
+import { RotationControl } from './RotationControl.js';
+import { SimpleValidator } from '../validation/SimpleValidator.js';
 
 export class Game {
     constructor() {
@@ -50,6 +52,9 @@ export class Game {
         this.dragStartPos = { x: 0, y: 0 };
         this.mouseHasMoved = false;
         this.hoveredMirror = null; // Track which mirror is being hovered
+        this.hoveredSpawner = null; // Track which spawner is being hovered (desktop)
+        this.selectedSpawner = null; // Track which spawner is selected (mobile tap)
+        this.selectedMirror = null; // Track which mirror is selected for rotation
 
         // Initialize collision systems
         this.collisionSystem = new CollisionSystem();
@@ -69,6 +74,11 @@ export class Game {
 
         // Initialize replay recorder
         this.replayRecorder = new ReplayRecorder(this.canvas);
+
+        // Initialize rotation control
+        const rotCanvas = document.getElementById('rotationCanvas');
+        this.rotationControl = new RotationControl(rotCanvas, (angle) => this.onRotationChange(angle));
+        this.rotationControlEl = document.getElementById('rotationControl');
 
         this.init();
     }
@@ -136,11 +146,28 @@ export class Game {
         // Check if touching a mirror
         for (let mirror of this.mirrors) {
             if (mirror.containsPoint(coords.x, coords.y)) {
-                e.preventDefault(); // Prevent scrolling when dragging mirror
+                e.preventDefault();
+                this.selectedSpawner = null;
                 this.startDragging(mirror, coords.x, coords.y);
-                break;
+                return;
             }
         }
+
+        // Check if tapping a spawner
+        for (let spawner of this.spawners) {
+            const dx = coords.x - spawner.x;
+            const dy = coords.y - spawner.y;
+            if (dx * dx + dy * dy <= 25 * 25) {
+                e.preventDefault();
+                this.selectedSpawner = (this.selectedSpawner === spawner) ? null : spawner;
+                this.selectMirror(null);
+                return;
+            }
+        }
+
+        // Tapped empty space — clear all selections
+        this.selectedSpawner = null;
+        this.selectMirror(null);
     }
 
     onTouchMove(e) {
@@ -215,6 +242,43 @@ export class Game {
     }
     
     
+    /**
+     * Select a mirror for rotation, or deselect if null
+     */
+    selectMirror(mirror) {
+        this.selectedMirror = mirror;
+        if (mirror) {
+            this.rotationControl.setAngle(mirror.rotation || 0);
+            this.rotationControlEl.classList.remove('hidden');
+        } else {
+            this.rotationControlEl.classList.add('hidden');
+        }
+    }
+
+    /**
+     * Handle rotation change from the dial control
+     */
+    onRotationChange(angleDegrees) {
+        if (!this.selectedMirror) return;
+
+        const mirror = this.selectedMirror;
+        const oldRotation = mirror.rotation;
+
+        // Apply new rotation
+        mirror.rotation = angleDegrees;
+        this.safeUpdateVertices(mirror);
+
+        // Validate — if invalid, revert
+        const otherMirrors = this.mirrors.filter(m => m !== mirror);
+        const validation = SimpleValidator.validateMirror(mirror, otherMirrors);
+
+        if (!validation.valid) {
+            mirror.rotation = oldRotation;
+            this.safeUpdateVertices(mirror);
+            this.rotationControl.setAngle(oldRotation);
+        }
+    }
+
     generateMirrors() {
         // Delegate mirror generation to the MirrorGenerator
         this.mirrors = this.mirrorGenerator.generateMirrors();
@@ -270,6 +334,9 @@ export class Game {
     
     launchLasers() {
         if (this.isPlaying) return;
+        this.selectedSpawner = null;
+        this.hoveredSpawner = null;
+        this.selectMirror(null);
 
         // Skip validation check - player has manually positioned mirrors
         // Let them play with their chosen configuration
@@ -326,10 +393,12 @@ export class Game {
         this.breachProgress = 0;
         this.breachSnapshotCaptured = false;
         this.breachSnapshotDataUrl = null;
+        this.selectedSpawner = null;
+        this.hoveredSpawner = null;
+        this.selectMirror(null);
         this.startTime = 0;
         this.gameTime = 0;
         this.lasers = [];
-        document.getElementById('timer').textContent = '0:00';
 
         // Generate new mirrors and spawners
         this.generateMirrors();
@@ -348,6 +417,7 @@ export class Game {
         // Only detect hover when not playing and not dragging
         if (this.isPlaying || this.draggedMirror) {
             this.hoveredMirror = null;
+            this.hoveredSpawner = null;
             return;
         }
 
@@ -366,11 +436,25 @@ export class Game {
             }
         }
 
+        // Check if hovering over a spawner
+        let foundSpawner = null;
+        if (!foundMirror) {
+            for (let spawner of this.spawners) {
+                const dx = mouseX - spawner.x;
+                const dy = mouseY - spawner.y;
+                if (dx * dx + dy * dy <= 20 * 20) {
+                    foundSpawner = spawner;
+                    break;
+                }
+            }
+        }
+
         // Update hover state
         this.hoveredMirror = foundMirror;
+        this.hoveredSpawner = foundSpawner;
 
         // Change cursor based on hover
-        this.canvas.style.cursor = foundMirror ? 'grab' : 'crosshair';
+        this.canvas.style.cursor = foundMirror ? 'grab' : (foundSpawner ? 'pointer' : 'crosshair');
     }
 
     isMouseOverMirror(mouseX, mouseY, mirror) {
@@ -388,13 +472,16 @@ export class Game {
         const mouseX = (e.clientX - rect.left) * scaleX;
         const mouseY = (e.clientY - rect.top) * scaleY;
 
-        // Check if clicking on a mirror - use proper OOP method
+        // Check if clicking on a mirror
         for (let mirror of this.mirrors) {
             if (mirror.containsPoint(mouseX, mouseY)) {
                 this.startDragging(mirror, mouseX, mouseY);
-                break;
+                return;
             }
         }
+
+        // Clicked empty space — deselect mirror
+        this.selectMirror(null);
     }
     
     onMouseMove(e) {
@@ -450,8 +537,9 @@ export class Game {
             // Clear dragging flag immediately
             mirror.isDragging = false;
 
-            // If mouse didn't move, just keep it where it was
+            // If mouse didn't move, it was a click — select this mirror
             if (!this.mouseHasMoved) {
+                this.selectMirror(mirror);
                 return;
             }
 
@@ -484,6 +572,7 @@ export class Game {
                 mirror.x = nearestValid.x;
                 mirror.y = nearestValid.y;
                 this.safeUpdateVertices(mirror);
+                this.selectMirror(mirror);
                 console.log(`✅ Mirror placed at (${mirror.x}, ${mirror.y})`);
             } else {
                 // Revert to original position - mirror stays where it started
@@ -1157,17 +1246,8 @@ export class Game {
     }
     
     updateTimerDisplay() {
-        const minutes = Math.floor(this.gameTime / 60);
-        const seconds = Math.floor(this.gameTime % 60);
-        const centiseconds = Math.floor((this.gameTime % 1) * 100);
-        const timeString = `${minutes}:${seconds.toString().padStart(2, '0')}.${centiseconds.toString().padStart(2, '0')}`;
-        document.getElementById('timer').textContent = timeString;
-
-        // Also update mobile timer (shorter format without centiseconds)
-        const mobileTimer = document.getElementById('mobileTimer');
-        if (mobileTimer) {
-            mobileTimer.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-        }
+        // Timer is now rendered directly on the canvas via GameRenderer.drawTimerHUD()
+        // No external DOM elements needed
     }
     
     async showGameOverModal() {

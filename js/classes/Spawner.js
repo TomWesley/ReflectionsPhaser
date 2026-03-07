@@ -4,7 +4,7 @@ export class Spawner {
         this.y = y;
         this.angle = angle;
     }
-    
+
     draw(ctx, showPreview = true) {
         ctx.save();
 
@@ -71,7 +71,73 @@ export class Spawner {
             ctx.moveTo(endX, endY);
             ctx.lineTo(endX + Math.cos(arrowAngle2) * arrowSize, endY + Math.sin(arrowAngle2) * arrowSize);
             ctx.stroke();
+
+}
+
+        ctx.restore();
+    }
+
+    drawAngleTooltip(ctx, arrowTipX, arrowTipY) {
+        // Convert radians to degrees (0-360), where 0 = right, 90 = down
+        let degrees = (this.angle * 180 / Math.PI) % 360;
+        if (degrees < 0) degrees += 360;
+        const angleStr = `${degrees.toFixed(1)}°`;
+
+        ctx.save();
+        ctx.shadowBlur = 0;
+
+        // Position tooltip along the arrow direction, past the tip
+        const tooltipDist = 22;
+        let tx = arrowTipX + Math.cos(this.angle) * tooltipDist;
+        let ty = arrowTipY + Math.sin(this.angle) * tooltipDist;
+
+        // Measure text for pill background
+        ctx.font = '700 15px "JetBrains Mono", "SF Mono", monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const textWidth = ctx.measureText(angleStr).width;
+
+        const pillW = textWidth + 16;
+        const pillH = 26;
+        const px = tx - pillW / 2;
+        const py = ty - pillH / 2;
+
+        // Clamp to canvas bounds
+        const margin = 4;
+        if (px < margin) tx += (margin - px);
+        if (px + pillW > 800 - margin) tx -= (px + pillW - 800 + margin);
+        if (py < margin) ty += (margin - py);
+        if (py + pillH > 600 - margin) ty -= (py + pillH - 600 + margin);
+
+        const finalPx = tx - pillW / 2;
+        const finalPy = ty - pillH / 2;
+
+        // Background pill
+        ctx.fillStyle = 'rgba(10, 10, 18, 0.85)';
+        ctx.beginPath();
+        if (ctx.roundRect) {
+            ctx.roundRect(finalPx, finalPy, pillW, pillH, 5);
+        } else {
+            ctx.rect(finalPx, finalPy, pillW, pillH);
         }
+        ctx.fill();
+
+        // Border
+        ctx.strokeStyle = 'rgba(78, 120, 232, 0.5)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        if (ctx.roundRect) {
+            ctx.roundRect(finalPx, finalPy, pillW, pillH, 5);
+        } else {
+            ctx.rect(finalPx, finalPy, pillW, pillH);
+        }
+        ctx.stroke();
+
+        // Text
+        ctx.fillStyle = '#4E78E8';
+        ctx.shadowColor = '#4E78E8';
+        ctx.shadowBlur = 4;
+        ctx.fillText(angleStr, tx, ty);
 
         ctx.restore();
     }
