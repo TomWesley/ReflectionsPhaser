@@ -451,16 +451,18 @@ h1 {
     display: flex;
     align-items: center;
     justify-content: center;
+    overflow: visible;
 }
 
-/* Rotation Control - sci-fi dial, absolutely positioned so it never shifts the grid */
+/* Rotation Control - sci-fi dial, positioned to the right of the game container */
 .rotation-control {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 0;
     position: absolute;
-    right: 20px;
+    left: 100%;
+    margin-left: 16px;
     top: 50%;
     transform: translateY(-50%);
     z-index: 50;
@@ -1381,6 +1383,7 @@ h1 {
     /* Rotation control on mobile - floating overlay on right edge */
     .rotation-control {
         position: fixed !important;
+        left: auto !important;
         right: 4px !important;
         top: 50% !important;
         transform: translateY(-50%) !important;
