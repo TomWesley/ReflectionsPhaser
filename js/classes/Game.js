@@ -40,6 +40,8 @@ export class Game {
         this.gameTime = 0;
         this.lastTimestamp = null;
         this.deltaTime = 1/60;
+        this.physicsAccumulator = 0;
+        this.PHYSICS_DT = 1/60; // Fixed physics timestep for deterministic simulation
 
         // Game objects
         this.mirrors = [];
@@ -359,6 +361,8 @@ export class Game {
             this.startTime = Date.now();
             this.gameTime = 0;
             this.lasers = [];
+            this.lastTimestamp = null;
+            this.physicsAccumulator = 0;
 
             // Save game state for canvas replay fallback, then start recording
             this.replayRecorder.saveGameState(this.mirrors, this.spawners);
@@ -1393,6 +1397,8 @@ export class Game {
         this.startTime = Date.now();
         this.gameTime = 0;
         this.lasers = [];
+        this.lastTimestamp = null;
+        this.physicsAccumulator = 0;
 
         // Create lasers from spawners
         this.spawners.forEach(spawner => {
@@ -1413,7 +1419,9 @@ export class Game {
         if (!state || !state.duration || typeof HME === 'undefined') return null;
 
         const fps = 30;
-        const fixedDt = 1 / fps;
+        const renderDt = 1 / fps; // Time between rendered frames
+        const physicsDt = this.PHYSICS_DT; // Must match live game physics step
+        const physicsStepsPerFrame = Math.round(renderDt / physicsDt); // 2 steps per frame at 30fps/60hz
         const totalFrames = Math.ceil(state.duration * fps);
         const width = this.canvas.width;
         const height = this.canvas.height;
@@ -1464,7 +1472,7 @@ export class Game {
             this.gameOver = false;
             this.isBreach = false;
             this.breachProgress = 0;
-            this.deltaTime = fixedDt;
+            this.deltaTime = physicsDt;
             this.startTime = Date.now();
 
             // Process frames in batches to avoid blocking the UI
@@ -1493,23 +1501,26 @@ export class Game {
                                 break;
                             }
                         } else {
-                            // Normal simulation
-                            this.gameTime = frameIndex * fixedDt;
+                            // Normal simulation - sub-step physics to match live game
+                            this.gameTime = frameIndex * renderDt;
 
-                            for (let i = this.lasers.length - 1; i >= 0; i--) {
-                                const laser = this.lasers[i];
-                                laser.update(fixedDt);
-                                this.laserCollisionHandler.checkAndHandleCollisions(laser, this.mirrors);
+                            for (let step = 0; step < physicsStepsPerFrame; step++) {
+                                for (let i = this.lasers.length - 1; i >= 0; i--) {
+                                    const laser = this.lasers[i];
+                                    laser.update(physicsDt);
+                                    this.laserCollisionHandler.checkAndHandleCollisions(laser, this.mirrors);
 
-                                if (this.laserCollisionHandler.checkTargetCollision(laser)) {
-                                    this.gameOver = true;
-                                    breachFrame = 0;
-                                    this.breachProgress = 0;
+                                    if (this.laserCollisionHandler.checkTargetCollision(laser)) {
+                                        this.gameOver = true;
+                                        breachFrame = 0;
+                                        this.breachProgress = 0;
+                                    }
+
+                                    if (this.laserCollisionHandler.isOutOfBounds(laser)) {
+                                        this.lasers.splice(i, 1);
+                                    }
                                 }
-
-                                if (this.laserCollisionHandler.isOutOfBounds(laser)) {
-                                    this.lasers.splice(i, 1);
-                                }
+                                if (breachFrame >= 0) break; // Stop sub-stepping once breach starts
                             }
                         }
 
@@ -1571,17 +1582,25 @@ export class Game {
     }
 
     gameLoop(timestamp) {
-        // Calculate delta time
+        // Calculate real elapsed time since last frame
+        let frameDt = this.PHYSICS_DT; // default for first frame
         if (this.lastTimestamp !== null && timestamp !== undefined) {
-            this.deltaTime = (timestamp - this.lastTimestamp) / 1000;
-            if (this.deltaTime > 0.1) this.deltaTime = 0.1;
-            if (this.deltaTime <= 0) this.deltaTime = 1/60;
+            frameDt = (timestamp - this.lastTimestamp) / 1000;
+            if (frameDt > 0.1) frameDt = 0.1; // cap to prevent spiral of death
+            if (frameDt <= 0) frameDt = this.PHYSICS_DT;
         }
         if (timestamp !== undefined) {
             this.lastTimestamp = timestamp;
         }
 
-        this.update();
+        // Fixed timestep with accumulator for deterministic physics
+        this.physicsAccumulator += frameDt;
+        while (this.physicsAccumulator >= this.PHYSICS_DT) {
+            this.deltaTime = this.PHYSICS_DT;
+            this.update();
+            this.physicsAccumulator -= this.PHYSICS_DT;
+        }
+
         this.render();
 
         // Capture frame for MP4 replay (throttled to 30fps internally, skip during replay)
