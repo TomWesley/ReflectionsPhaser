@@ -18,10 +18,16 @@ export class GameRenderer {
      * Main render method - orchestrates all drawing operations
      */
     render() {
-        // Clear canvas and fill with void background (#0A0A12)
+        // Clear canvas and fill with void background
         this.ctx.clearRect(0, 0, CONFIG.CANVAS_WIDTH, CONFIG.CANVAS_HEIGHT);
         this.ctx.fillStyle = '#0A0A12';
         this.ctx.fillRect(0, 0, CONFIG.CANVAS_WIDTH, CONFIG.CANVAS_HEIGHT);
+
+        // Subtle green tint for daily challenge
+        if (this.game.isDailyChallenge) {
+            this.ctx.fillStyle = 'rgba(20, 60, 40, 0.15)';
+            this.ctx.fillRect(0, 0, CONFIG.CANVAS_WIDTH, CONFIG.CANVAS_HEIGHT);
+        }
 
         // Draw grid
         GridRenderer.drawGrid(this.ctx);
@@ -39,7 +45,7 @@ export class GameRenderer {
                 this.drawHoverGlow(mirror);
             }
 
-            const isPlacementPhase = !this.game.isPlaying;
+            const isPlacementPhase = !this.game.isPlaying && !this.game.dailyCompleted;
             mirror.draw(this.ctx, isPlacementPhase);
         });
 
@@ -51,8 +57,8 @@ export class GameRenderer {
         // Draw lasers
         this.game.lasers.forEach(laser => laser.draw(this.ctx));
 
-        // Draw zones and validation when not playing
-        if (!this.game.isPlaying) {
+        // Draw zones and validation when not playing (but not on completed daily view)
+        if (!this.game.isPlaying && !this.game.dailyCompleted) {
             ZoneRenderer.drawForbiddenZones(this.ctx);
             ValidationRenderer.drawValidationViolations(this.ctx, this.game.mirrors, this.game.isPlaying);
 
@@ -75,6 +81,68 @@ export class GameRenderer {
         if (this.game.isPlaying || this.game.gameOver) {
             this.drawTimerHUD();
         }
+
+        // Daily challenge indicator
+        if (this.game.isDailyChallenge) {
+            this.drawDailyChallengeIndicator();
+        }
+
+        // Completed daily challenge overlay
+        if (this.game.dailyCompleted) {
+            this.drawDailyCompletedOverlay();
+        }
+    }
+
+    /**
+     * Draw overlay showing today's daily challenge is already completed
+     */
+    drawDailyCompletedOverlay() {
+        const ctx = this.ctx;
+        const W = CONFIG.CANVAS_WIDTH;
+        const H = CONFIG.CANVAS_HEIGHT;
+
+        ctx.save();
+
+        // Dim overlay
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+        ctx.fillRect(0, 0, W, H);
+
+        // "COMPLETED" banner
+        const bannerY = H / 2 - 20;
+        ctx.font = '700 28px "JetBrains Mono", monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#32FFB4';
+        ctx.shadowColor = '#32FFB4';
+        ctx.shadowBlur = 16;
+        ctx.fillText('CHALLENGE COMPLETED', W / 2, bannerY);
+
+        // Score line
+        ctx.shadowBlur = 0;
+        ctx.font = '500 14px "Space Grotesk", sans-serif';
+        ctx.fillStyle = 'rgba(212, 212, 232, 0.8)';
+        ctx.fillText('Come back tomorrow for a new challenge', W / 2, bannerY + 36);
+
+        ctx.restore();
+    }
+
+    /**
+     * Draw "DAILY CHALLENGE" text indicator at bottom right of canvas
+     */
+    drawDailyChallengeIndicator() {
+        const ctx = this.ctx;
+        ctx.save();
+
+        const text = 'DAILY CHALLENGE';
+        ctx.font = '600 10px "JetBrains Mono", monospace';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'bottom';
+        ctx.fillStyle = 'rgba(50, 255, 180, 0.4)';
+        ctx.shadowColor = '#32FFB4';
+        ctx.shadowBlur = 6;
+        ctx.fillText(text, CONFIG.CANVAS_WIDTH - 12, CONFIG.CANVAS_HEIGHT - 10);
+
+        ctx.restore();
     }
 
     /**
@@ -264,6 +332,7 @@ export class GameRenderer {
     drawTimerHUD() {
         const ctx = this.ctx;
         const gameTime = this.game.gameTime;
+        const isDailyCompleted = this.game.dailyCompleted;
 
         const minutes = Math.floor(gameTime / 60);
         const seconds = Math.floor(gameTime % 60);
@@ -276,14 +345,15 @@ export class GameRenderer {
         const x = CONFIG.CANVAS_WIDTH / 2;
         const y = 28;
 
-        // Background pill
-        const pillWidth = 160;
-        const pillHeight = 38;
-        const pillRadius = 10;
+        // Larger pill for completed daily challenge
+        const pillWidth = isDailyCompleted ? 200 : 160;
+        const pillHeight = isDailyCompleted ? 48 : 38;
+        const pillRadius = isDailyCompleted ? 12 : 10;
         const px = x - pillWidth / 2;
         const py = y - pillHeight / 2;
 
-        ctx.fillStyle = 'rgba(6, 6, 14, 0.8)';
+        // Background pill
+        ctx.fillStyle = isDailyCompleted ? 'rgba(6, 6, 14, 0.9)' : 'rgba(6, 6, 14, 0.8)';
         ctx.beginPath();
         if (ctx.roundRect) {
             ctx.roundRect(px, py, pillWidth, pillHeight, pillRadius);
@@ -292,12 +362,27 @@ export class GameRenderer {
         }
         ctx.fill();
 
-        // Border with subtle glow
+        // Border with glow
         const isBreach = this.game.breachProgress > 0;
-        ctx.strokeStyle = isBreach ? 'rgba(232, 78, 106, 0.6)' : 'rgba(78, 120, 232, 0.4)';
-        ctx.lineWidth = 1.5;
-        ctx.shadowColor = isBreach ? '#E84E6A' : 'rgba(78, 120, 232, 0.3)';
-        ctx.shadowBlur = 8;
+        const isDaily = this.game.isDailyChallenge;
+
+        if (isDailyCompleted) {
+            // Bright mint green border with strong glow for completed daily
+            ctx.strokeStyle = 'rgba(50, 255, 180, 0.8)';
+            ctx.lineWidth = 2;
+            ctx.shadowColor = '#32FFB4';
+            ctx.shadowBlur = 16;
+        } else {
+            const borderColor = isBreach ? 'rgba(232, 78, 106, 0.6)'
+                : (isDaily ? 'rgba(50, 255, 180, 0.4)' : 'rgba(78, 120, 232, 0.4)');
+            const borderGlow = isBreach ? '#E84E6A'
+                : (isDaily ? 'rgba(50, 255, 180, 0.3)' : 'rgba(78, 120, 232, 0.3)');
+            ctx.strokeStyle = borderColor;
+            ctx.lineWidth = 1.5;
+            ctx.shadowColor = borderGlow;
+            ctx.shadowBlur = 8;
+        }
+
         ctx.beginPath();
         if (ctx.roundRect) {
             ctx.roundRect(px, py, pillWidth, pillHeight, pillRadius);
@@ -308,15 +393,22 @@ export class GameRenderer {
         ctx.shadowBlur = 0;
 
         // Timer text
-        ctx.font = '700 22px "JetBrains Mono", "SF Mono", monospace';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
 
-        if (isBreach) {
+        if (isDailyCompleted) {
+            // Large, bright mint green with strong glow
+            ctx.font = '700 28px "JetBrains Mono", "SF Mono", monospace';
+            ctx.shadowColor = '#32FFB4';
+            ctx.shadowBlur = 20;
+            ctx.fillStyle = '#32FFB4';
+        } else if (isBreach) {
+            ctx.font = '700 22px "JetBrains Mono", "SF Mono", monospace';
             ctx.shadowColor = '#E84E6A';
             ctx.shadowBlur = 14;
             ctx.fillStyle = '#E84E6A';
         } else {
+            ctx.font = '700 22px "JetBrains Mono", "SF Mono", monospace';
             ctx.shadowColor = 'rgba(78, 120, 232, 0.5)';
             ctx.shadowBlur = 6;
             ctx.fillStyle = '#D4D4E8';
@@ -373,12 +465,19 @@ export class GameRenderer {
     }
 
     /**
-     * Draw a persistent selection glow around a selected mirror - flare red (#E84E6A)
+     * Draw a persistent selection glow around a selected mirror
+     * Uses mint green for daily challenge, flare red for main game
      */
     drawSelectionGlow(mirror) {
         const ctx = this.ctx;
         const vertices = mirror.vertices || mirror.getVertices();
         if (!vertices || vertices.length === 0) return;
+
+        const isDaily = this.game.isDailyChallenge;
+        const glowColor = isDaily ? '#32FFB4' : '#E84E6A';
+        const glowR = isDaily ? 50 : 232;
+        const glowG = isDaily ? 255 : 78;
+        const glowB = isDaily ? 180 : 106;
 
         ctx.save();
 
@@ -386,9 +485,9 @@ export class GameRenderer {
 
         // Outer aura glow — draw multiple passes for a wide, soft glow
         for (let pass = 0; pass < 3; pass++) {
-            ctx.shadowColor = '#E84E6A';
+            ctx.shadowColor = glowColor;
             ctx.shadowBlur = 20 + pass * 10;
-            ctx.strokeStyle = `rgba(232, 78, 106, ${(0.15 + pulse * 0.1) / (pass + 1)})`;
+            ctx.strokeStyle = `rgba(${glowR}, ${glowG}, ${glowB}, ${(0.15 + pulse * 0.1) / (pass + 1)})`;
             ctx.lineWidth = 4 + pass * 4;
 
             ctx.beginPath();
@@ -401,9 +500,9 @@ export class GameRenderer {
         }
 
         // Sharp inner outline
-        ctx.shadowColor = '#E84E6A';
+        ctx.shadowColor = glowColor;
         ctx.shadowBlur = 12;
-        ctx.strokeStyle = `rgba(232, 78, 106, ${0.6 + pulse * 0.4})`;
+        ctx.strokeStyle = `rgba(${glowR}, ${glowG}, ${glowB}, ${0.6 + pulse * 0.4})`;
         ctx.lineWidth = 2.5;
 
         ctx.beginPath();

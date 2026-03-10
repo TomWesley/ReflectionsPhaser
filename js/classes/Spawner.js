@@ -8,9 +8,9 @@ export class Spawner {
     draw(ctx, showPreview = true) {
         ctx.save();
 
-        // Neon Crypt colors - Arc blue for arrows, Pink for spawner
+        // Colors: arc blue outer, pink/mint inner based on mode
         const outerColor = '#4E78E8';  // Arc blue
-        const innerColor = '#E87ADC';  // Pink
+        const innerColor = this.isDailyChallenge ? '#32FFB4' : '#E87ADC';
 
         // Draw glowing spawner body
         ctx.shadowColor = outerColor;

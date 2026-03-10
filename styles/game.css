@@ -135,6 +135,42 @@ body {
     transform: translateY(-2px);
 }
 
+/* Daily Challenge Toggle Button */
+.navbar-btn-daily {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 8px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    background: rgba(50, 255, 180, 0.15);
+    color: #7FFFD4;
+    border: 1px solid rgba(50, 255, 180, 0.3);
+}
+
+.navbar-btn-daily:hover {
+    background: rgba(50, 255, 180, 0.3);
+    transform: translateY(-2px);
+}
+
+.navbar-btn-daily.daily-active {
+    background: rgba(50, 255, 180, 0.35);
+    border-color: rgba(50, 255, 180, 0.6);
+    box-shadow: 0 0 12px rgba(50, 255, 180, 0.3);
+}
+
+.navbar-btn-daily i {
+    font-size: 16px;
+}
+
 .navbar-btn-primary i,
 .navbar-btn-secondary i {
     font-size: 16px;
@@ -1527,6 +1563,15 @@ h1 {
     .mobile-menu-item:active {
         background: rgba(78, 120, 232, 0.15);
         transform: scale(0.98);
+    }
+
+    .mobile-menu-item.daily-active {
+        background: rgba(50, 255, 180, 0.15);
+        border-color: rgba(50, 255, 180, 0.4);
+    }
+
+    .mobile-menu-item.daily-active i {
+        color: #32FFB4;
     }
 
     /* Rules modal adjustments for mobile landscape */

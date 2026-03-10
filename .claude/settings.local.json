@@ -27,7 +27,10 @@
       "Bash(git -C /Users/tomwesley/LocalGithubFiles/WesleyArcadeSite fetch origin && git -C /Users/tomwesley/LocalGithubFiles/WesleyArcadeSite log --oneline origin/main -5)",
       "Bash(git -C /Users/tomwesley/LocalGithubFiles/WesleyArcadeSite diff dd27fc4..39f2989 -- .github/workflows/deploy.yml)",
       "WebFetch(domain:singularity-c216f.web.app)",
-      "WebFetch(domain:wesleyarcade.com)"
+      "WebFetch(domain:wesleyarcade.com)",
+      "Bash(node -e \"\nimport\\('./js/validation/RigidSurfaceAreaGenerator.js'\\).then\\(\\({ RigidSurfaceAreaGenerator }\\) => {\n    let failures = 0;\n    for \\(let i = 0; i < 100; i++\\) {\n        const config = RigidSurfaceAreaGenerator.generateExact84Configuration\\(\\);\n        const total = config.reduce\\(\\(s, m\\) => s + m.surfaceArea, 0\\);\n        if \\(total !== 84\\) { failures++; }\n    }\n    console.log\\('Failures out of 100:', failures\\);\n}\\);\n\" 2>&1 | grep -E \"^\\(Failures|FAIL|Emergency\\)\")",
+      "Bash(node -e \"\nimport\\('./js/validation/RigidSurfaceAreaGenerator.js'\\).then\\(\\({ RigidSurfaceAreaGenerator }\\) => {\n    let failures = 0;\n    for \\(let i = 0; i < 200; i++\\) {\n        const config = RigidSurfaceAreaGenerator.generateExact84Configuration\\(\\);\n        const total = config.reduce\\(\\(s, m\\) => s + m.surfaceArea, 0\\);\n        if \\(total !== 84\\) { failures++; }\n    }\n    console.log\\('Failures out of 200:', failures\\);\n}\\);\n\" 2>&1 | grep \"^Failures\")",
+      "Bash(node -e \"\nimport\\('./js/validation/RigidSurfaceAreaGenerator.js'\\).then\\(\\({ RigidSurfaceAreaGenerator }\\) => {\n    let failures = 0;\n    for \\(let i = 0; i < 500; i++\\) {\n        const config = RigidSurfaceAreaGenerator.generateExact84Configuration\\(\\);\n        const total = config.reduce\\(\\(s, m\\) => s + m.surfaceArea, 0\\);\n        if \\(total !== 84\\) { failures++; }\n    }\n    console.log\\('Failures out of 500:', failures\\);\n}\\);\n\" 2>&1 | grep \"^Failures\")"
     ],
     "deny": [],
     "ask": []

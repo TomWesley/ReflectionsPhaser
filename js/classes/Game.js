@@ -21,6 +21,7 @@ import { MirrorDragAndSnapHandler } from '../handlers/MirrorDragAndSnapHandler.j
 import { ReplayRecorder } from './ReplayRecorder.js';
 import { RotationControl } from './RotationControl.js';
 import { SimpleValidator } from '../validation/SimpleValidator.js';
+import { DailyChallenge } from '../validation/DailyChallenge.js';
 
 export class Game {
     constructor() {
@@ -57,6 +58,7 @@ export class Game {
         this.hoveredSpawner = null; // Track which spawner is being hovered (desktop)
         this.selectedSpawner = null; // Track which spawner is selected (mobile tap)
         this.selectedMirror = null; // Track which mirror is selected for rotation
+        this.isDailyChallenge = false; // Daily challenge mode flag
 
         // Initialize collision systems
         this.collisionSystem = new CollisionSystem();
@@ -114,6 +116,20 @@ export class Game {
         // UI buttons
         document.getElementById('launchBtn').addEventListener('click', () => this.launchLasers());
         document.getElementById('resetBtn').addEventListener('click', () => this.resetGame());
+
+        // Daily challenge toggle
+        const dailyToggle = document.getElementById('dailyChallengeToggle');
+        if (dailyToggle) dailyToggle.addEventListener('click', () => this.toggleDailyChallenge());
+        const mobileDailyToggle = document.getElementById('mobileDailyChallengeToggle');
+        if (mobileDailyToggle) mobileDailyToggle.addEventListener('click', () => {
+            this.toggleDailyChallenge();
+            // Close mobile menu after toggling
+            const menu = document.getElementById('mobileMenu');
+            const overlay = document.getElementById('mobileMenuOverlay');
+            if (menu) menu.classList.remove('open');
+            if (overlay) overlay.classList.add('hidden');
+            document.body.classList.remove('menu-open');
+        });
     }
 
     // Helper to get canvas coordinates from mouse or touch event
@@ -141,7 +157,7 @@ export class Game {
     }
 
     onTouchStart(e) {
-        if (this.isPlaying) return;
+        if (this.isPlaying || this.dailyCompleted) return;
 
         const coords = this.getCanvasCoordinates(e);
 
@@ -250,6 +266,7 @@ export class Game {
     selectMirror(mirror) {
         this.selectedMirror = mirror;
         if (mirror) {
+            this.rotationControl.isDailyChallenge = this.isDailyChallenge;
             this.rotationControl.setAngle(mirror.rotation || 0);
             this.rotationControlEl.classList.remove('hidden');
         } else {
@@ -282,8 +299,28 @@ export class Game {
     }
 
     generateMirrors() {
-        // Delegate mirror generation to the MirrorGenerator
-        this.mirrors = this.mirrorGenerator.generateMirrors();
+        if (this.isDailyChallenge) {
+            // Daily challenge generates mirrors and spawners together from seed
+            this.generateDailyChallengeConfig();
+        } else {
+            // Delegate mirror generation to the MirrorGenerator
+            this.mirrors = this.mirrorGenerator.generateMirrors();
+        }
+    }
+
+    /**
+     * Generate both mirrors and spawners from the daily seed in one pass
+     */
+    generateDailyChallengeConfig() {
+        const config = DailyChallenge.generateDailyConfig();
+        this.dailyTheme = config.theme;
+        this.mirrors = DailyChallenge.placeMirrors(config.mirrors, this);
+        this.mirrors.forEach(m => { m.isDailyChallenge = true; });
+        this.spawners = config.spawners.map(s => {
+            const spawner = new Spawner(s.x, s.y, s.angle);
+            spawner.isDailyChallenge = true;
+            return spawner;
+        });
     }
 
     // Helper method to safely update mirror vertices
@@ -303,6 +340,10 @@ export class Game {
 
     
     generateSpawners() {
+        if (this.isDailyChallenge) {
+            // Already generated in generateDailyChallengeConfig()
+            return;
+        }
         // Delegate spawner generation to the SpawnerGenerator
         this.spawners = this.spawnerGenerator.generateSpawners();
     }
@@ -336,6 +377,17 @@ export class Game {
     
     launchLasers() {
         if (this.isPlaying) return;
+
+        // Daily challenge: one attempt only
+        if (this.isDailyChallenge && DailyChallenge.hasAttemptedToday()) {
+            const statusEl = document.getElementById('status');
+            if (statusEl) {
+                statusEl.textContent = "Already completed today's challenge!";
+                statusEl.className = 'status-modern';
+            }
+            return;
+        }
+
         this.selectedSpawner = null;
         this.hoveredSpawner = null;
         this.selectMirror(null);
@@ -384,13 +436,21 @@ export class Game {
     createLasersFromSpawners() {
         // Create lasers from spawners
         this.spawners.forEach(spawner => {
-            this.lasers.push(new Laser(spawner.x, spawner.y, spawner.angle));
+            const laser = new Laser(spawner.x, spawner.y, spawner.angle);
+            laser.isDailyChallenge = this.isDailyChallenge;
+            this.lasers.push(laser);
         });
 
         document.getElementById('launchBtn').disabled = true;
     }
     
     resetGame() {
+        // If daily challenge already completed, show frozen state instead
+        if (this.isDailyChallenge && DailyChallenge.hasAttemptedToday()) {
+            this.showCompletedDailyChallenge();
+            return;
+        }
+
         this.isPlaying = false;
         this.gameOver = false;
         this.isBreach = false;
@@ -403,6 +463,7 @@ export class Game {
         this.startTime = 0;
         this.gameTime = 0;
         this.lasers = [];
+        this.dailyCompleted = false;
 
         // Generate new mirrors and spawners
         this.generateMirrors();
@@ -412,9 +473,122 @@ export class Game {
         const statusEl = document.getElementById('status');
 
         if (statusEl) {
-            statusEl.textContent = 'Position your mirrors to protect the center!';
+            statusEl.textContent = this.isDailyChallenge
+                ? 'Daily Challenge - position your mirrors!'
+                : 'Position your mirrors to protect the center!';
             statusEl.className = 'status-modern';
         }
+
+        this.updateModeUI();
+    }
+
+    /**
+     * Toggle between main game and daily challenge mode
+     */
+    toggleDailyChallenge() {
+        if (this.isPlaying) return; // Can't toggle during gameplay
+
+        this.isDailyChallenge = !this.isDailyChallenge;
+
+        if (this.isDailyChallenge && DailyChallenge.hasAttemptedToday()) {
+            // Already completed — show frozen final state
+            this.showCompletedDailyChallenge();
+            return;
+        }
+
+        this.resetGame();
+    }
+
+    /**
+     * Display the frozen final state of today's completed daily challenge
+     */
+    showCompletedDailyChallenge() {
+        const result = DailyChallenge.getTodayResult();
+        const savedMirrors = DailyChallenge.getSavedMirrors();
+        const savedLasers = DailyChallenge.getSavedLasers();
+
+        // Restore mirrors from saved state
+        if (savedMirrors) {
+            this.mirrors = savedMirrors.map(saved => {
+                const mirror = MirrorFactory.createMirror(saved.x, saved.y, saved.shape);
+                mirror.size = saved.size;
+                mirror.width = saved.width;
+                mirror.height = saved.height;
+                mirror.rotation = saved.rotation;
+                if (saved.topWidth) mirror.topWidth = saved.topWidth;
+                if (saved.skew) mirror.skew = saved.skew;
+                mirror.isDailyChallenge = true;
+                this.safeUpdateVertices(mirror);
+                return mirror;
+            });
+        }
+
+        // Restore lasers from saved state (frozen positions with trails)
+        if (savedLasers) {
+            this.lasers = savedLasers.map(saved => {
+                const laser = new Laser(saved.x, saved.y, 0);
+                laser.vx = saved.vx;
+                laser.vy = saved.vy;
+                laser.trail = saved.trail || [];
+                laser.isDailyChallenge = true;
+                return laser;
+            });
+        } else {
+            this.lasers = [];
+        }
+
+        // Restore spawners from daily config
+        const config = DailyChallenge.generateDailyConfig();
+        this.spawners = config.spawners.map(s => {
+            const spawner = new Spawner(s.x, s.y, s.angle);
+            spawner.isDailyChallenge = true;
+            return spawner;
+        });
+
+        // Set game state to show as completed (not playing, game over)
+        this.isPlaying = false;
+        this.gameOver = true;
+        this.isBreach = false;
+        this.breachProgress = 0;
+        this.selectedMirror = null;
+        this.selectedSpawner = null;
+        this.hoveredSpawner = null;
+        this.gameTime = result.gameTime;
+        this.dailyCompleted = true; // Flag to prevent interaction
+
+        // Disable launch
+        document.getElementById('launchBtn').disabled = true;
+
+        this.updateModeUI();
+        this.renderer.render();
+
+        // Also draw the timer HUD to show final score
+        // (render() already handles this since gameOver is true)
+    }
+
+    /**
+     * Update UI elements to reflect current mode
+     */
+    updateModeUI() {
+        const isDaily = this.isDailyChallenge;
+
+        // Update toggle button text/state
+        const desktopToggle = document.getElementById('dailyChallengeToggle');
+        if (desktopToggle) {
+            desktopToggle.classList.toggle('daily-active', isDaily);
+            const label = desktopToggle.querySelector('span');
+            if (label) label.textContent = isDaily ? 'Main Game' : 'Daily';
+        }
+
+        const mobileToggle = document.getElementById('mobileDailyChallengeToggle');
+        if (mobileToggle) {
+            mobileToggle.classList.toggle('daily-active', isDaily);
+            const label = mobileToggle.querySelector('span');
+            if (label) label.textContent = isDaily ? 'Switch to Main Game' : 'Daily Challenge';
+        }
+
+        // Toggle body class for global CSS theming
+        document.body.classList.toggle('daily-challenge-mode', isDaily);
     }
     
     onCanvasHover(e) {
@@ -468,7 +642,7 @@ export class Game {
     }
 
     onMouseDown(e) {
-        if (this.isPlaying) return;
+        if (this.isPlaying || this.dailyCompleted) return;
 
         const rect = this.canvas.getBoundingClientRect();
         const scaleX = this.canvas.width / rect.width;
@@ -1281,6 +1455,11 @@ export class Game {
         const centiseconds = Math.floor((this.gameTime % 1) * 100);
         const finalTimeString = `${minutes}:${seconds.toString().padStart(2, '0')}.${centiseconds.toString().padStart(2, '0')}`;
 
+        // Save daily challenge result if applicable
+        if (this.isDailyChallenge && !this.isReplayMode) {
+            DailyChallenge.markCompleted(this.gameTime, finalTimeString, this.mirrors, this.lasers);
+        }
+
         // Update modal content
         document.getElementById('finalTime').textContent = finalTimeString;
 
@@ -1336,6 +1515,11 @@ export class Game {
         const seconds = Math.floor(this.gameTime % 60);
         const centiseconds = Math.floor((this.gameTime % 1) * 100);
         const finalTimeString = `${minutes}:${seconds.toString().padStart(2, '0')}.${centiseconds.toString().padStart(2, '0')}`;
+
+        // Save daily challenge result if applicable
+        if (this.isDailyChallenge && !this.isReplayMode) {
+            DailyChallenge.markCompleted(this.gameTime, finalTimeString, this.mirrors, this.lasers);
+        }
 
         // Update modal content
         document.getElementById('victoryTime').textContent = finalTimeString;
@@ -1402,7 +1586,9 @@ export class Game {
 
         // Create lasers from spawners
         this.spawners.forEach(spawner => {
-            this.lasers.push(new Laser(spawner.x, spawner.y, spawner.angle));
+            const laser = new Laser(spawner.x, spawner.y, spawner.angle);
+            laser.isDailyChallenge = this.isDailyChallenge;
+            this.lasers.push(laser);
         });
 
         return true;
@@ -1462,7 +1648,9 @@ export class Game {
             this.spawners = state.spawners.map(s => new Spawner(s.x, s.y, s.angle));
             this.lasers = [];
             this.spawners.forEach(s => {
-                this.lasers.push(new Laser(s.x, s.y, s.angle));
+                const laser = new Laser(s.x, s.y, s.angle);
+                laser.isDailyChallenge = this.isDailyChallenge;
+                this.lasers.push(laser);
             });
 
             this.collisionSystem.initializeCollisionBoundaries(this.mirrors);

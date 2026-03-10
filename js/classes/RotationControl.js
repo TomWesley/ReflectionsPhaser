@@ -15,6 +15,7 @@ export class RotationControl {
 
         this.currentAngle = 0; // degrees
         this.isDragging = false;
+        this.isDailyChallenge = false; // Mint green mode
 
         this.setupEvents();
         this.render();
@@ -84,6 +85,9 @@ export class RotationControl {
         const cx = this.center;
         const cy = this.center;
         const r = this.radius;
+        // Accent color: mint green for daily challenge, red/pink for main game
+        const accent = this.isDailyChallenge ? '#32FFB4' : '#E84E6A';
+        const accentRgba = this.isDailyChallenge ? '50, 255, 180' : '232, 78, 106';
 
         ctx.clearRect(0, 0, this.width, this.height);
 
@@ -180,12 +184,12 @@ export class RotationControl {
             cx + Math.cos(angleRad) * this.handleRadius,
             cy + Math.sin(angleRad) * this.handleRadius
         );
-        lineGrad.addColorStop(0, 'rgba(232, 78, 106, 0.2)');
-        lineGrad.addColorStop(1, '#E84E6A');
+        lineGrad.addColorStop(0, `rgba(${accentRgba}, 0.2)`);
+        lineGrad.addColorStop(1, accent);
 
         ctx.strokeStyle = lineGrad;
         ctx.lineWidth = 2.5;
-        ctx.shadowColor = '#E84E6A';
+        ctx.shadowColor = accent;
         ctx.shadowBlur = 8;
         ctx.beginPath();
         ctx.moveTo(cx, cy);
@@ -199,15 +203,15 @@ export class RotationControl {
         const hx = cx + Math.cos(angleRad) * this.handleRadius;
         const hy = cy + Math.sin(angleRad) * this.handleRadius;
 
-        ctx.fillStyle = '#E84E6A';
-        ctx.shadowColor = '#E84E6A';
+        ctx.fillStyle = accent;
+        ctx.shadowColor = accent;
         ctx.shadowBlur = 12;
         ctx.beginPath();
         ctx.arc(hx, hy, 5, 0, Math.PI * 2);
         ctx.fill();
 
         // Outer glow ring on handle
-        ctx.strokeStyle = 'rgba(232, 78, 106, 0.4)';
+        ctx.strokeStyle = `rgba(${accentRgba}, 0.4)`;
         ctx.lineWidth = 1.5;
         ctx.beginPath();
         ctx.arc(hx, hy, 8, 0, Math.PI * 2);

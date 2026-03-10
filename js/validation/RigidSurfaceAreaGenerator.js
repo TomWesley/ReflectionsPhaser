@@ -284,11 +284,35 @@ export class RigidSurfaceAreaGenerator {
             iterations++;
             const remaining = TARGET - currentTotal;
 
-            // Check if we can hit exactly the target
-            if (bySurfaceArea[remaining] && bySurfaceArea[remaining].length > 0) {
-                // Pick a random exact match
-                const exactMatches = bySurfaceArea[remaining];
-                const exactMirror = exactMatches[Math.floor(Math.random() * exactMatches.length)];
+            // If remaining is smaller than any available mirror AND no exact match exists,
+            // find a mirror to swap out so the new remaining has an exact match
+            if (remaining > 0 && remaining < 4 && !(bySurfaceArea[remaining] && bySurfaceArea[remaining].length > 0)) {
+                let swapped = false;
+                for (let j = selectedMirrors.length - 1; j >= 0; j--) {
+                    const newRemaining = remaining + selectedMirrors[j].surfaceArea;
+                    if (bySurfaceArea[newRemaining] && bySurfaceArea[newRemaining].length > 0) {
+                        const removed = selectedMirrors.splice(j, 1)[0];
+                        currentTotal -= removed.surfaceArea;
+                        shapeCount[removed.shape]--;
+                        swapped = true;
+                        break;
+                    }
+                }
+                if (!swapped && selectedMirrors.length > 0) {
+                    const removed = selectedMirrors.pop();
+                    currentTotal -= removed.surfaceArea;
+                    shapeCount[removed.shape]--;
+                }
+                continue;
+            }
+
+            // Pick a random SHAPE first (equal probability for all 7 shapes)
+            const randomShape = ALL_SHAPES[Math.floor(Math.random() * ALL_SHAPES.length)];
+
+            // Check if this shape has an exact match for the remaining area
+            const shapeExactMatches = byShape[randomShape].filter(m => m.surfaceArea === remaining);
+            if (shapeExactMatches.length > 0) {
+                const exactMirror = shapeExactMatches[Math.floor(Math.random() * shapeExactMatches.length)];
                 selectedMirrors.push({ ...exactMirror });
                 currentTotal += exactMirror.surfaceArea;
                 shapeCount[exactMirror.shape]++;
@@ -296,8 +320,17 @@ export class RigidSurfaceAreaGenerator {
                 break;
             }
 
-            // Pick a random SHAPE (equal probability for all 7 shapes)
-            const randomShape = ALL_SHAPES[Math.floor(Math.random() * ALL_SHAPES.length)];
+            // If no exact match with this shape, check ANY shape for exact match
+            // (but only after several iterations to give shape diversity a chance)
+            if (iterations > 5 && bySurfaceArea[remaining] && bySurfaceArea[remaining].length > 0) {
+                const exactMatches = bySurfaceArea[remaining];
+                const exactMirror = exactMatches[Math.floor(Math.random() * exactMatches.length)];
+                selectedMirrors.push({ ...exactMirror });
+                currentTotal += exactMirror.surfaceArea;
+                shapeCount[exactMirror.shape]++;
+                console.log(`  ✓ Exact match (any): ${exactMirror.shape} (${exactMirror.surfaceArea}) - Total: ${currentTotal}/${TARGET}`);
+                break;
+            }
 
             // Filter mirrors of this shape that fit
             const shapeMirrors = byShape[randomShape];
@@ -308,9 +341,9 @@ export class RigidSurfaceAreaGenerator {
                 continue;
             }
 
-            // Bias toward smaller mirrors: weight inversely by surface area
-            // Smaller mirrors get higher weight, but large ones are still possible
-            const weights = candidates.map(m => 1 / (m.surfaceArea * m.surfaceArea));
+            // Mild bias toward smaller mirrors: weight inversely by surface area (not squared)
+            // This keeps variety while still preferring more pieces over fewer
+            const weights = candidates.map(m => 1 / m.surfaceArea);
             const totalWeight = weights.reduce((a, b) => a + b, 0);
             let roll = Math.random() * totalWeight;
             let selectedMirror = candidates[candidates.length - 1];
@@ -387,10 +420,20 @@ export class RigidSurfaceAreaGenerator {
                     break;
                 }
 
-                // Find smallest mirror that fits
+                // Find mirrors with exact remaining area
                 const fitAreas = uniqueAreas.filter(a => a <= remaining);
+                const exactFitAreas = fitAreas.filter(a => a === remaining);
+                if (exactFitAreas.length > 0) {
+                    // Use exact fit
+                    const options = bySurfaceArea[remaining];
+                    const pick = options[Math.floor(Math.random() * options.length)];
+                    mirrors.push({ ...pick });
+                    currentTotal += pick.surfaceArea;
+                    console.log(`  + Exact backtrack fill: ${pick.shape} (${pick.surfaceArea}) - Total: ${currentTotal}`);
+                    break;
+                }
                 if (fitAreas.length === 0) {
-                    // No mirrors fit - need to remove one and try again
+                    // No mirrors fit (remaining < smallest mirror) - remove last and retry
                     if (mirrors.length === 0) break;
                     const removed = mirrors.pop();
                     currentTotal -= removed.surfaceArea;
