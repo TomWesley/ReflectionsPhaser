@@ -117,8 +117,7 @@ export class MirrorGenerator {
 
     /**
      * Generate the simplest guaranteed-placeable fallback
-     * Uses COMBINATION 10 from MirrorCombinations (28 + 28 + 28 = 84)
-     * Only 3 large rectangles positioned safely away from all forbidden zones
+     * 3 large rectangles (28 + 28 + 28 = 84) positioned safely away from all forbidden zones
      */
     generateGuaranteedFallback() {
         const mirrors = [];
