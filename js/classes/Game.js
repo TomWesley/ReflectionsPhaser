@@ -60,6 +60,16 @@ export class Game {
         this.selectedMirror = null; // Track which mirror is selected for rotation
         this.isDailyChallenge = false; // Daily challenge mode flag
 
+        // Zoom/pan state for setup phase
+        this.zoom = 1;
+        this.zoomMin = 1;
+        this.zoomMax = 3;
+        this.panX = 0;
+        this.panY = 0;
+        this.isPinching = false;
+        this.lastPinchDist = 0;
+        this.lastPinchCenter = { x: 0, y: 0 };
+
         // Initialize collision systems
         this.collisionSystem = new CollisionSystem();
         this.laserCollisionHandler = new LaserCollisionHandler(this.collisionSystem);
@@ -113,6 +123,9 @@ export class Game {
         // Touch events for mobile support
         this.canvas.addEventListener('touchstart', (e) => this.onTouchStart(e), { passive: false });
 
+        // Wheel event for trackpad/mouse zoom
+        this.canvas.addEventListener('wheel', (e) => this.onWheel(e), { passive: false });
+
         // UI buttons
         document.getElementById('launchBtn').addEventListener('click', () => this.launchLasers());
         document.getElementById('resetBtn').addEventListener('click', () => this.resetGame());
@@ -133,6 +146,7 @@ export class Game {
     }
 
     // Helper to get canvas coordinates from mouse or touch event
+    // Accounts for zoom/pan transform during setup phase
     getCanvasCoordinates(e) {
         const rect = this.canvas.getBoundingClientRect();
         const scaleX = this.canvas.width / rect.width;
@@ -150,14 +164,37 @@ export class Game {
             clientY = e.clientY;
         }
 
+        // Convert to base canvas coordinates
+        const canvasX = (clientX - rect.left) * scaleX;
+        const canvasY = (clientY - rect.top) * scaleY;
+
+        // Inverse zoom/pan transform to get game-world coordinates
         return {
-            x: (clientX - rect.left) * scaleX,
-            y: (clientY - rect.top) * scaleY
+            x: (canvasX - this.panX) / this.zoom,
+            y: (canvasY - this.panY) / this.zoom
         };
     }
 
     onTouchStart(e) {
         if (this.isPlaying || this.dailyCompleted) return;
+
+        // Two-finger pinch start
+        if (e.touches.length === 2) {
+            e.preventDefault();
+            this.isPinching = true;
+            // Stop any active drag
+            if (this.draggedMirror) this.stopDragging();
+            const t0 = e.touches[0], t1 = e.touches[1];
+            this.lastPinchDist = Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY);
+            this.lastPinchCenter = {
+                x: (t0.clientX + t1.clientX) / 2,
+                y: (t0.clientY + t1.clientY) / 2
+            };
+            return;
+        }
+
+        // Single touch — skip if already pinching
+        if (this.isPinching) return;
 
         const coords = this.getCanvasCoordinates(e);
 
@@ -189,6 +226,35 @@ export class Game {
     }
 
     onTouchMove(e) {
+        // Handle pinch zoom/pan
+        if (e.touches.length === 2 && this.isPinching) {
+            e.preventDefault();
+            const t0 = e.touches[0], t1 = e.touches[1];
+            const dist = Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY);
+            const center = {
+                x: (t0.clientX + t1.clientX) / 2,
+                y: (t0.clientY + t1.clientY) / 2
+            };
+
+            // Zoom
+            const zoomDelta = dist / this.lastPinchDist;
+            this.applyZoom(zoomDelta, center.x, center.y);
+
+            // Pan
+            const rect = this.canvas.getBoundingClientRect();
+            const dxScreen = center.x - this.lastPinchCenter.x;
+            const dyScreen = center.y - this.lastPinchCenter.y;
+            const canvasScaleX = this.canvas.width / rect.width;
+            const canvasScaleY = this.canvas.height / rect.height;
+            this.panX += dxScreen * canvasScaleX;
+            this.panY += dyScreen * canvasScaleY;
+            this.clampPan();
+
+            this.lastPinchDist = dist;
+            this.lastPinchCenter = center;
+            return;
+        }
+
         if (!this.draggedMirror || this.isPlaying) return;
 
         e.preventDefault(); // Prevent scrolling while dragging
@@ -214,6 +280,13 @@ export class Game {
     }
 
     onTouchEnd(e) {
+        if (this.isPinching) {
+            // End pinch when fewer than 2 fingers remain
+            if (!e.touches || e.touches.length < 2) {
+                this.isPinching = false;
+            }
+            return;
+        }
         this.handleDragEnd(e);
     }
 
@@ -296,6 +369,51 @@ export class Game {
             this.safeUpdateVertices(mirror);
             this.rotationControl.setAngle(oldRotation);
         }
+    }
+
+    // --- Zoom / Pan ---
+
+    onWheel(e) {
+        if (this.isPlaying || this.dailyCompleted) return;
+        e.preventDefault();
+
+        // Trackpad pinch sends ctrlKey + wheel; mouse scroll also uses wheel
+        const zoomSensitivity = 0.002;
+        const zoomDelta = 1 - e.deltaY * zoomSensitivity;
+        this.applyZoom(zoomDelta, e.clientX, e.clientY);
+    }
+
+    applyZoom(zoomDelta, clientX, clientY) {
+        const oldZoom = this.zoom;
+        this.zoom = Math.min(this.zoomMax, Math.max(this.zoomMin, this.zoom * zoomDelta));
+        const actualDelta = this.zoom / oldZoom;
+
+        // Zoom toward the pointer: adjust pan so the point under the cursor stays fixed
+        const rect = this.canvas.getBoundingClientRect();
+        const canvasScaleX = this.canvas.width / rect.width;
+        const canvasScaleY = this.canvas.height / rect.height;
+        const cx = (clientX - rect.left) * canvasScaleX;
+        const cy = (clientY - rect.top) * canvasScaleY;
+
+        this.panX = cx - actualDelta * (cx - this.panX);
+        this.panY = cy - actualDelta * (cy - this.panY);
+        this.clampPan();
+    }
+
+    clampPan() {
+        // Prevent panning so far that the game board goes off-screen
+        const W = CONFIG.CANVAS_WIDTH;
+        const H = CONFIG.CANVAS_HEIGHT;
+        const maxPanX = (this.zoom - 1) * W;
+        const maxPanY = (this.zoom - 1) * H;
+        this.panX = Math.min(0, Math.max(-maxPanX, this.panX));
+        this.panY = Math.min(0, Math.max(-maxPanY, this.panY));
+    }
+
+    resetZoom() {
+        this.zoom = 1;
+        this.panX = 0;
+        this.panY = 0;
     }
 
     generateMirrors() {
@@ -388,6 +506,9 @@ export class Game {
             return;
         }
 
+        // Reset zoom to full view for gameplay
+        this.resetZoom();
+
         this.selectedSpawner = null;
         this.hoveredSpawner = null;
         this.selectMirror(null);
@@ -464,6 +585,7 @@ export class Game {
         this.gameTime = 0;
         this.lasers = [];
         this.dailyCompleted = false;
+        this.resetZoom();
 
         // Generate new mirrors and spawners
         this.generateMirrors();
@@ -599,11 +721,9 @@ export class Game {
             return;
         }
 
-        const rect = this.canvas.getBoundingClientRect();
-        const scaleX = this.canvas.width / rect.width;
-        const scaleY = this.canvas.height / rect.height;
-        const mouseX = (e.clientX - rect.left) * scaleX;
-        const mouseY = (e.clientY - rect.top) * scaleY;
+        const coords = this.getCanvasCoordinates(e);
+        const mouseX = coords.x;
+        const mouseY = coords.y;
 
         // Check if hovering over a mirror
         let foundMirror = null;
@@ -644,11 +764,9 @@ export class Game {
     onMouseDown(e) {
         if (this.isPlaying || this.dailyCompleted) return;
 
-        const rect = this.canvas.getBoundingClientRect();
-        const scaleX = this.canvas.width / rect.width;
-        const scaleY = this.canvas.height / rect.height;
-        const mouseX = (e.clientX - rect.left) * scaleX;
-        const mouseY = (e.clientY - rect.top) * scaleY;
+        const coords = this.getCanvasCoordinates(e);
+        const mouseX = coords.x;
+        const mouseY = coords.y;
 
         // Check if clicking on a mirror
         for (let mirror of this.mirrors) {
@@ -665,11 +783,9 @@ export class Game {
     onMouseMove(e) {
         if (!this.draggedMirror || this.isPlaying) return;
 
-        const rect = this.canvas.getBoundingClientRect();
-        const scaleX = this.canvas.width / rect.width;
-        const scaleY = this.canvas.height / rect.height;
-        const mouseX = (e.clientX - rect.left) * scaleX;
-        const mouseY = (e.clientY - rect.top) * scaleY;
+        const coords = this.getCanvasCoordinates(e);
+        const mouseX = coords.x;
+        const mouseY = coords.y;
         
         // Check if mouse has moved significantly from start position
         const moveThreshold = 5; // pixels

@@ -18,26 +18,35 @@ export class GameRenderer {
      * Main render method - orchestrates all drawing operations
      */
     render() {
+        const ctx = this.ctx;
+        const W = CONFIG.CANVAS_WIDTH;
+        const H = CONFIG.CANVAS_HEIGHT;
+
         // Clear canvas and fill with void background
-        this.ctx.clearRect(0, 0, CONFIG.CANVAS_WIDTH, CONFIG.CANVAS_HEIGHT);
-        this.ctx.fillStyle = '#0A0A12';
-        this.ctx.fillRect(0, 0, CONFIG.CANVAS_WIDTH, CONFIG.CANVAS_HEIGHT);
+        ctx.clearRect(0, 0, W, H);
+        ctx.fillStyle = '#0A0A12';
+        ctx.fillRect(0, 0, W, H);
 
         // Subtle green tint for daily challenge
         if (this.game.isDailyChallenge) {
-            this.ctx.fillStyle = 'rgba(20, 60, 40, 0.15)';
-            this.ctx.fillRect(0, 0, CONFIG.CANVAS_WIDTH, CONFIG.CANVAS_HEIGHT);
+            ctx.fillStyle = 'rgba(20, 60, 40, 0.15)';
+            ctx.fillRect(0, 0, W, H);
         }
 
+        // --- Begin zoom/pan transformed game-world rendering ---
+        ctx.save();
+        ctx.translate(this.game.panX, this.game.panY);
+        ctx.scale(this.game.zoom, this.game.zoom);
+
         // Draw grid
-        GridRenderer.drawGrid(this.ctx);
+        GridRenderer.drawGrid(ctx);
 
         // Draw center target with breach animation progress
         const breachProgress = this.game.breachProgress || 0;
-        TargetRenderer.drawTarget(this.ctx, this.game.gameOver, breachProgress);
+        TargetRenderer.drawTarget(ctx, this.game.gameOver, breachProgress);
 
         // Draw game objects
-        this.game.spawners.forEach(spawner => spawner.draw(this.ctx, !this.game.isPlaying));
+        this.game.spawners.forEach(spawner => spawner.draw(ctx, !this.game.isPlaying));
 
         // Draw mirrors
         this.game.mirrors.forEach(mirror => {
@@ -46,7 +55,7 @@ export class GameRenderer {
             }
 
             const isPlacementPhase = !this.game.isPlaying && !this.game.dailyCompleted;
-            mirror.draw(this.ctx, isPlacementPhase);
+            mirror.draw(ctx, isPlacementPhase);
         });
 
         // Draw selection glow ON TOP of the selected mirror so it's always visible
@@ -55,12 +64,12 @@ export class GameRenderer {
         }
 
         // Draw lasers
-        this.game.lasers.forEach(laser => laser.draw(this.ctx));
+        this.game.lasers.forEach(laser => laser.draw(ctx));
 
         // Draw zones and validation when not playing (but not on completed daily view)
         if (!this.game.isPlaying && !this.game.dailyCompleted) {
-            ZoneRenderer.drawForbiddenZones(this.ctx);
-            ValidationRenderer.drawValidationViolations(this.ctx, this.game.mirrors, this.game.isPlaying);
+            ZoneRenderer.drawForbiddenZones(ctx);
+            ValidationRenderer.drawValidationViolations(ctx, this.game.mirrors, this.game.isPlaying);
 
             // Draw spawner angle tooltip on top of everything
             const activeSpawner = this.game.hoveredSpawner || this.game.selectedSpawner;
@@ -68,7 +77,7 @@ export class GameRenderer {
                 const pathLength = 30;
                 const tipX = activeSpawner.x + Math.cos(activeSpawner.angle) * pathLength;
                 const tipY = activeSpawner.y + Math.sin(activeSpawner.angle) * pathLength;
-                activeSpawner.drawAngleTooltip(this.ctx, tipX, tipY);
+                activeSpawner.drawAngleTooltip(ctx, tipX, tipY);
             }
         }
 
@@ -77,6 +86,10 @@ export class GameRenderer {
             this.drawBreachOverlay(breachProgress);
         }
 
+        ctx.restore();
+        // --- End zoom/pan transformed rendering ---
+
+        // HUD elements render in screen space (unaffected by zoom)
         // Draw timer HUD on canvas - only after launch
         if (this.game.isPlaying || this.game.gameOver) {
             this.drawTimerHUD();
