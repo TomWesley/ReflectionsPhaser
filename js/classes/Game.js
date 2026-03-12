@@ -122,6 +122,9 @@ export class Game {
 
         // Touch events for mobile support
         this.canvas.addEventListener('touchstart', (e) => this.onTouchStart(e), { passive: false });
+        this.canvas.addEventListener('touchmove', (e) => this.onCanvasTouchMove(e), { passive: false });
+        this.canvas.addEventListener('touchend', (e) => this.onCanvasTouchEnd(e), { passive: false });
+        this.canvas.addEventListener('touchcancel', (e) => this.onCanvasTouchEnd(e), { passive: false });
 
         // Wheel event for trackpad/mouse zoom
         this.canvas.addEventListener('wheel', (e) => this.onWheel(e), { passive: false });
@@ -226,34 +229,8 @@ export class Game {
     }
 
     onTouchMove(e) {
-        // Handle pinch zoom/pan
-        if (e.touches.length === 2 && this.isPinching) {
-            e.preventDefault();
-            const t0 = e.touches[0], t1 = e.touches[1];
-            const dist = Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY);
-            const center = {
-                x: (t0.clientX + t1.clientX) / 2,
-                y: (t0.clientY + t1.clientY) / 2
-            };
-
-            // Zoom
-            const zoomDelta = dist / this.lastPinchDist;
-            this.applyZoom(zoomDelta, center.x, center.y);
-
-            // Pan
-            const rect = this.canvas.getBoundingClientRect();
-            const dxScreen = center.x - this.lastPinchCenter.x;
-            const dyScreen = center.y - this.lastPinchCenter.y;
-            const canvasScaleX = this.canvas.width / rect.width;
-            const canvasScaleY = this.canvas.height / rect.height;
-            this.panX += dxScreen * canvasScaleX;
-            this.panY += dyScreen * canvasScaleY;
-            this.clampPan();
-
-            this.lastPinchDist = dist;
-            this.lastPinchCenter = center;
-            return;
-        }
+        // Pinch zoom is handled by onCanvasTouchMove (canvas-level listener)
+        if (this.isPinching) return;
 
         if (!this.draggedMirror || this.isPlaying) return;
 
@@ -288,6 +265,48 @@ export class Game {
             return;
         }
         this.handleDragEnd(e);
+    }
+
+    /**
+     * Canvas-level touchmove — handles pinch zoom/pan.
+     * Separate from the document-level onTouchMove (used for mirror dragging).
+     */
+    onCanvasTouchMove(e) {
+        if (e.touches.length === 2 && this.isPinching) {
+            e.preventDefault();
+            const t0 = e.touches[0], t1 = e.touches[1];
+            const dist = Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY);
+            const center = {
+                x: (t0.clientX + t1.clientX) / 2,
+                y: (t0.clientY + t1.clientY) / 2
+            };
+
+            // Zoom
+            const zoomDelta = dist / this.lastPinchDist;
+            this.applyZoom(zoomDelta, center.x, center.y);
+
+            // Pan
+            const rect = this.canvas.getBoundingClientRect();
+            const dxScreen = center.x - this.lastPinchCenter.x;
+            const dyScreen = center.y - this.lastPinchCenter.y;
+            const canvasScaleX = this.canvas.width / rect.width;
+            const canvasScaleY = this.canvas.height / rect.height;
+            this.panX += dxScreen * canvasScaleX;
+            this.panY += dyScreen * canvasScaleY;
+            this.clampPan();
+
+            this.lastPinchDist = dist;
+            this.lastPinchCenter = center;
+        }
+    }
+
+    /**
+     * Canvas-level touchend — ends pinch when fingers lift.
+     */
+    onCanvasTouchEnd(e) {
+        if (this.isPinching && (!e.touches || e.touches.length < 2)) {
+            this.isPinching = false;
+        }
     }
 
     startDragging(mirror, mouseX, mouseY) {
