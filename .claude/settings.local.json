@@ -43,7 +43,11 @@
       "Bash(\\\\\nmagick favicon-transparent.png -resize 32x32 favicon-32.png && \\\\\nmagick favicon-transparent.png -resize 16x16 favicon-16.png && \\\\\nmagick favicon-transparent.png -resize 180x180 apple-touch-icon.png && \\\\\nmagick favicon-transparent.png -resize 192x192 favicon-192.png && \\\\\nmagick favicon-transparent.png -resize 512x512 favicon-512.png && \\\\\nmagick favicon-16.png favicon-32.png favicon.ico && \\\\\necho \"Generated all favicon sizes\" && ls -la favicon* apple-touch-icon.png)",
       "WebFetch(domain:iconoir.com)",
       "Bash(curl -s \"https://cdn.jsdelivr.net/gh/iconoir-icons/iconoir@main/css/iconoir.css\")",
-      "Read(//private/tmp/**)"
+      "Read(//private/tmp/**)",
+      "Bash(cd /Users/tomwesley/LocalGithubFiles/WesleyArcadeSite && gh run list --limit 5 2>&1)",
+      "Bash(cd /Users/tomwesley/LocalGithubFiles/WesleyArcadeSite && npm run build 2>&1 | tail -5)",
+      "Bash(mkdir -p /Users/tomwesley/LocalGithubFiles/WesleyArcadeSite/dist/reflections && cp -r /Users/tomwesley/LocalGithubFiles/ReflectionsPhaser/* /Users/tomwesley/LocalGithubFiles/WesleyArcadeSite/dist/reflections/ && rm -rf /Users/tomwesley/LocalGithubFiles/WesleyArcadeSite/dist/reflections/.git /Users/tomwesley/LocalGithubFiles/WesleyArcadeSite/dist/reflections/.github /Users/tomwesley/LocalGithubFiles/WesleyArcadeSite/dist/reflections/.claude /Users/tomwesley/LocalGithubFiles/WesleyArcadeSite/dist/reflections/node_modules /Users/tomwesley/LocalGithubFiles/WesleyArcadeSite/dist/reflections/tests && echo \"Done\" && ls /Users/tomwesley/LocalGithubFiles/WesleyArcadeSite/dist/reflections/ | head -10)",
+      "Bash(cd /Users/tomwesley/LocalGithubFiles/WesleyArcadeSite && npx firebase deploy --only hosting 2>&1)"
     ],
     "deny": [],
     "ask": []
