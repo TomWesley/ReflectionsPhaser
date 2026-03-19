@@ -69,6 +69,10 @@ export class Game {
         this.isPinching = false;
         this.lastPinchDist = 0;
         this.lastPinchCenter = { x: 0, y: 0 };
+        this.isPanning = false;
+        this.panStartScreen = { x: 0, y: 0 };
+        this.isMousePanning = false;
+        this.mousePanStart = { x: 0, y: 0 };
 
         // Initialize collision systems
         this.collisionSystem = new CollisionSystem();
@@ -223,7 +227,15 @@ export class Game {
             }
         }
 
-        // Tapped empty space — clear all selections
+        // Tapped empty space — if zoomed in, start panning
+        if (this.zoom > 1.01) {
+            e.preventDefault();
+            this.isPanning = true;
+            this.panStartScreen = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            return;
+        }
+
+        // Not zoomed — clear all selections
         this.selectedSpawner = null;
         this.selectMirror(null);
     }
@@ -268,10 +280,11 @@ export class Game {
     }
 
     /**
-     * Canvas-level touchmove — handles pinch zoom/pan.
+     * Canvas-level touchmove — handles pinch zoom/pan and single-finger pan.
      * Separate from the document-level onTouchMove (used for mirror dragging).
      */
     onCanvasTouchMove(e) {
+        // Two-finger pinch zoom/pan
         if (e.touches.length === 2 && this.isPinching) {
             e.preventDefault();
             const t0 = e.touches[0], t1 = e.touches[1];
@@ -297,15 +310,33 @@ export class Game {
 
             this.lastPinchDist = dist;
             this.lastPinchCenter = center;
+            return;
+        }
+
+        // Single-finger pan when zoomed (on empty space)
+        if (e.touches.length === 1 && this.isPanning) {
+            e.preventDefault();
+            const rect = this.canvas.getBoundingClientRect();
+            const canvasScaleX = this.canvas.width / rect.width;
+            const canvasScaleY = this.canvas.height / rect.height;
+            const dx = (e.touches[0].clientX - this.panStartScreen.x) * canvasScaleX;
+            const dy = (e.touches[0].clientY - this.panStartScreen.y) * canvasScaleY;
+            this.panX += dx;
+            this.panY += dy;
+            this.clampPan();
+            this.panStartScreen = { x: e.touches[0].clientX, y: e.touches[0].clientY };
         }
     }
 
     /**
-     * Canvas-level touchend — ends pinch when fingers lift.
+     * Canvas-level touchend — ends pinch/pan when fingers lift.
      */
     onCanvasTouchEnd(e) {
         if (this.isPinching && (!e.touches || e.touches.length < 2)) {
             this.isPinching = false;
+        }
+        if (this.isPanning && (!e.touches || e.touches.length < 1)) {
+            this.isPanning = false;
         }
     }
 
@@ -396,10 +427,25 @@ export class Game {
         if (this.isPlaying || this.dailyCompleted) return;
         e.preventDefault();
 
-        // Trackpad pinch sends ctrlKey + wheel; mouse scroll also uses wheel
-        const zoomSensitivity = 0.002;
-        const zoomDelta = 1 - e.deltaY * zoomSensitivity;
-        this.applyZoom(zoomDelta, e.clientX, e.clientY);
+        if (e.ctrlKey || e.metaKey) {
+            // Ctrl/Cmd + wheel = zoom (trackpad pinch sends this)
+            const zoomSensitivity = 0.01;
+            const zoomDelta = 1 - e.deltaY * zoomSensitivity;
+            this.applyZoom(zoomDelta, e.clientX, e.clientY);
+        } else if (this.zoom > 1.01) {
+            // Regular scroll/swipe while zoomed = pan
+            const rect = this.canvas.getBoundingClientRect();
+            const canvasScaleX = this.canvas.width / rect.width;
+            const canvasScaleY = this.canvas.height / rect.height;
+            this.panX -= e.deltaX * canvasScaleX;
+            this.panY -= e.deltaY * canvasScaleY;
+            this.clampPan();
+        } else {
+            // Not zoomed, no modifier — zoom
+            const zoomSensitivity = 0.002;
+            const zoomDelta = 1 - e.deltaY * zoomSensitivity;
+            this.applyZoom(zoomDelta, e.clientX, e.clientY);
+        }
     }
 
     applyZoom(zoomDelta, clientX, clientY) {
@@ -771,7 +817,8 @@ export class Game {
         this.hoveredSpawner = foundSpawner;
 
         // Change cursor based on hover
-        this.canvas.style.cursor = foundMirror ? 'grab' : (foundSpawner ? 'pointer' : 'crosshair');
+        const defaultCursor = this.zoom > 1.01 ? 'grab' : 'crosshair';
+        this.canvas.style.cursor = foundMirror ? 'grab' : (foundSpawner ? 'pointer' : defaultCursor);
     }
 
     isMouseOverMirror(mouseX, mouseY, mirror) {
@@ -795,11 +842,42 @@ export class Game {
             }
         }
 
-        // Clicked empty space — deselect mirror
+        // Clicked empty space — if zoomed, start mouse pan
+        if (this.zoom > 1.01) {
+            this.isMousePanning = true;
+            this.mousePanStart = { x: e.clientX, y: e.clientY };
+            this.canvas.style.cursor = 'grabbing';
+            // Add document-level listeners for pan dragging
+            this.boundPanMove = (ev) => this.onMouseMove(ev);
+            this.boundPanEnd = () => this.endMousePan();
+            document.addEventListener('mousemove', this.boundPanMove);
+            document.addEventListener('mouseup', this.boundPanEnd);
+        }
         this.selectMirror(null);
     }
-    
+
+    endMousePan() {
+        this.isMousePanning = false;
+        this.canvas.style.cursor = 'crosshair';
+        document.removeEventListener('mousemove', this.boundPanMove);
+        document.removeEventListener('mouseup', this.boundPanEnd);
+    }
+
     onMouseMove(e) {
+        // Handle mouse panning
+        if (this.isMousePanning) {
+            const rect = this.canvas.getBoundingClientRect();
+            const canvasScaleX = this.canvas.width / rect.width;
+            const canvasScaleY = this.canvas.height / rect.height;
+            const dx = (e.clientX - this.mousePanStart.x) * canvasScaleX;
+            const dy = (e.clientY - this.mousePanStart.y) * canvasScaleY;
+            this.panX += dx;
+            this.panY += dy;
+            this.mousePanStart = { x: e.clientX, y: e.clientY };
+            this.clampPan();
+            return;
+        }
+
         if (!this.draggedMirror || this.isPlaying) return;
 
         const coords = this.getCanvasCoordinates(e);
