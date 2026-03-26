@@ -111,20 +111,30 @@ export class DailyChallenge {
         const today = DailyChallenge.getTodayString();
         const rng = new SeededRandom(today);
 
-        // Pick a theme deterministically
+        // Pick theme using day-of-year for even distribution, then shuffle order with seed
         const themes = DailyChallenge.getThemes();
-        const theme = themes[rng.nextInt(0, themes.length - 1)];
+        const parts = today.split('-');
+        const dayOfYear = Math.floor((new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2])) - new Date(parseInt(parts[0]), 0, 0)) / 86400000);
+        const themeIndex = dayOfYear % themes.length;
+        // Shuffle themes with a yearly seed so the rotation order varies year to year
+        const yearRng = new SeededRandom(parts[0]);
+        const shuffledThemes = yearRng.shuffle([...themes]);
+        const theme = shuffledThemes[themeIndex];
 
         // Generate mirror configs using the theme
         const mirrorConfigs = theme.generate(rng);
 
         // Generate spawner configs
-        const spawnerConfigs = DailyChallenge.generateDailySpawners(rng);
+        const spawnerConfigs = DailyChallenge.generateDailySpawners(rng, theme.name);
+
+        // Calculate difficulty rating
+        const difficulty = DailyChallenge.calculateDifficulty(mirrorConfigs, spawnerConfigs.length);
 
         return {
             mirrors: mirrorConfigs,
             spawners: spawnerConfigs,
-            theme: theme.name
+            theme: theme.name,
+            difficulty
         };
     }
 
@@ -132,15 +142,22 @@ export class DailyChallenge {
     // Each returns an array of mirror config objects
 
     /**
-     * Tiny Army: 8-14 small squares
+     * Tiny Army: 10-16 small squares and rectangles
      */
     static generateTinyArmy(rng) {
-        const count = rng.nextInt(8, 14);
+        const count = rng.nextInt(10, 16);
         const configs = [];
+        const tinyShapes = [
+            { shape: 'square', width: 20, height: 20 },
+            { shape: 'square', width: 30, height: 30 },
+            { shape: 'rectangle', width: 40, height: 20 },
+            { shape: 'rectangle', width: 20, height: 40 },
+        ];
         for (let i = 0; i < count; i++) {
+            const cfg = rng.choice(tinyShapes);
             configs.push({
-                shape: 'square',
-                size: 20, width: 20, height: 20,
+                ...cfg,
+                size: Math.max(cfg.width, cfg.height),
                 rotation: rng.choice([0, 45, 90, 135])
             });
         }
@@ -220,10 +237,10 @@ export class DailyChallenge {
     }
 
     /**
-     * Corridor: Long rectangles / parallelograms to create lanes
+     * Corridor: Long rectangles / parallelograms / trapezoids to create lanes
      */
     static generateCorridor(rng) {
-        const count = rng.nextInt(4, 6);
+        const count = rng.nextInt(4, 7);
         const configs = [];
         const longShapes = [
             { shape: 'rectangle', width: 120, height: 20 },
@@ -231,54 +248,66 @@ export class DailyChallenge {
             { shape: 'rectangle', width: 120, height: 40 },
             { shape: 'parallelogram', width: 100, height: 40, skew: 20 },
             { shape: 'parallelogram', width: 80, height: 40, skew: 20 },
+            { shape: 'trapezoid', width: 100, height: 30, topWidth: 60 },
         ];
         for (let i = 0; i < count; i++) {
             const cfg = rng.choice(longShapes);
             configs.push({
                 ...cfg,
                 size: Math.max(cfg.width, cfg.height),
-                rotation: rng.nextInt(0, 7) * 45
+                rotation: rng.nextInt(0, 11) * 30
             });
         }
         return configs;
     }
 
     /**
-     * Big Three: 3 very large mirrors
+     * Big Three: 3 very large mirrors, guaranteed different shapes
      */
     static generateBigThree(rng) {
         const configs = [];
         const bigShapes = [
             { shape: 'square', size: 100, width: 100, height: 100 },
             { shape: 'rectangle', width: 120, height: 80, size: 120 },
-            { shape: 'rectangle', width: 100, height: 80, size: 100 },
             { shape: 'hexagon', size: 120, width: 120, height: 120 },
-            { shape: 'trapezoid', width: 100, height: 80, topWidth: 60, size: 100 },
-            { shape: 'isoscelesTriangle', width: 100, height: 80, size: 100 },
+            { shape: 'trapezoid', width: 120, height: 80, topWidth: 60, size: 120 },
+            { shape: 'isoscelesTriangle', width: 120, height: 100, size: 120 },
+            { shape: 'rightTriangle', width: 100, height: 100, size: 100 },
+            { shape: 'parallelogram', width: 120, height: 80, skew: 30, size: 120 },
         ];
         const shuffled = rng.shuffle(bigShapes);
-        for (let i = 0; i < 3; i++) {
-            configs.push({
-                ...shuffled[i],
-                rotation: rng.nextInt(0, 3) * 90
-            });
+        // Pick 3, but ensure all different shapes
+        const picked = [];
+        const usedShapes = new Set();
+        for (const s of shuffled) {
+            if (!usedShapes.has(s.shape)) {
+                usedShapes.add(s.shape);
+                picked.push({ ...s, rotation: rng.nextInt(0, 7) * 45 });
+                if (picked.length === 3) break;
+            }
         }
-        return configs;
+        return picked;
     }
 
     /**
-     * Diamond Ring: All squares rotated 45 degrees around center
+     * Diamond Ring: Squares and hexagons at 45/30 degree angles
      */
     static generateDiamondRing(rng) {
         const count = rng.nextInt(6, 10);
         const configs = [];
-        const squareSizes = [20, 40, 60];
+        const diamondShapes = [
+            { shape: 'square', size: 20, rotation: 45 },
+            { shape: 'square', size: 40, rotation: 45 },
+            { shape: 'square', size: 60, rotation: 45 },
+            { shape: 'hexagon', size: 40, rotation: 30 },
+            { shape: 'hexagon', size: 60, rotation: 30 },
+        ];
         for (let i = 0; i < count; i++) {
-            const size = rng.choice(squareSizes);
+            const cfg = rng.choice(diamondShapes);
             configs.push({
-                shape: 'square',
-                size, width: size, height: size,
-                rotation: 45
+                shape: cfg.shape,
+                size: cfg.size, width: cfg.size, height: cfg.size,
+                rotation: cfg.rotation
             });
         }
         return configs;
@@ -303,6 +332,62 @@ export class DailyChallenge {
         return configs;
     }
 
+    // --- DIFFICULTY RATING ---
+
+    /**
+     * Calculate a difficulty rating (1.0 - 10.0) for a daily challenge config.
+     * Lower = easier. Based on total mirror surface area vs spawner count.
+     * More surface area makes it easier, more spawners make it harder.
+     */
+    static calculateDifficulty(mirrorConfigs, spawnerCount) {
+        // Estimate total reflective area in pixels squared
+        let totalArea = 0;
+        for (const cfg of mirrorConfigs) {
+            const w = cfg.width || cfg.size || 40;
+            const h = cfg.height || cfg.size || 40;
+            switch (cfg.shape) {
+                case 'square':
+                    totalArea += w * h;
+                    break;
+                case 'rectangle':
+                    totalArea += w * h;
+                    break;
+                case 'rightTriangle':
+                case 'isoscelesTriangle':
+                    totalArea += 0.5 * w * h;
+                    break;
+                case 'hexagon':
+                    // Regular hexagon area ≈ 2.598 * (size/2)^2
+                    totalArea += 2.598 * (w / 2) * (w / 2);
+                    break;
+                case 'trapezoid': {
+                    const topW = cfg.topWidth || w * 0.6;
+                    totalArea += 0.5 * (w + topW) * h;
+                    break;
+                }
+                case 'parallelogram':
+                    totalArea += w * h;
+                    break;
+                default:
+                    totalArea += w * h;
+            }
+        }
+
+        // Normalize: a "baseline" easy puzzle might have ~20000px area, 5 spawners
+        // A hard puzzle might have ~3000px area, 10 spawners
+        // ratio = area / spawners — higher ratio = easier
+        const ratio = totalArea / Math.max(spawnerCount, 1);
+
+        // Map ratio to 1.0-10.0 scale (inverted: low ratio = hard = high number)
+        // Empirical range: ~300 (very hard) to ~5000 (very easy)
+        // Use log scale for better distribution
+        const logRatio = Math.log(Math.max(ratio, 100));
+        // log(300) ≈ 5.7, log(5000) ≈ 8.5
+        // Map [5.7, 8.5] → [9.0, 1.0]
+        const difficulty = 9.0 - (logRatio - 5.7) * (8.0 / 2.8);
+        return Math.round(Math.max(1.0, Math.min(10.0, difficulty)) * 10) / 10;
+    }
+
     // --- SPAWNER GENERATION ---
 
     /**
@@ -311,17 +396,12 @@ export class DailyChallenge {
      * "scatter-shot" gets more spawners (8-10).
      * Default is 6-8 spawners from all edges.
      */
-    static generateDailySpawners(rng) {
-        const today = DailyChallenge.getTodayString();
-        const themeRng = new SeededRandom(today);
-        const themes = DailyChallenge.getThemes();
-        const theme = themes[themeRng.nextInt(0, themes.length - 1)];
-
+    static generateDailySpawners(rng, themeName) {
         let count, forcedEdge;
-        if (theme.name === 'one-wall') {
+        if (themeName === 'one-wall') {
             count = rng.nextInt(6, 8);
             forcedEdge = rng.choice(['left', 'right', 'top', 'bottom']);
-        } else if (theme.name === 'scatter-shot') {
+        } else if (themeName === 'scatter-shot') {
             count = rng.nextInt(8, 10);
             forcedEdge = null;
         } else {

@@ -22,6 +22,7 @@ import { ReplayRecorder } from './ReplayRecorder.js';
 import { RotationControl } from './RotationControl.js';
 import { SimpleValidator } from '../validation/SimpleValidator.js';
 import { DailyChallenge } from '../validation/DailyChallenge.js';
+import { MirrorEdgeSnapping } from '../systems/MirrorEdgeSnapping.js';
 
 export class Game {
     constructor() {
@@ -73,6 +74,11 @@ export class Game {
         this.panStartScreen = { x: 0, y: 0 };
         this.isMousePanning = false;
         this.mousePanStart = { x: 0, y: 0 };
+
+        // Mirror edge snapping
+        this.mirrorSnapping = false;
+        this.snappedEdges = []; // Array of { segment: [{x,y}, {x,y}] } for rendering
+        this.preSnapRotation = null; // Original rotation before snap adjustment
 
         // Initialize collision systems
         this.collisionSystem = new CollisionSystem();
@@ -266,6 +272,9 @@ export class Game {
         this.draggedMirror.x = newX;
         this.draggedMirror.y = newY;
         this.safeUpdateVertices(this.draggedMirror);
+
+        // Apply edge snapping if enabled
+        this.applyEdgeSnapping(this.draggedMirror);
     }
 
     onTouchEnd(e) {
@@ -350,9 +359,10 @@ export class Game {
         this.canvas.style.cursor = 'grabbing';
         mirror.isDragging = true;
 
-        // Store original position for potential revert
+        // Store original position and rotation for potential revert
         mirror.originalX = mirror.x;
         mirror.originalY = mirror.y;
+        mirror.originalRotation = mirror.rotation || 0;
 
         // Add global event listeners for drag (mouse and touch)
         // These will work anywhere on the page
@@ -379,10 +389,11 @@ export class Game {
             this.draggedMirror = null;
         }
         this.mouseHasMoved = false;
+        this.preSnapRotation = null;
         this.canvas.style.cursor = 'crosshair';
     }
-    
-    
+
+
     /**
      * Select a mirror for rotation, or deselect if null
      */
@@ -481,6 +492,84 @@ export class Game {
         this.panY = 0;
     }
 
+    toggleMirrorSnapping() {
+        this.mirrorSnapping = !this.mirrorSnapping;
+        if (!this.mirrorSnapping) {
+            this.snappedEdges = [];
+        }
+    }
+
+    /**
+     * Apply edge snapping during drag if enabled.
+     * Phase 1: Rotate dragged mirror to align edges perfectly.
+     * Phase 2: Offset perpendicular to sit flush (outside, not overlapping).
+     * Sliding along the shared edge remains free.
+     */
+    applyEdgeSnapping(mirror) {
+        if (!this.mirrorSnapping) {
+            // Restore rotation if snapping was just turned off mid-drag
+            if (this.preSnapRotation !== null) {
+                mirror.rotation = this.preSnapRotation;
+                this.preSnapRotation = null;
+                this.safeUpdateVertices(mirror);
+            }
+            this.snappedEdges = [];
+            return;
+        }
+
+        const otherMirrors = this.mirrors.filter(m => m !== mirror);
+
+        // Phase 1: Find best edge match and rotation delta
+        const match = MirrorEdgeSnapping.findBestMatch(mirror, otherMirrors);
+
+        if (!match) {
+            // No snap — restore original rotation if previously adjusted
+            if (this.preSnapRotation !== null) {
+                mirror.rotation = this.preSnapRotation;
+                this.preSnapRotation = null;
+                this.safeUpdateVertices(mirror);
+            }
+            this.snappedEdges = [];
+            return;
+        }
+
+        // Save original rotation on first snap of this drag
+        if (this.preSnapRotation === null) {
+            this.preSnapRotation = mirror.rotation || 0;
+        }
+
+        // Apply rotation to make edges perfectly anti-parallel
+        mirror.rotation = this.preSnapRotation + match.rotationDelta;
+        this.safeUpdateVertices(mirror);
+
+        // Phase 2: Calculate perpendicular offset with rotated vertices
+        const snap = MirrorEdgeSnapping.calculatePerpendicularSnap(mirror, otherMirrors);
+
+        if (snap) {
+            // Save pre-snap position to revert if overlap detected
+            const preSnapX = mirror.x;
+            const preSnapY = mirror.y;
+
+            mirror.x += snap.offsetX;
+            mirror.y += snap.offsetY;
+            this.safeUpdateVertices(mirror);
+
+            // Check that the snapped position doesn't overlap any other mirror
+            const overlapCheck = SimpleValidator.checkMirrorOverlap(mirror, otherMirrors);
+            if (overlapCheck.valid) {
+                this.snappedEdges = snap.snappedEdges;
+            } else {
+                // Snap caused overlap — revert to pre-snap position
+                mirror.x = preSnapX;
+                mirror.y = preSnapY;
+                this.safeUpdateVertices(mirror);
+                this.snappedEdges = [];
+            }
+        } else {
+            this.snappedEdges = [];
+        }
+    }
+
     generateMirrors() {
         if (this.isDailyChallenge) {
             // Daily challenge generates mirrors and spawners together from seed
@@ -497,6 +586,7 @@ export class Game {
     generateDailyChallengeConfig() {
         const config = DailyChallenge.generateDailyConfig();
         this.dailyTheme = config.theme;
+        this.dailyDifficulty = config.difficulty;
         this.mirrors = DailyChallenge.placeMirrors(config.mirrors, this);
         this.mirrors.forEach(m => { m.isDailyChallenge = true; });
         this.spawners = config.spawners.map(s => {
@@ -571,8 +661,9 @@ export class Game {
             return;
         }
 
-        // Reset zoom to full view for gameplay
+        // Reset zoom and clear snap indicators for gameplay
         this.resetZoom();
+        this.snappedEdges = [];
 
         this.selectedSpawner = null;
         this.hoveredSpawner = null;
@@ -724,8 +815,9 @@ export class Game {
             this.lasers = [];
         }
 
-        // Restore spawners from daily config
+        // Restore spawners and difficulty from daily config
         const config = DailyChallenge.generateDailyConfig();
+        this.dailyDifficulty = config.difficulty;
         this.spawners = config.spawners.map(s => {
             const spawner = new Spawner(s.x, s.y, s.angle);
             spawner.isDailyChallenge = true;
@@ -912,16 +1004,24 @@ export class Game {
 
         // IMPORTANT: Update vertices so the mirror renders correctly at the new position
         this.safeUpdateVertices(this.draggedMirror);
+
+        // Apply edge snapping if enabled
+        this.applyEdgeSnapping(this.draggedMirror);
     }
-    
+
     handleDragEnd(e) {
         if (!this.draggedMirror) return;
 
         const mirror = this.draggedMirror;
+        const wasSnapped = this.mirrorSnapping && this.snappedEdges.length > 0;
+        const savedPreSnapRotation = this.preSnapRotation;
 
         // CRITICAL: Store mirror reference and clear draggedMirror IMMEDIATELY
         // This prevents any race conditions where a new drag could start
         this.draggedMirror = null;
+
+        // Clear snap rendering state immediately
+        this.snappedEdges = [];
 
         // CRITICAL: Use try/finally to ensure stopDragging is ALWAYS called
         try {
@@ -930,59 +1030,85 @@ export class Game {
 
             // If mouse didn't move, it was a click — select this mirror
             if (!this.mouseHasMoved) {
+                // Restore rotation if snap adjusted it during this non-drag click
+                if (savedPreSnapRotation !== null) {
+                    mirror.rotation = savedPreSnapRotation;
+                    this.safeUpdateVertices(mirror);
+                }
                 this.selectMirror(mirror);
                 return;
             }
 
-            // Get the final drop position with proper scaling (works for both mouse and touch)
-            const coords = this.getCanvasCoordinates(e);
-            const dropX = coords.x - this.dragOffset.x;
-            const dropY = coords.y - this.dragOffset.y;
+            // Get the final drop position
+            let dropX, dropY;
+            if (wasSnapped) {
+                // Use the mirror's current (snapped) position
+                dropX = mirror.x;
+                dropY = mirror.y;
+            } else {
+                const coords = this.getCanvasCoordinates(e);
+                dropX = coords.x - this.dragOffset.x;
+                dropY = coords.y - this.dragOffset.y;
+            }
 
-            // Quick bounds check - reject positions clearly outside the canvas
-            // The SimpleValidator will handle precise forbidden zone checking
-            const margin = 20; // Small buffer
+            // Quick bounds check
+            const margin = 20;
             const isWayOutOfBounds = dropX < margin ||
                                      dropX > CONFIG.CANVAS_WIDTH - margin ||
                                      dropY < margin ||
                                      dropY > CONFIG.CANVAS_HEIGHT - margin;
 
             if (isWayOutOfBounds) {
-                console.warn('Drop position is way out of bounds, reverting to original position');
-                mirror.x = mirror.originalX;
-                mirror.y = mirror.originalY;
-                this.safeUpdateVertices(mirror);
+                this.revertMirror(mirror, savedPreSnapRotation);
                 return;
             }
 
-            // Find nearest valid position using the dedicated handler
-            const nearestValid = this.dragAndSnapHandler.findNearestValidPosition(mirror, dropX, dropY);
-
-            if (nearestValid) {
-                // nearestValid already has the correctly aligned position
-                mirror.x = nearestValid.x;
-                mirror.y = nearestValid.y;
-                this.safeUpdateVertices(mirror);
-                this.selectMirror(mirror);
-                console.log(`✅ Mirror placed at (${mirror.x}, ${mirror.y})`);
+            if (wasSnapped) {
+                // Snapped placement: the snap system already ensures no overlap
+                // (0.5px gap). Only check forbidden zones.
+                const forbiddenCheck = SimpleValidator.checkForbiddenZones(mirror);
+                if (forbiddenCheck.valid) {
+                    // Accept snapped position and rotation
+                    this.selectMirror(mirror);
+                } else {
+                    this.revertMirror(mirror, savedPreSnapRotation);
+                }
             } else {
-                // Revert to original position - mirror stays where it started
-                console.warn('No valid position found, reverting to original');
-                mirror.x = mirror.originalX;
-                mirror.y = mirror.originalY;
-                this.safeUpdateVertices(mirror);
+                // Normal (non-snapped) placement: full validation
+                const nearestValid = this.dragAndSnapHandler.findNearestValidPosition(mirror, dropX, dropY);
+
+                if (nearestValid) {
+                    mirror.x = nearestValid.x;
+                    mirror.y = nearestValid.y;
+                    this.safeUpdateVertices(mirror);
+                    this.selectMirror(mirror);
+                } else {
+                    this.revertMirror(mirror, savedPreSnapRotation);
+                }
             }
         } catch (error) {
-            console.error('❌ Error during drag end:', error);
-            // Revert to original position on any error
-            mirror.x = mirror.originalX;
-            mirror.y = mirror.originalY;
-            GridAlignmentEnforcer.enforceGridAlignment(mirror);
-            this.safeUpdateVertices(mirror);
+            console.error('Error during drag end:', error);
+            this.revertMirror(mirror, savedPreSnapRotation);
         } finally {
             // CRITICAL: Clean up and remove event listeners NO MATTER WHAT
             this.stopDragging();
         }
+    }
+
+    /**
+     * Revert a mirror to its original position and rotation.
+     */
+    revertMirror(mirror, savedPreSnapRotation) {
+        mirror.x = mirror.originalX;
+        mirror.y = mirror.originalY;
+        // Restore rotation: prefer preSnapRotation, fall back to originalRotation
+        const restoreRotation = savedPreSnapRotation !== null
+            ? savedPreSnapRotation
+            : mirror.originalRotation;
+        if (restoreRotation !== undefined) {
+            mirror.rotation = restoreRotation;
+        }
+        this.safeUpdateVertices(mirror);
     }
     
     onGlobalMouseMove(e) {

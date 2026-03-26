@@ -55,6 +55,10 @@
                 <i class="iconoir-calendar"></i>
                 <span>Daily</span>
             </button>
+            <button id="snapToggle" class="navbar-btn-snap" title="Toggle Mirror Snapping">
+                <i class="iconoir-align-horizontal-centers"></i>
+                <span>Snap</span>
+            </button>
             <button id="launchBtn" class="navbar-btn-primary">
                 <i class="iconoir-rocket"></i>
                 <span>Launch</span>
@@ -205,6 +209,9 @@
         <button id="mobileResetBtn" class="mobile-reset-btn" title="New Config">
             <i class="iconoir-refresh"></i>
         </button>
+        <button id="mobileSnapBtn" class="mobile-snap-btn" title="Mirror Snapping">
+            <i class="iconoir-align-horizontal-centers"></i>
+        </button>
         <button class="hamburger-btn" onclick="toggleMobileMenu()" aria-label="Menu">
             <i class="iconoir-menu"></i>
         </button>
@@ -225,6 +232,10 @@
                 <button id="mobileDailyChallengeToggle" class="mobile-menu-item">
                     <i class="iconoir-calendar"></i>
                     <span>Daily Challenge</span>
+                </button>
+                <button id="mobileSnapToggle" class="mobile-menu-item">
+                    <i class="iconoir-align-horizontal-centers"></i>
+                    <span>Mirror Snapping</span>
                 </button>
                 <button class="mobile-menu-item" onclick="openMobileRules()">
                     <i class="iconoir-info-circle"></i>
@@ -562,6 +573,45 @@
             if (mobileResetBtn && desktopResetBtn) {
                 mobileResetBtn.addEventListener('click', function() {
                     desktopResetBtn.click();
+                });
+            }
+
+            // Mirror Snapping toggle (desktop + mobile)
+            const snapToggle = document.getElementById('snapToggle');
+            const mobileSnapToggle = document.getElementById('mobileSnapToggle');
+            const mobileSnapBtn = document.getElementById('mobileSnapBtn');
+
+            function updateSnapUI(active) {
+                if (snapToggle) snapToggle.classList.toggle('snap-active', active);
+                if (mobileSnapToggle) mobileSnapToggle.classList.toggle('snap-active', active);
+                if (mobileSnapBtn) mobileSnapBtn.classList.toggle('snap-active', active);
+            }
+
+            if (snapToggle) {
+                snapToggle.addEventListener('click', function() {
+                    if (window.game) {
+                        window.game.toggleMirrorSnapping();
+                        updateSnapUI(window.game.mirrorSnapping);
+                    }
+                });
+            }
+
+            if (mobileSnapToggle) {
+                mobileSnapToggle.addEventListener('click', function() {
+                    if (window.game) {
+                        window.game.toggleMirrorSnapping();
+                        updateSnapUI(window.game.mirrorSnapping);
+                    }
+                    closeMobileMenu();
+                });
+            }
+
+            if (mobileSnapBtn) {
+                mobileSnapBtn.addEventListener('click', function() {
+                    if (window.game) {
+                        window.game.toggleMirrorSnapping();
+                        updateSnapUI(window.game.mirrorSnapping);
+                    }
                 });
             }
 

@@ -183,6 +183,43 @@ body {
     font-size: 16px;
 }
 
+/* Mirror Snapping Toggle Button */
+.navbar-btn-snap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 8px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    background: rgba(78, 120, 232, 0.15);
+    color: var(--text-secondary);
+    border: 1px solid rgba(78, 120, 232, 0.25);
+}
+
+.navbar-btn-snap:hover {
+    background: rgba(78, 120, 232, 0.3);
+    transform: translateY(-2px);
+}
+
+.navbar-btn-snap.snap-active {
+    background: rgba(232, 78, 106, 0.25);
+    color: #FF8FA3;
+    border-color: rgba(232, 78, 106, 0.5);
+    box-shadow: 0 0 12px rgba(232, 78, 106, 0.3);
+}
+
+.navbar-btn-snap i {
+    font-size: 16px;
+}
+
 .navbar-btn-primary i,
 .navbar-btn-secondary i {
     font-size: 16px;
@@ -358,7 +395,7 @@ h1 {
     width: 100%;
     max-width: 900px;
     margin: 0 auto;
-    padding: 10px 20px;
+    padding: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -1194,7 +1231,7 @@ h1 {
     }
     
     body {
-        padding: 20px;
+        padding: 0;
         min-height: 100vh;
         display: flex;
         flex-direction: column;
@@ -1404,6 +1441,26 @@ h1 {
         color: var(--arc);
     }
 
+    .mobile-snap-btn {
+        width: 34px;
+        height: 34px;
+        border-radius: 8px;
+        border: 1px solid rgba(78, 120, 232, 0.5);
+        background: rgba(78, 120, 232, 0.3);
+        color: var(--arc);
+        font-size: 16px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .mobile-snap-btn.snap-active {
+        background: rgba(232, 78, 106, 0.3);
+        border-color: rgba(232, 78, 106, 0.6);
+        color: var(--flare);
+    }
+
     /* Game Container - fills remaining space */
     #gameContainer {
         position: relative !important;
@@ -1587,6 +1644,15 @@ h1 {
 
     .mobile-menu-item.daily-active i {
         color: #32FFB4;
+    }
+
+    .mobile-menu-item.snap-active {
+        background: rgba(232, 78, 106, 0.15);
+        border-color: rgba(232, 78, 106, 0.4);
+    }
+
+    .mobile-menu-item.snap-active i {
+        color: #E84E6A;
     }
 
     /* Rules modal adjustments for mobile landscape */

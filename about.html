@@ -31,17 +31,30 @@
     <style>
         /* Override body/html for scrollable content page */
         html, body {
-            overflow: auto;
-            height: auto;
+            overflow: auto !important;
+            height: auto !important;
+            overscroll-behavior: auto !important;
         }
         body {
             padding: 0;
         }
 
+        /* Disable game-specific mobile restrictions on about page */
+        body.about-page::after {
+            display: none !important;
+            content: none !important;
+        }
+        body.about-page > * {
+            opacity: 1 !important;
+        }
+        body.about-page .navbar {
+            display: flex !important;
+        }
+
         .about-container {
             max-width: 900px;
             margin: 0 auto;
-            padding: 20px 20px 60px 20px;
+            padding: 0 20px 60px 20px;
         }
 
         .back-button {
@@ -52,8 +65,8 @@
             background: var(--card-bg);
             border: 1px solid var(--border-glow);
             border-radius: 15px;
-            padding: 35px;
-            margin-bottom: 30px;
+            padding: 25px;
+            margin-bottom: 20px;
             backdrop-filter: blur(10px);
             box-shadow: 0 8px 32px rgba(255, 107, 53, 0.2),
                         inset 0 1px 0 rgba(255, 255, 255, 0.05);
@@ -164,10 +177,10 @@
 
         .page-title {
             font-family: 'Space Grotesk', sans-serif;
-            font-size: 2.5rem;
+            font-size: 2rem;
             font-weight: 700;
             text-align: center;
-            margin: 30px 0 20px 0;
+            margin: 4px 0 4px 0;
             background: linear-gradient(135deg, var(--sunset-orange), var(--sunset-pink));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -177,7 +190,7 @@
         }
     </style>
 </head>
-<body>
+<body class="about-page">
     <!-- Professional Navigation Bar -->
     <nav class="navbar">
         <div class="navbar-left">

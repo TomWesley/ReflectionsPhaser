@@ -63,6 +63,11 @@ export class GameRenderer {
             this.drawSelectionGlow(this.game.selectedMirror);
         }
 
+        // Draw snapped edge indicators
+        if (this.game.snappedEdges && this.game.snappedEdges.length > 0 && !this.game.isPlaying) {
+            this.drawSnappedEdges(this.game.snappedEdges);
+        }
+
         // Draw lasers
         this.game.lasers.forEach(laser => laser.draw(ctx));
 
@@ -146,14 +151,16 @@ export class GameRenderer {
         const ctx = this.ctx;
         ctx.save();
 
-        const text = 'DAILY CHALLENGE';
         ctx.font = '600 10px "JetBrains Mono", monospace';
         ctx.textAlign = 'right';
         ctx.textBaseline = 'bottom';
         ctx.fillStyle = 'rgba(50, 255, 180, 0.4)';
         ctx.shadowColor = '#32FFB4';
         ctx.shadowBlur = 6;
-        ctx.fillText(text, CONFIG.CANVAS_WIDTH - 12, CONFIG.CANVAS_HEIGHT - 10);
+
+        const difficulty = this.game.dailyDifficulty;
+        const diffText = difficulty != null ? `  [${difficulty.toFixed(1)}/10]` : '';
+        ctx.fillText('DAILY CHALLENGE' + diffText, CONFIG.CANVAS_WIDTH - 12, CONFIG.CANVAS_HEIGHT - 10);
 
         ctx.restore();
     }
@@ -428,6 +435,42 @@ export class GameRenderer {
         }
 
         ctx.fillText(timeString, x, y);
+
+        ctx.restore();
+    }
+
+    /**
+     * Draw highlighted segments where mirror edges are flush/snapped together
+     */
+    drawSnappedEdges(snappedEdges) {
+        const ctx = this.ctx;
+        ctx.save();
+
+        const pulse = 0.7 + 0.3 * Math.sin(Date.now() / 300);
+
+        for (const { segment } of snappedEdges) {
+            if (!segment || segment.length < 2) continue;
+
+            // Outer glow pass
+            ctx.strokeStyle = `rgba(232, 78, 106, ${0.3 * pulse})`;
+            ctx.lineWidth = 6;
+            ctx.shadowColor = '#E84E6A';
+            ctx.shadowBlur = 12;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(segment[0].x, segment[0].y);
+            ctx.lineTo(segment[1].x, segment[1].y);
+            ctx.stroke();
+
+            // Inner bright line
+            ctx.strokeStyle = `rgba(232, 78, 106, ${0.6 + 0.4 * pulse})`;
+            ctx.lineWidth = 2.5;
+            ctx.shadowBlur = 6;
+            ctx.beginPath();
+            ctx.moveTo(segment[0].x, segment[0].y);
+            ctx.lineTo(segment[1].x, segment[1].y);
+            ctx.stroke();
+        }
 
         ctx.restore();
     }
