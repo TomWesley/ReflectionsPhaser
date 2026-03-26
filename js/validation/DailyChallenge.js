@@ -24,66 +24,76 @@ export class DailyChallenge {
      * Check if today's challenge has already been attempted
      */
     static hasAttemptedToday() {
-        const key = `daily_challenge_${DailyChallenge.getTodayString()}`;
-        return localStorage.getItem(key) !== null;
+        try {
+            const key = `daily_challenge_${DailyChallenge.getTodayString()}`;
+            return localStorage.getItem(key) !== null;
+        } catch { return false; }
     }
 
     /**
      * Mark today's challenge as completed
      */
     static markCompleted(gameTime, timeString, mirrors, lasers) {
-        const today = DailyChallenge.getTodayString();
-        localStorage.setItem(`daily_challenge_${today}`, JSON.stringify({
-            gameTime,
-            timeString,
-            completedAt: Date.now()
-        }));
+        try {
+            const today = DailyChallenge.getTodayString();
+            localStorage.setItem(`daily_challenge_${today}`, JSON.stringify({
+                gameTime,
+                timeString,
+                completedAt: Date.now()
+            }));
 
-        // Save freeze-frame state for revisiting
-        if (mirrors) {
-            localStorage.setItem(`daily_mirrors_${today}`, JSON.stringify(
-                mirrors.map(m => ({
-                    x: m.x, y: m.y, shape: m.shape,
-                    size: m.size, width: m.width, height: m.height,
-                    rotation: m.rotation, topWidth: m.topWidth, skew: m.skew
-                }))
-            ));
-        }
-        if (lasers) {
-            localStorage.setItem(`daily_lasers_${today}`, JSON.stringify(
-                lasers.map(l => ({
-                    x: l.x, y: l.y, vx: l.vx, vy: l.vy,
-                    trail: l.trail.slice(-20) // Keep last 20 trail points
-                }))
-            ));
-        }
+            // Save freeze-frame state for revisiting
+            if (mirrors) {
+                localStorage.setItem(`daily_mirrors_${today}`, JSON.stringify(
+                    mirrors.map(m => ({
+                        x: m.x, y: m.y, shape: m.shape,
+                        size: m.size, width: m.width, height: m.height,
+                        rotation: m.rotation, topWidth: m.topWidth, skew: m.skew
+                    }))
+                ));
+            }
+            if (lasers) {
+                localStorage.setItem(`daily_lasers_${today}`, JSON.stringify(
+                    lasers.map(l => ({
+                        x: l.x, y: l.y, vx: l.vx, vy: l.vy,
+                        trail: l.trail.slice(-20) // Keep last 20 trail points
+                    }))
+                ));
+            }
+        } catch { /* Private browsing or quota exceeded — silently fail */ }
     }
 
     /**
      * Get today's completed result (or null if not attempted)
      */
     static getTodayResult() {
-        const key = `daily_challenge_${DailyChallenge.getTodayString()}`;
-        const data = localStorage.getItem(key);
-        return data ? JSON.parse(data) : null;
+        try {
+            const key = `daily_challenge_${DailyChallenge.getTodayString()}`;
+            const data = localStorage.getItem(key);
+            return data ? JSON.parse(data) : null;
+        } catch { return null; }
     }
 
     /**
      * Get saved frozen mirror configs from today's completed challenge
      */
     static getSavedMirrors() {
-        const key = `daily_mirrors_${DailyChallenge.getTodayString()}`;
-        const data = localStorage.getItem(key);
-        return data ? JSON.parse(data) : null;
+        try {
+            const key = `daily_mirrors_${DailyChallenge.getTodayString()}`;
+            const data = localStorage.getItem(key);
+            return data ? JSON.parse(data) : null;
+        } catch { return null; }
     }
 
     /**
      * Get saved frozen laser states from today's completed challenge
      */
     static getSavedLasers() {
-        const key = `daily_lasers_${DailyChallenge.getTodayString()}`;
-        const data = localStorage.getItem(key);
-        return data ? JSON.parse(data) : null;
+        try {
+            const key = `daily_lasers_${DailyChallenge.getTodayString()}`;
+            const data = localStorage.getItem(key);
+            return data ? JSON.parse(data) : null;
+        } catch { return null; }
     }
 
     /**

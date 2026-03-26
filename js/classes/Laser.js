@@ -35,14 +35,14 @@ export class Laser {
         this.x += this.vx * deltaTime * 35;
         this.y += this.vy * deltaTime * 35;
         
-        // Bounce off walls
+        // Bounce off walls (clamp slightly inward to prevent re-trigger next frame)
         if (this.x <= 0 || this.x >= CONFIG.CANVAS_WIDTH) {
             this.vx = -this.vx;
-            this.x = Math.max(0, Math.min(CONFIG.CANVAS_WIDTH, this.x));
+            this.x = Math.max(1, Math.min(CONFIG.CANVAS_WIDTH - 1, this.x));
         }
         if (this.y <= 0 || this.y >= CONFIG.CANVAS_HEIGHT) {
             this.vy = -this.vy;
-            this.y = Math.max(0, Math.min(CONFIG.CANVAS_HEIGHT, this.y));
+            this.y = Math.max(1, Math.min(CONFIG.CANVAS_HEIGHT - 1, this.y));
         }
     }
     

@@ -14,7 +14,6 @@ export class LaserCollisionHandler {
      */
     initialize(mirrors) {
         this.mirrorIds = mirrors.map((_, index) => `mirror_${index}`);
-        console.log('Laser collision handler initialized with', this.mirrorIds.length, 'mirrors');
     }
 
     /**
@@ -115,20 +114,19 @@ export class LaserCollisionHandler {
             if (collisionEdge) {
                 this.collisionSystem.reflectLaserOffEdge(laser, collisionEdge);
             } else {
-                // Last resort: use mirror's built-in reflection
-                console.warn('No collision edge found, using fallback reflection');
-                mirror.reflect(laser);
+                // Last resort: use mirror's built-in reflect (handles its own bookkeeping)
+                laser.reflect(mirror);
+                return;
             }
         }
 
-        // Update laser state
+        // Update laser state (only for the direct reflectLaserOffEdge paths above)
         laser.reflectionCooldown = 5;
         laser.lastReflectedMirror = mirror;
         laser.totalReflections++;
 
         // Check for max reflections
         if (laser.totalReflections >= laser.maxReflections) {
-            console.log('Laser exceeded max reflections, removing');
             laser.x = -100;
             laser.y = -100;
         }
@@ -138,7 +136,7 @@ export class LaserCollisionHandler {
      * Emergency escape for stuck lasers
      */
     emergencyEscape(laser, mirrorId) {
-        console.warn('Emergency escape triggered for stuck laser');
+        // Emergency escape for stuck laser
 
         // Try to move laser out of mirror
         this.collisionSystem.moveLaserToEdge(laser, mirrorId);
@@ -147,6 +145,7 @@ export class LaserCollisionHandler {
         if (this.collisionSystem.checkLaserMirrorCollision(laser, mirrorId)) {
             const escapeDistance = 5;
             const speed = Math.sqrt(laser.vx * laser.vx + laser.vy * laser.vy);
+            if (speed < 0.001) return;
             const normalizedVx = laser.vx / speed;
             const normalizedVy = laser.vy / speed;
 

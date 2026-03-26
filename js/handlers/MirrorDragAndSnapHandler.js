@@ -19,9 +19,6 @@ export class MirrorDragAndSnapHandler {
      * Simply tests the exact drop position - no grid snapping!
      */
     findNearestValidPosition(mirror, dropX, dropY) {
-        console.log(`\n=== Testing drop position for ${mirror.shape} ===`);
-        console.log(`Drop position: (${Math.round(dropX)}, ${Math.round(dropY)})`);
-
         // Get all other mirrors (exclude the one being dragged)
         const otherMirrors = this.game.mirrors.filter(m => m !== mirror);
 
@@ -42,10 +39,8 @@ export class MirrorDragAndSnapHandler {
             const validation = SimpleValidator.validateMirror(mirror, otherMirrors);
 
             if (validation.valid) {
-                console.log(`✅ Position is VALID`);
                 return { x: mirror.x, y: mirror.y };
             } else {
-                console.log(`❌ Position is INVALID: ${validation.reason}`);
                 return null;
             }
 

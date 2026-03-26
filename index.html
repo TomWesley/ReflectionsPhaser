@@ -16,6 +16,7 @@
     <link rel="icon" type="image/png" sizes="32x32" href="public/favicon-32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="public/favicon-16.png">
     <link rel="apple-touch-icon" sizes="180x180" href="public/apple-touch-icon.png">
+    <link rel="manifest" href="manifest.json">
     <!-- Open Graph / Social Sharing -->
     <meta property="og:type" content="website">
     <meta property="og:title" content="Reflections">
@@ -278,6 +279,26 @@
 
     <!-- UI Functions -->
     <script>
+        // Toast notification system
+        function showToast(message, duration = 3000) {
+            let container = document.getElementById('toastContainer');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'toastContainer';
+                container.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:10000;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;';
+                document.body.appendChild(container);
+            }
+            const toast = document.createElement('div');
+            toast.textContent = message;
+            toast.style.cssText = 'background:rgba(27,27,47,0.95);color:#D4D4E8;padding:10px 20px;border-radius:8px;border:1px solid rgba(78,120,232,0.5);font-family:"Space Grotesk",sans-serif;font-size:13px;backdrop-filter:blur(8px);box-shadow:0 4px 16px rgba(0,0,0,0.4);opacity:0;transition:opacity 0.25s ease;pointer-events:auto;text-align:center;max-width:320px;';
+            container.appendChild(toast);
+            requestAnimationFrame(() => { toast.style.opacity = '1'; });
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, duration);
+        }
+
         // UI Functions
         function openRules() {
             document.getElementById('rulesModal').classList.remove('hidden');
@@ -285,16 +306,15 @@
 
         function closeRules() {
             document.getElementById('rulesModal').classList.add('hidden');
-            // Mark that user has seen the rules
-            localStorage.setItem('reflections_visited', 'true');
+            try { localStorage.setItem('reflections_visited', 'true'); } catch {}
         }
 
         // Show mission briefing for first-time visitors
         function checkFirstVisit() {
-            const hasVisited = localStorage.getItem('reflections_visited');
-            if (!hasVisited) {
-                openRules();
-            }
+            try {
+                const hasVisited = localStorage.getItem('reflections_visited');
+                if (!hasVisited) openRules();
+            } catch { openRules(); }
         }
 
         // Check on page load
@@ -325,7 +345,7 @@
         function watchReplay() {
             if (!window.game || !window.game.replayRecorder.hasReplay()) {
                 console.warn('No replay available');
-                alert('No replay available. Try playing a game first.');
+                showToast('No replay available. Try playing a game first.');
                 return;
             }
 
@@ -417,7 +437,7 @@
                         btn.innerHTML = originalContents[i];
                         btn.disabled = false;
                     });
-                    alert('Unable to generate video. Please try again.');
+                    showToast('Unable to generate video. Please try again.');
                     return;
                 } finally {
                     saveButtons.forEach((btn, i) => {
@@ -449,7 +469,7 @@
                 } catch (error) {
                     if (error.name !== 'AbortError') {
                         console.error('Save failed:', error);
-                        alert('Unable to save video. Please try again.');
+                        showToast('Unable to save video. Please try again.');
                     }
                 }
             } else {
@@ -464,7 +484,7 @@
 
             if (!snapshotImg || !snapshotImg.src) {
                 console.warn('No snapshot available');
-                alert('No screenshot available to share.');
+                showToast('No screenshot available to share.');
                 return;
             }
 
@@ -503,12 +523,12 @@
                         text: `Try to beat my score @ wesleyarcade.com/reflections`
                     });
                 } else {
-                    alert('Sharing is not supported on this device.');
+                    showToast('Sharing is not supported on this device.');
                 }
             } catch (error) {
                 if (error.name !== 'AbortError') {
                     console.error('Share failed:', error);
-                    alert('Unable to share. Please try again.');
+                    showToast('Unable to share. Please try again.');
                 }
             } finally {
                 // Restore button state
@@ -531,7 +551,7 @@
 
         function openLeaderboard() {
             // Placeholder - leaderboard coming soon
-            alert('Leaderboard coming soon!');
+            showToast('Leaderboard coming soon!');
         }
 
         // Mobile Menu Functions

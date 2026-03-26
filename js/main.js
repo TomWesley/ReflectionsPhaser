@@ -1,8 +1,8 @@
 // Initialize the game when the page loads with error handling
 document.addEventListener('DOMContentLoaded', async () => {
-    // Cache-busting version - increment to force reload of all modules
-    const CACHE_VERSION = 19;
-    const cacheBust = `?v=${CACHE_VERSION}`;
+    // Cache-busting: daily granularity (caches within a session, busts across deploys)
+    const today = new Date().toISOString().slice(0, 10);
+    const cacheBust = `?v=${today}`;
 
     // Show loading indicator
     const statusEl = document.getElementById('status');
@@ -26,14 +26,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (launchBtn) {
             launchBtn.addEventListener('click', () => {
-                console.log('Launch button clicked!');
                 game.launchLasers();
             });
         }
 
         if (resetBtn) {
             resetBtn.addEventListener('click', () => {
-                console.log('Reset button clicked!');
                 game.resetGame();
             });
         }

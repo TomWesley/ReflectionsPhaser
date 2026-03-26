@@ -1,0 +1,27 @@
+{
+    "name": "REFLECTIONS",
+    "short_name": "Reflections",
+    "description": "A Geometric Game To Reflect On",
+    "start_url": "/reflections/",
+    "display": "standalone",
+    "orientation": "landscape",
+    "background_color": "#0A0A12",
+    "theme_color": "#0A0A12",
+    "icons": [
+        {
+            "src": "public/favicon-192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "public/favicon-512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        },
+        {
+            "src": "public/apple-touch-icon.png",
+            "sizes": "180x180",
+            "type": "image/png"
+        }
+    ]
+}

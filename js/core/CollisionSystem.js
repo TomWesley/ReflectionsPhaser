@@ -15,8 +15,6 @@ export class CollisionSystem {
      * This ensures consistent collision detection throughout the game
      */
     initializeCollisionBoundaries(mirrors) {
-        console.log('Initializing collision boundaries for', mirrors.length, 'mirrors');
-
         this.collisionBoundaries.clear();
         this.laserCollisionBoundaries.clear();
 
@@ -33,7 +31,6 @@ export class CollisionSystem {
             this.laserCollisionBoundaries.set(mirrorId, laserBoundary);
         });
 
-        console.log('Collision boundaries initialized');
     }
 
     /**

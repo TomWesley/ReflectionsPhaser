@@ -80,9 +80,7 @@ export class TrapezoidMirror extends BaseMirror {
         }
 
         // Reflect across closest edge
-        if (closestEdge && minDistance < 5) {
-            this.reflectAcrossLine(laser, closestEdge.start.x, closestEdge.start.y, closestEdge.end.x, closestEdge.end.y);
-            this.snapLaserAngle(laser);
-        }
+        this.reflectAcrossLine(laser, closestEdge.start.x, closestEdge.start.y, closestEdge.end.x, closestEdge.end.y);
+        this.snapLaserAngle(laser);
     }
 }
