@@ -80,6 +80,9 @@ export class Game {
         this.snappedEdges = []; // Array of { segment: [{x,y}, {x,y}] } for rendering
         this.preSnapRotation = null; // Original rotation before snap adjustment
 
+        // Placement feedback (subtle toast when mirror reverts)
+        this.placementFeedback = []; // Array of { x, y, message, startTime, duration }
+
         // Initialize collision systems
         this.collisionSystem = new CollisionSystem();
         this.laserCollisionHandler = new LaserCollisionHandler(this.collisionSystem);
@@ -741,6 +744,7 @@ export class Game {
         this.gameTime = 0;
         this.lasers = [];
         this.dailyCompleted = false;
+        this.placementFeedback = [];
         this.resetZoom();
 
         // Generate new mirrors and spawners
@@ -1059,7 +1063,7 @@ export class Game {
                                      dropY > CONFIG.CANVAS_HEIGHT - margin;
 
             if (isWayOutOfBounds) {
-                this.revertMirror(mirror, savedPreSnapRotation);
+                this.revertMirror(mirror, savedPreSnapRotation, 'Out of bounds');
                 return;
             }
 
@@ -1071,10 +1075,21 @@ export class Game {
                     // Accept snapped position and rotation
                     this.selectMirror(mirror);
                 } else {
-                    this.revertMirror(mirror, savedPreSnapRotation);
+                    this.revertMirror(mirror, savedPreSnapRotation, 'Forbidden zone');
                 }
             } else {
                 // Normal (non-snapped) placement: full validation
+                // First check why it would fail (for feedback), then find valid position
+                const otherMirrors = this.mirrors.filter(m => m !== mirror);
+                mirror.x = dropX;
+                mirror.y = dropY;
+                this.safeUpdateVertices(mirror);
+                const preCheck = SimpleValidator.validateMirror(mirror, otherMirrors);
+                // Restore and let findNearestValidPosition handle it
+                mirror.x = mirror.originalX;
+                mirror.y = mirror.originalY;
+                this.safeUpdateVertices(mirror);
+
                 const nearestValid = this.dragAndSnapHandler.findNearestValidPosition(mirror, dropX, dropY);
 
                 if (nearestValid) {
@@ -1083,7 +1098,9 @@ export class Game {
                     this.safeUpdateVertices(mirror);
                     this.selectMirror(mirror);
                 } else {
-                    this.revertMirror(mirror, savedPreSnapRotation);
+                    // Map validator reason to friendly message
+                    const reason = this.getFriendlyReason(preCheck.reason);
+                    this.revertMirror(mirror, savedPreSnapRotation, reason);
                 }
             }
         } catch (error) {
@@ -1097,8 +1114,14 @@ export class Game {
 
     /**
      * Revert a mirror to its original position and rotation.
+     * Shows subtle feedback explaining why placement failed.
      */
-    revertMirror(mirror, savedPreSnapRotation) {
+    revertMirror(mirror, savedPreSnapRotation, reason) {
+        // Show feedback at the drop location (before reverting)
+        if (reason) {
+            this.showPlacementFeedback(mirror.x, mirror.y, reason);
+        }
+
         mirror.x = mirror.originalX;
         mirror.y = mirror.originalY;
         // Restore rotation: prefer preSnapRotation, fall back to originalRotation
@@ -1110,7 +1133,30 @@ export class Game {
         }
         this.safeUpdateVertices(mirror);
     }
+
+    /**
+     * Show a brief, subtle feedback message at a canvas position.
+     */
+    showPlacementFeedback(x, y, message) {
+        this.placementFeedback.push({
+            x, y,
+            message,
+            startTime: Date.now(),
+            duration: 1200
+        });
+    }
     
+    /**
+     * Convert validator reason to a short, friendly message.
+     */
+    getFriendlyReason(reason) {
+        if (!reason) return 'Invalid placement';
+        if (reason.includes('forbidden zone')) return 'Forbidden zone';
+        if (reason.includes('overlap') || reason.includes('same position')) return 'Overlaps mirror';
+        if (reason.includes('edge crosses')) return 'Crosses boundary';
+        return 'Invalid placement';
+    }
+
     onGlobalMouseMove(e) {
         // Only handle if we have a dragged mirror and mouse left canvas
         if (!this.draggedMirror) return;

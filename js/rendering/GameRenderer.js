@@ -86,6 +86,9 @@ export class GameRenderer {
             }
         }
 
+        // Draw placement feedback toasts
+        this.drawPlacementFeedback();
+
         // Draw full-screen breach overlay effects (glitch, flash, scanlines)
         if (breachProgress > 0) {
             this.drawBreachOverlay(breachProgress);
@@ -108,6 +111,67 @@ export class GameRenderer {
         // Completed daily challenge overlay
         if (this.game.dailyCompleted) {
             this.drawDailyCompletedOverlay();
+        }
+    }
+
+    /**
+     * Draw subtle placement feedback toasts that fade out.
+     */
+    drawPlacementFeedback() {
+        const feedback = this.game.placementFeedback;
+        if (!feedback || feedback.length === 0) return;
+
+        const ctx = this.ctx;
+        const now = Date.now();
+
+        // Remove expired feedback
+        for (let i = feedback.length - 1; i >= 0; i--) {
+            if (now - feedback[i].startTime > feedback[i].duration) {
+                feedback.splice(i, 1);
+            }
+        }
+
+        for (const fb of feedback) {
+            const elapsed = now - fb.startTime;
+            const progress = elapsed / fb.duration;
+
+            // Fade in quickly, hold, then fade out
+            let alpha;
+            if (progress < 0.15) {
+                alpha = progress / 0.15; // fade in
+            } else if (progress < 0.6) {
+                alpha = 1; // hold
+            } else {
+                alpha = 1 - (progress - 0.6) / 0.4; // fade out
+            }
+
+            // Float upward slightly
+            const yOffset = -20 - progress * 25;
+
+            ctx.save();
+            ctx.font = '500 11px "Space Grotesk", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+
+            // Background pill
+            const textWidth = ctx.measureText(fb.message).width;
+            const pillW = textWidth + 16;
+            const pillH = 20;
+            const px = fb.x - pillW / 2;
+            const py = fb.y + yOffset - pillH;
+
+            ctx.fillStyle = `rgba(232, 78, 106, ${0.25 * alpha})`;
+            ctx.beginPath();
+            ctx.roundRect(px, py, pillW, pillH, 6);
+            ctx.fill();
+
+            // Text
+            ctx.fillStyle = `rgba(232, 78, 106, ${0.9 * alpha})`;
+            ctx.shadowColor = '#E84E6A';
+            ctx.shadowBlur = 4 * alpha;
+            ctx.fillText(fb.message, fb.x, fb.y + yOffset);
+
+            ctx.restore();
         }
     }
 
