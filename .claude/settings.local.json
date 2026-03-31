@@ -56,7 +56,9 @@
       "Bash(node --input-type=module -e \"\nimport { DailyChallenge } from './js/validation/DailyChallenge.js';\n\nfor \\(let day = 1; day <= 30; day++\\) {\n    const dateStr = '2026-03-' + String\\(day\\).padStart\\(2, '0'\\);\n    const origFn = DailyChallenge.getTodayString;\n    DailyChallenge.getTodayString = \\(\\) => dateStr;\n    \n    const config = DailyChallenge.generateDailyConfig\\(\\);\n    \n    console.log\\(dateStr + ': ' + config.theme.padEnd\\(15\\) + \n        ' mirrors=' + String\\(config.mirrors.length\\).padStart\\(2\\) + \n        ' spawners=' + config.spawners.length + \n        ' difficulty=' + config.difficulty.toFixed\\(1\\)\\);\n    \n    DailyChallenge.getTodayString = origFn;\n}\n\" 2>&1)",
       "Bash(node --input-type=module -e \"\nimport { DailyChallenge } from './js/validation/DailyChallenge.js';\n\nfor \\(let day = 1; day <= 30; day++\\) {\n    const dateStr = '2026-03-' + String\\(day\\).padStart\\(2, '0'\\);\n    const origFn = DailyChallenge.getTodayString;\n    DailyChallenge.getTodayString = \\(\\) => dateStr;\n    const config = DailyChallenge.generateDailyConfig\\(\\);\n    console.log\\(dateStr + ': ' + config.theme.padEnd\\(15\\) + \n        ' mirrors=' + String\\(config.mirrors.length\\).padStart\\(2\\) + \n        ' spawners=' + config.spawners.length + \n        ' difficulty=' + config.difficulty.toFixed\\(1\\)\\);\n    DailyChallenge.getTodayString = origFn;\n}\n\" 2>&1)",
       "Bash(grep -rn \"alert\\(\" /Users/tomwesley/LocalGithubFiles/ReflectionsPhaser/*.html)",
-      "Bash(grep -n \"calculateVertices\\\\|updateVertices\" /Users/tomwesley/LocalGithubFiles/ReflectionsPhaser/js/mirrors/*.js | head -20)"
+      "Bash(grep -n \"calculateVertices\\\\|updateVertices\" /Users/tomwesley/LocalGithubFiles/ReflectionsPhaser/js/mirrors/*.js | head -20)",
+      "Bash(grep -r \"leaderboard\\\\|score.*api\\\\|submit.*score\\\\|global.*score\" /Users/tomwesley/LocalGithubFiles/ReflectionsPhaser/js /Users/tomwesley/LocalGithubFiles/ReflectionsPhaser/*.html)",
+      "Bash(git status:*)"
     ],
     "deny": [],
     "ask": []

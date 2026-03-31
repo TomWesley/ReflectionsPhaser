@@ -111,6 +111,25 @@
             <div class="snapshot-header">
                 <div id="finalTime" class="score-value">0:00.00</div>
                 <div id="missionPerformance" class="performance-rating">Calculating...</div>
+                <div id="leaderboardSubmit" class="leaderboard-submit hidden">
+                    <!-- Shown when signed in -->
+                    <div class="submit-signed-in" style="display:none;">
+                        <div class="submit-row">
+                            <input type="text" id="playerNameInput" placeholder="Enter your name" maxlength="16"
+                                   class="player-name-input" autocomplete="off" spellcheck="false">
+                            <button id="submitScoreBtn" class="btn-submit-score" onclick="submitScore()">
+                                <i class="iconoir-send"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Shown when anonymous -->
+                    <div class="submit-anon">
+                        <button class="btn-sign-in-to-submit" onclick="openAuthModal()">
+                            <i class="iconoir-user"></i> Sign in to submit your score
+                        </button>
+                    </div>
+                    <div id="scoreSubmitStatus" class="score-submit-status"></div>
+                </div>
             </div>
             <div class="snapshot-container">
                 <img id="gameOverSnapshot" class="game-snapshot" alt="Game Over State">
@@ -138,6 +157,25 @@
             <div class="snapshot-header victory">
                 <div id="victoryTime" class="score-value">5:00.00</div>
                 <div id="victoryPerformance" class="performance-rating perfect">MAX SURVIVAL</div>
+                <div id="victoryLeaderboardSubmit" class="leaderboard-submit hidden">
+                    <!-- Shown when signed in -->
+                    <div class="submit-signed-in" style="display:none;">
+                        <div class="submit-row">
+                            <input type="text" id="victoryPlayerNameInput" placeholder="Enter your name" maxlength="16"
+                                   class="player-name-input" autocomplete="off" spellcheck="false">
+                            <button id="victorySubmitScoreBtn" class="btn-submit-score" onclick="submitScore()">
+                                <i class="iconoir-send"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Shown when anonymous -->
+                    <div class="submit-anon">
+                        <button class="btn-sign-in-to-submit" onclick="openAuthModal()">
+                            <i class="iconoir-user"></i> Sign in to submit your score
+                        </button>
+                    </div>
+                    <div id="victoryScoreSubmitStatus" class="score-submit-status"></div>
+                </div>
             </div>
             <div class="snapshot-container">
                 <img id="victorySnapshot" class="game-snapshot" alt="Victory State">
@@ -182,6 +220,47 @@
                     <i class="iconoir-share-ios"></i> <span class="share-text">SHARE</span>
                 </button>
                 <button class="btn-secondary" onclick="closeReplay()">CLOSE</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Auth Modal -->
+    <div id="authModal" class="rules-modal hidden">
+        <div class="rules-content auth-modal-content">
+            <div class="auth-modal-header">
+                <span class="auth-modal-title">Sign In</span>
+                <button class="auth-modal-close" onclick="closeAuthModal()">
+                    <i class="iconoir-xmark"></i>
+                </button>
+            </div>
+            <div class="auth-modal-body">
+                <div class="auth-tabs">
+                    <button class="auth-tab active" onclick="switchAuthTab('signin')">Sign In</button>
+                    <button class="auth-tab" onclick="switchAuthTab('signup')">Create Account</button>
+                </div>
+
+                <div id="authSignInForm" class="auth-form">
+                    <input type="email" id="authEmail" class="auth-input" placeholder="Email" autocomplete="email">
+                    <input type="password" id="authPassword" class="auth-input" placeholder="Password" autocomplete="current-password">
+                    <button class="auth-btn-primary" onclick="doEmailSignIn()">Sign In</button>
+                    <button class="auth-btn-link" onclick="doPasswordReset()">Forgot password?</button>
+                </div>
+
+                <div id="authSignUpForm" class="auth-form" style="display:none;">
+                    <input type="text" id="authSignUpName" class="auth-input" placeholder="Display name" maxlength="16" autocomplete="username">
+                    <input type="email" id="authSignUpEmail" class="auth-input" placeholder="Email" autocomplete="email">
+                    <input type="password" id="authSignUpPassword" class="auth-input" placeholder="Password (6+ characters)" autocomplete="new-password">
+                    <button class="auth-btn-primary" onclick="doEmailSignUp()">Create Account</button>
+                </div>
+
+                <div class="auth-divider"><span>or</span></div>
+
+                <button class="auth-btn-google" onclick="doGoogleSignInFromModal()">
+                    <svg viewBox="0 0 24 24" width="18" height="18"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                    Continue with Google
+                </button>
+
+                <div id="authError" class="auth-error"></div>
             </div>
         </div>
     </div>
@@ -550,8 +629,114 @@
         }
 
         function openLeaderboard() {
-            // Placeholder - leaderboard coming soon
-            showToast('Leaderboard coming soon!');
+            window.location.href = 'leaderboard.html';
+        }
+
+        // Score submission to Firebase leaderboard
+        async function submitScore() {
+            if (!window.game || !window.leaderboardService || !window.firebaseAuth) {
+                showToast('Leaderboard not available. Please refresh.');
+                return;
+            }
+
+            const auth = window.firebaseAuth;
+            const service = window.leaderboardService;
+            const game = window.game;
+
+            // Require sign-in — anonymous users must sign in first
+            if (auth.isAnonymous()) {
+                openAuthModal();
+                return;
+            }
+
+            // Get name from whichever modal is visible
+            const nameInput = document.getElementById('playerNameInput');
+            const victoryNameInput = document.getElementById('victoryPlayerNameInput');
+            const activeInput = !document.getElementById('victoryModal').classList.contains('hidden')
+                ? victoryNameInput : nameInput;
+            const statusEl = !document.getElementById('victoryModal').classList.contains('hidden')
+                ? document.getElementById('victoryScoreSubmitStatus')
+                : document.getElementById('scoreSubmitStatus');
+
+            const name = (activeInput ? activeInput.value : '').trim();
+            if (name) {
+                auth.setDisplayName(name);
+            }
+
+            // Disable buttons during submission
+            const btns = document.querySelectorAll('.btn-submit-score');
+            btns.forEach(b => b.disabled = true);
+
+            try {
+                statusEl.textContent = 'Submitting...';
+                statusEl.style.color = 'var(--text-secondary)';
+
+                const mode = game.isDailyChallenge ? 'daily' : 'main';
+                const DailyChallenge = (await import('./js/validation/DailyChallenge.js')).DailyChallenge;
+                const dailyDate = game.isDailyChallenge ? DailyChallenge.getTodayString() : null;
+
+                const minutes = Math.floor(game.gameTime / 60);
+                const seconds = Math.floor(game.gameTime % 60);
+                const centiseconds = Math.floor((game.gameTime % 1) * 100);
+                const scoreFormatted = `${minutes}:${seconds.toString().padStart(2, '0')}.${centiseconds.toString().padStart(2, '0')}`;
+
+                const result = await service.submitScore(mode, game.gameTime, scoreFormatted, {
+                    dailyDate,
+                    mirrorCount: game.mirrors.length,
+                    spawnerCount: game.spawners.length,
+                });
+
+                if (result.isNewBest) {
+                    statusEl.textContent = 'New personal best!';
+                    statusEl.style.color = '#FFD700';
+
+                    // Video upload for main game top 10
+                    if (mode === 'main' && window.videoUploader) {
+                        const isTop = await service.isTop10(game.gameTime);
+                        if (isTop) {
+                            const recorder = game.replayRecorder;
+                            let videoBlob = recorder.videoBlob;
+
+                            // Generate MP4 if no video but canvas replay exists
+                            if (!videoBlob && recorder.canGenerateMP4()) {
+                                statusEl.textContent = 'Top 10! Generating replay...';
+                                await game.generateReplayMP4();
+                                videoBlob = recorder.videoBlob;
+                            }
+
+                            if (videoBlob) {
+                                statusEl.textContent = 'Top 10! Uploading replay...';
+                                await window.videoUploader.uploadReplayVideo(
+                                    videoBlob, game.gameTime, result.docId,
+                                    (percent) => {
+                                        statusEl.textContent = `Uploading replay... ${percent}%`;
+                                    }
+                                );
+                                statusEl.textContent = 'Top 10! Replay uploaded!';
+                            } else {
+                                statusEl.textContent = 'Top 10! Score submitted!';
+                            }
+                        }
+                    }
+                } else {
+                    statusEl.textContent = 'Score submitted (not a new best)';
+                    statusEl.style.color = 'var(--text-secondary)';
+                }
+
+                // Hide the input, show submitted state
+                const submitContainer = activeInput.closest('.leaderboard-submit');
+                if (submitContainer) {
+                    const submitRow = submitContainer.querySelector('.submit-row');
+                    if (submitRow) submitRow.style.display = 'none';
+                }
+
+            } catch (error) {
+                console.error('Score submission failed:', error);
+                statusEl.textContent = 'Submission failed. Try again.';
+                statusEl.style.color = '#E84E6A';
+            } finally {
+                btns.forEach(b => b.disabled = false);
+            }
         }
 
         // Mobile Menu Functions
@@ -673,6 +858,12 @@
                 closeVictory();
             }
         });
+
+        document.getElementById('authModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeAuthModal();
+            }
+        });
     </script>
 
     <!-- Dev Tools (localhost only) -->
@@ -737,6 +928,12 @@
             }
         })();
     </script>
+
+    <!-- Firebase SDK (compat mode for CDN usage) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
 
     <!-- Main Game Module -->
     <script type="module" src="js/main.js?v=15"></script>

@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Seed Leaderboard Scores</title>
+    <style>
+        body { background: #1a1a2e; color: #d4d4e8; font-family: monospace; padding: 40px; }
+        pre { background: #0d0d1a; padding: 16px; border-radius: 8px; overflow: auto; }
+        button { background: #4e78e8; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 16px; margin: 10px 4px; }
+        button:hover { background: #6b8ff0; }
+        button.danger { background: #e84e6a; }
+        .done { color: #32ffb4; }
+        .error { color: #e84e6a; }
+    </style>
+</head>
+<body>
+    <h1>Seed Leaderboard - REFLECTIONS</h1>
+    <p>This will create fake scores in Firestore that are easy to beat (all under 4 seconds).</p>
+    <p style="color:#ffd700;">Before running: Temporarily set Firestore rules to allow all writes, then restore them after seeding.</p>
+    <pre style="font-size:12px;color:#888;">Temporary rule: match /scores/{doc} { allow read, write: if true; }</pre>
+    <button onclick="seedScores()">Seed Main Game Scores</button>
+    <button onclick="seedDailyScores()">Seed Daily Challenge Scores</button>
+    <button class="danger" onclick="clearScores()">Clear All Scores</button>
+    <pre id="log">Ready. Click a button to start.</pre>
+
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+    <script>
+        firebase.initializeApp({
+            apiKey: "AIzaSyBaTbUHflVyBoxrsvcFbXNY_lTD7RCVYgs",
+            authDomain: "singularity-c216f.firebaseapp.com",
+            projectId: "singularity-c216f",
+        });
+
+        const db = firebase.firestore();
+        const logEl = document.getElementById('log');
+
+        function log(msg, cls) {
+            const span = document.createElement('span');
+            span.className = cls || '';
+            span.textContent = msg + '\n';
+            logEl.appendChild(span);
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        function formatScore(seconds) {
+            const m = Math.floor(seconds / 60);
+            const s = Math.floor(seconds % 60);
+            const cs = Math.floor((seconds % 1) * 100);
+            return `${m}:${s.toString().padStart(2, '0')}.${cs.toString().padStart(2, '0')}`;
+        }
+
+        const fakeMainPlayers = [
+            { name: 'LaserDodger',    score: 3.82 },
+            { name: 'MirrorNova',     score: 3.45 },
+            { name: 'ReflexBot',      score: 3.21 },
+            { name: 'PrismHunter',    score: 2.98 },
+            { name: 'BeamSplitter',   score: 2.77 },
+            { name: 'PhotonShield',   score: 2.54 },
+            { name: 'CoreGuardian',   score: 2.33 },
+            { name: 'AngleGrinder',   score: 2.11 },
+            { name: 'GlassWalker',    score: 1.89 },
+            { name: 'OpticNerd',      score: 1.67 },
+        ];
+
+        const fakeDailyPlayers = [
+            { name: 'DailyChamp',     score: 3.91 },
+            { name: 'MorningLaser',   score: 3.58 },
+            { name: 'NoonDefender',   score: 3.14 },
+            { name: 'SunsetMirror',   score: 2.85 },
+            { name: 'NightShield',    score: 2.49 },
+            { name: 'TwilightBeam',   score: 2.22 },
+            { name: 'DawnReflect',    score: 1.95 },
+            { name: 'MidnightCore',   score: 1.73 },
+        ];
+
+        async function ensureAuth() {
+            if (!firebase.auth().currentUser) {
+                await firebase.auth().signInAnonymously();
+            }
+            log('Authenticated as: ' + firebase.auth().currentUser.uid);
+        }
+
+        async function seedScores() {
+            logEl.textContent = '';
+            log('Seeding main game scores...');
+
+            try {
+                await ensureAuth();
+                const batch = db.batch();
+
+                for (const player of fakeMainPlayers) {
+                    // Use a fake UID based on the player name to avoid collisions
+                    const fakeUid = 'seed_' + player.name.toLowerCase().replace(/\s/g, '_');
+                    const docId = fakeUid + '_main';
+
+                    const ref = db.collection('scores').doc(docId);
+                    batch.set(ref, {
+                        uid: fakeUid,
+                        displayName: player.name,
+                        mode: 'main',
+                        dailyDate: null,
+                        score: player.score,
+                        scoreFormatted: formatScore(player.score),
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                        mirrorCount: 8,
+                        spawnerCount: 4,
+                        videoPath: null,
+                    });
+
+                    log(`  ${player.name}: ${formatScore(player.score)}`);
+                }
+
+                await batch.commit();
+                log('Main game scores seeded!', 'done');
+            } catch (err) {
+                log('Error: ' + err.message, 'error');
+                console.error(err);
+            }
+        }
+
+        async function seedDailyScores() {
+            logEl.textContent = '';
+            const today = new Date().toISOString().slice(0, 10);
+            log(`Seeding daily challenge scores for ${today}...`);
+
+            try {
+                await ensureAuth();
+                const batch = db.batch();
+
+                for (const player of fakeDailyPlayers) {
+                    const fakeUid = 'seed_' + player.name.toLowerCase().replace(/\s/g, '_');
+                    const docId = fakeUid + '_' + today;
+
+                    const ref = db.collection('scores').doc(docId);
+                    batch.set(ref, {
+                        uid: fakeUid,
+                        displayName: player.name,
+                        mode: 'daily',
+                        dailyDate: today,
+                        score: player.score,
+                        scoreFormatted: formatScore(player.score),
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                        mirrorCount: 6,
+                        spawnerCount: 7,
+                        videoPath: null,
+                    });
+
+                    log(`  ${player.name}: ${formatScore(player.score)}`);
+                }
+
+                await batch.commit();
+                log('Daily challenge scores seeded!', 'done');
+            } catch (err) {
+                log('Error: ' + err.message, 'error');
+                console.error(err);
+            }
+        }
+
+        async function clearScores() {
+            if (!confirm('Delete ALL scores from the leaderboard?')) return;
+
+            logEl.textContent = '';
+            log('Clearing all scores...');
+
+            try {
+                await ensureAuth();
+
+                const snapshot = await db.collection('scores').get();
+                log(`Found ${snapshot.size} score documents`);
+
+                // Firestore batches max 500, but we should be fine
+                const batch = db.batch();
+                snapshot.docs.forEach(doc => {
+                    batch.delete(doc.ref);
+                    log(`  Deleting: ${doc.id}`);
+                });
+
+                await batch.commit();
+                log('All scores cleared!', 'done');
+            } catch (err) {
+                log('Error: ' + err.message, 'error');
+                console.error(err);
+            }
+        }
+    </script>
+</body>
+</html>
