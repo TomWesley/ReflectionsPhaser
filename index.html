@@ -112,16 +112,6 @@
                 <div id="finalTime" class="score-value">0:00.00</div>
                 <div id="missionPerformance" class="performance-rating">Calculating...</div>
                 <div id="leaderboardSubmit" class="leaderboard-submit hidden">
-                    <!-- Shown when signed in -->
-                    <div class="submit-signed-in" style="display:none;">
-                        <div class="submit-row">
-                            <input type="text" id="playerNameInput" placeholder="Enter your name" maxlength="16"
-                                   class="player-name-input" autocomplete="off" spellcheck="false">
-                            <button id="submitScoreBtn" class="btn-submit-score" onclick="submitScore()">
-                                <i class="iconoir-send"></i>
-                            </button>
-                        </div>
-                    </div>
                     <!-- Shown when anonymous -->
                     <div class="submit-anon">
                         <button class="btn-sign-in-to-submit" onclick="openAuthModal()">
@@ -158,16 +148,6 @@
                 <div id="victoryTime" class="score-value">5:00.00</div>
                 <div id="victoryPerformance" class="performance-rating perfect">MAX SURVIVAL</div>
                 <div id="victoryLeaderboardSubmit" class="leaderboard-submit hidden">
-                    <!-- Shown when signed in -->
-                    <div class="submit-signed-in" style="display:none;">
-                        <div class="submit-row">
-                            <input type="text" id="victoryPlayerNameInput" placeholder="Enter your name" maxlength="16"
-                                   class="player-name-input" autocomplete="off" spellcheck="false">
-                            <button id="victorySubmitScoreBtn" class="btn-submit-score" onclick="submitScore()">
-                                <i class="iconoir-send"></i>
-                            </button>
-                        </div>
-                    </div>
                     <!-- Shown when anonymous -->
                     <div class="submit-anon">
                         <button class="btn-sign-in-to-submit" onclick="openAuthModal()">
@@ -633,43 +613,37 @@
         }
 
         // Score submission to Firebase leaderboard
+        // Auto-submit score to leaderboard. Called when:
+        // 1. Game over modal appears and user is signed in
+        // 2. User signs in from auth modal while game over modal is showing
+        window.submitScore = submitScore;
         async function submitScore() {
-            if (!window.game || !window.leaderboardService || !window.firebaseAuth) {
-                showToast('Leaderboard not available. Please refresh.');
-                return;
-            }
+            if (!window.game || !window.leaderboardService || !window.firebaseAuth) return;
 
             const auth = window.firebaseAuth;
             const service = window.leaderboardService;
             const game = window.game;
 
-            // Require sign-in — anonymous users must sign in first
-            if (auth.isAnonymous()) {
-                openAuthModal();
-                return;
-            }
+            // Must be signed in and game must be over
+            if (auth.isAnonymous() || !game.gameOver || game.gameTime <= 0) return;
 
-            // Get name from whichever modal is visible
-            const nameInput = document.getElementById('playerNameInput');
-            const victoryNameInput = document.getElementById('victoryPlayerNameInput');
-            const activeInput = !document.getElementById('victoryModal').classList.contains('hidden')
-                ? victoryNameInput : nameInput;
-            const statusEl = !document.getElementById('victoryModal').classList.contains('hidden')
+            // Find the visible status element
+            const isVictory = !document.getElementById('victoryModal').classList.contains('hidden');
+            const statusEl = isVictory
                 ? document.getElementById('victoryScoreSubmitStatus')
                 : document.getElementById('scoreSubmitStatus');
 
-            const name = (activeInput ? activeInput.value : '').trim();
-            if (name) {
-                auth.setDisplayName(name);
-            }
-
-            // Disable buttons during submission
-            const btns = document.querySelectorAll('.btn-submit-score');
-            btns.forEach(b => b.disabled = true);
+            // Don't re-submit if already submitted this game
+            if (statusEl && statusEl.dataset.submitted === 'true') return;
 
             try {
-                statusEl.textContent = 'Submitting...';
-                statusEl.style.color = 'var(--text-secondary)';
+                if (statusEl) {
+                    statusEl.textContent = 'Submitting score...';
+                    statusEl.style.color = 'var(--text-secondary)';
+                }
+
+                // Hide the sign-in prompt since we're signed in
+                document.querySelectorAll('.submit-anon').forEach(el => el.style.display = 'none');
 
                 const mode = game.isDailyChallenge ? 'daily' : 'main';
                 const DailyChallenge = (await import('./js/validation/DailyChallenge.js')).DailyChallenge;
@@ -686,56 +660,50 @@
                     spawnerCount: game.spawners.length,
                 });
 
-                if (result.isNewBest) {
-                    statusEl.textContent = 'New personal best!';
-                    statusEl.style.color = '#FFD700';
+                if (statusEl) {
+                    statusEl.dataset.submitted = 'true';
 
-                    // Video upload for main game top 10
-                    if (mode === 'main' && window.videoUploader) {
-                        const isTop = await service.isTop10(game.gameTime);
-                        if (isTop) {
-                            const recorder = game.replayRecorder;
-                            let videoBlob = recorder.videoBlob;
+                    if (result.isNewBest) {
+                        statusEl.textContent = 'Score submitted - new personal best!';
+                        statusEl.style.color = '#FFD700';
 
-                            // Generate MP4 if no video but canvas replay exists
-                            if (!videoBlob && recorder.canGenerateMP4()) {
-                                statusEl.textContent = 'Top 10! Generating replay...';
-                                await game.generateReplayMP4();
-                                videoBlob = recorder.videoBlob;
-                            }
+                        // Video upload for main game top 10
+                        if (mode === 'main' && window.videoUploader) {
+                            const isTop = await service.isTop10(game.gameTime);
+                            if (isTop) {
+                                const recorder = game.replayRecorder;
+                                let videoBlob = recorder.videoBlob;
 
-                            if (videoBlob) {
-                                statusEl.textContent = 'Top 10! Uploading replay...';
-                                await window.videoUploader.uploadReplayVideo(
-                                    videoBlob, game.gameTime, result.docId,
-                                    (percent) => {
-                                        statusEl.textContent = `Uploading replay... ${percent}%`;
-                                    }
-                                );
-                                statusEl.textContent = 'Top 10! Replay uploaded!';
-                            } else {
-                                statusEl.textContent = 'Top 10! Score submitted!';
+                                if (!videoBlob && recorder.canGenerateMP4()) {
+                                    statusEl.textContent = 'Top 10! Generating replay...';
+                                    await game.generateReplayMP4();
+                                    videoBlob = recorder.videoBlob;
+                                }
+
+                                if (videoBlob) {
+                                    statusEl.textContent = 'Top 10! Uploading replay...';
+                                    await window.videoUploader.uploadReplayVideo(
+                                        videoBlob, game.gameTime, result.docId,
+                                        (percent) => {
+                                            statusEl.textContent = `Uploading replay... ${percent}%`;
+                                        }
+                                    );
+                                    statusEl.textContent = 'Top 10! Replay uploaded!';
+                                }
                             }
                         }
+                    } else {
+                        statusEl.textContent = 'Score submitted';
+                        statusEl.style.color = 'var(--text-secondary)';
                     }
-                } else {
-                    statusEl.textContent = 'Score submitted (not a new best)';
-                    statusEl.style.color = 'var(--text-secondary)';
-                }
-
-                // Hide the input, show submitted state
-                const submitContainer = activeInput.closest('.leaderboard-submit');
-                if (submitContainer) {
-                    const submitRow = submitContainer.querySelector('.submit-row');
-                    if (submitRow) submitRow.style.display = 'none';
                 }
 
             } catch (error) {
                 console.error('Score submission failed:', error);
-                statusEl.textContent = 'Submission failed. Try again.';
-                statusEl.style.color = '#E84E6A';
-            } finally {
-                btns.forEach(b => b.disabled = false);
+                if (statusEl) {
+                    statusEl.textContent = 'Submission failed';
+                    statusEl.style.color = '#E84E6A';
+                }
             }
         }
 

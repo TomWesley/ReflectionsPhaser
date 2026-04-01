@@ -1653,8 +1653,15 @@ export class Game {
             performanceElement.style.color = '#E84E6A';
         }
 
+        // Reset submission state for new game
+        const gameOverStatus = document.getElementById('scoreSubmitStatus');
+        if (gameOverStatus) { gameOverStatus.dataset.submitted = ''; gameOverStatus.textContent = ''; }
+
         // Show modal
         document.getElementById('gameOverModal').classList.remove('hidden');
+
+        // Auto-submit score to leaderboard
+        if (typeof window.submitScore === 'function') window.submitScore();
 
         // Update status (if element exists)
         const statusEl = document.getElementById('status');
@@ -1699,8 +1706,15 @@ export class Game {
         // Update modal content
         document.getElementById('victoryTime').textContent = finalTimeString;
 
+        // Reset submission state for new game
+        const victoryStatus = document.getElementById('victoryScoreSubmitStatus');
+        if (victoryStatus) { victoryStatus.dataset.submitted = ''; victoryStatus.textContent = ''; }
+
         // Show modal
         document.getElementById('victoryModal').classList.remove('hidden');
+
+        // Auto-submit score to leaderboard
+        if (typeof window.submitScore === 'function') window.submitScore();
 
         // Update status (if element exists)
         const statusEl = document.getElementById('status');

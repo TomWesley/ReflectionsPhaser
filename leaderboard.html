@@ -30,11 +30,16 @@
     <link rel="stylesheet" href="styles/game.css">
     <style>
         html, body {
-            overflow: auto;
-            height: auto;
+            overflow: auto !important;
+            overflow-y: auto !important;
+            height: auto !important;
+            overscroll-behavior: auto !important;
+            -webkit-user-select: auto !important;
+            user-select: auto !important;
         }
         body {
             padding: 0;
+            display: block !important;
         }
 
         .leaderboard-container {
@@ -43,18 +48,73 @@
             padding: 20px 20px 60px 20px;
         }
 
+        .page-title-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            margin: 25px auto 20px auto;
+            max-width: 700px;
+            padding: 0 20px;
+            box-sizing: border-box;
+        }
+
+        .title-glow-line {
+            flex: 1;
+            height: 3px;
+            border-radius: 3px;
+            min-width: 40px;
+        }
+
+        .title-glow-line.left {
+            background: linear-gradient(to right, transparent 0%, #4E78E8 50%, #8338EC 100%);
+            box-shadow: 0 0 12px rgba(78, 120, 232, 0.6), 0 0 4px rgba(131, 56, 236, 0.4);
+            animation: pulseLineLeft 3s ease-in-out infinite;
+        }
+
+        .title-glow-line.right {
+            background: linear-gradient(to left, transparent 0%, #E87ADC 50%, #FF8FA3 100%);
+            box-shadow: 0 0 12px rgba(232, 122, 220, 0.6), 0 0 4px rgba(255, 143, 163, 0.4);
+            animation: pulseLineRight 3s ease-in-out infinite;
+        }
+
+        @keyframes pulseLineLeft {
+            0%, 100% {
+                opacity: 0.6;
+                box-shadow: 0 0 8px rgba(78, 120, 232, 0.4), 0 0 2px rgba(131, 56, 236, 0.3);
+            }
+            50% {
+                opacity: 1;
+                box-shadow: 0 0 20px rgba(78, 120, 232, 0.8), 0 0 6px rgba(131, 56, 236, 0.5);
+            }
+        }
+
+        @keyframes pulseLineRight {
+            0%, 100% {
+                opacity: 0.6;
+                box-shadow: 0 0 8px rgba(232, 122, 220, 0.4), 0 0 2px rgba(255, 143, 163, 0.3);
+            }
+            50% {
+                opacity: 1;
+                box-shadow: 0 0 20px rgba(232, 122, 220, 0.8), 0 0 6px rgba(255, 143, 163, 0.5);
+            }
+        }
+
         .page-title {
             font-family: 'Space Grotesk', sans-serif;
             font-size: 2.2rem;
             font-weight: 700;
             text-align: center;
-            margin: 25px 0 20px 0;
-            background: linear-gradient(135deg, var(--arc), var(--pink));
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #4E78E8, #E87ADC);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
             letter-spacing: 3px;
             text-transform: uppercase;
+            white-space: nowrap;
+            flex-shrink: 0;
         }
 
         /* Mode Tabs (Main Game vs Daily) */
@@ -623,7 +683,14 @@
         /* Mobile Responsive */
         @media (max-width: 600px) {
             .page-title {
-                font-size: 1.8rem;
+                font-size: 1.3rem;
+                letter-spacing: 2px;
+            }
+
+            .page-title-wrapper {
+                gap: 12px;
+                margin: 20px auto 16px auto;
+                padding: 0 12px;
             }
 
             .mode-tabs {
@@ -700,7 +767,10 @@
 
             .page-title {
                 font-size: 1.5rem;
-                margin: 10px 0 15px 0;
+            }
+
+            .page-title-wrapper {
+                margin: 10px auto 15px auto;
             }
         }
     </style>
@@ -715,10 +785,6 @@
         </div>
 
         <div class="navbar-center">
-            <div class="navbar-timer">
-                <i class="iconoir-trophy"></i>
-                <span class="navbar-timer-value" style="min-width: auto;">TOP SCORES</span>
-            </div>
         </div>
 
         <div class="navbar-right">
@@ -731,7 +797,11 @@
         </div>
     </nav>
 
-    <h1 class="page-title"><i class="iconoir-trophy"></i> Leaderboard</h1>
+    <div class="page-title-wrapper">
+        <div class="title-glow-line left"></div>
+        <div class="page-title">Global Leaderboard</div>
+        <div class="title-glow-line right"></div>
+    </div>
 
     <div class="leaderboard-container">
         <!-- Auth Section -->

@@ -29,6 +29,10 @@ async function initFirebaseServices(cacheBust) {
     // Update UI when auth state changes (e.g., after Google/email sign-in)
     auth.onAuthChange(() => {
         syncNameInputs();
+        // Auto-submit score if game is over and user just signed in
+        if (window.game && window.game.gameOver && !auth.isAnonymous()) {
+            if (typeof window.submitScore === 'function') window.submitScore();
+        }
     });
 
     updateSubmitUI(auth);
@@ -37,12 +41,9 @@ async function initFirebaseServices(cacheBust) {
     document.querySelectorAll('.leaderboard-submit').forEach(el => el.classList.remove('hidden'));
 }
 
-// Toggle between signed-in submit row and anonymous sign-in prompt
+// Toggle sign-in prompt visibility based on auth state
 function updateSubmitUI(auth) {
     const signedIn = auth.isSignedIn();
-    document.querySelectorAll('.submit-signed-in').forEach(el => {
-        el.style.display = signedIn ? '' : 'none';
-    });
     document.querySelectorAll('.submit-anon').forEach(el => {
         el.style.display = signedIn ? 'none' : '';
     });
