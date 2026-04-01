@@ -111,13 +111,8 @@
             <div class="snapshot-header">
                 <div id="finalTime" class="score-value">0:00.00</div>
                 <div id="missionPerformance" class="performance-rating">Calculating...</div>
+                <div id="playerIdentity" class="player-identity"></div>
                 <div id="leaderboardSubmit" class="leaderboard-submit hidden">
-                    <!-- Shown when anonymous -->
-                    <div class="submit-anon">
-                        <button class="btn-sign-in-to-submit" onclick="openAuthModal()">
-                            <i class="iconoir-user"></i> Sign in to submit your score
-                        </button>
-                    </div>
                     <div id="scoreSubmitStatus" class="score-submit-status"></div>
                 </div>
             </div>
@@ -147,13 +142,8 @@
             <div class="snapshot-header victory">
                 <div id="victoryTime" class="score-value">5:00.00</div>
                 <div id="victoryPerformance" class="performance-rating perfect">MAX SURVIVAL</div>
+                <div id="victoryPlayerIdentity" class="player-identity"></div>
                 <div id="victoryLeaderboardSubmit" class="leaderboard-submit hidden">
-                    <!-- Shown when anonymous -->
-                    <div class="submit-anon">
-                        <button class="btn-sign-in-to-submit" onclick="openAuthModal()">
-                            <i class="iconoir-user"></i> Sign in to submit your score
-                        </button>
-                    </div>
                     <div id="victoryScoreSubmitStatus" class="score-submit-status"></div>
                 </div>
             </div>
@@ -616,6 +606,7 @@
         // Auto-submit score to leaderboard. Called when:
         // 1. Game over modal appears and user is signed in
         // 2. User signs in from auth modal while game over modal is showing
+        // Called when game over modal appears. Shows leaderboard rank or sign-in prompt.
         window.submitScore = submitScore;
         async function submitScore() {
             if (!window.game || !window.leaderboardService || !window.firebaseAuth) return;
@@ -624,26 +615,40 @@
             const service = window.leaderboardService;
             const game = window.game;
 
-            // Must be signed in and game must be over
-            if (auth.isAnonymous() || !game.gameOver || game.gameTime <= 0) return;
+            if (!game.gameOver || game.gameTime <= 0) return;
 
-            // Find the visible status element
+            // Find the visible elements
             const isVictory = !document.getElementById('victoryModal').classList.contains('hidden');
             const statusEl = isVictory
                 ? document.getElementById('victoryScoreSubmitStatus')
                 : document.getElementById('scoreSubmitStatus');
+            const identityEl = isVictory
+                ? document.getElementById('victoryPlayerIdentity')
+                : document.getElementById('playerIdentity');
+            if (!statusEl) return;
+
+            // Show username if signed in
+            if (identityEl) {
+                if (auth.isAnonymous()) {
+                    identityEl.textContent = '';
+                } else {
+                    const displayName = auth.getDisplayNameOrDefault();
+                    identityEl.textContent = displayName;
+                }
+            }
+
+            // Anonymous users: show sign-in prompt
+            if (auth.isAnonymous()) {
+                statusEl.innerHTML = '<span class="leaderboard-signin-link" onclick="openAuthModal()"><i class="iconoir-user"></i> Sign In To Join the Leaderboard</span>';
+                return;
+            }
 
             // Don't re-submit if already submitted this game
-            if (statusEl && statusEl.dataset.submitted === 'true') return;
+            if (statusEl.dataset.submitted === 'true') return;
 
             try {
-                if (statusEl) {
-                    statusEl.textContent = 'Submitting score...';
-                    statusEl.style.color = 'var(--text-secondary)';
-                }
-
-                // Hide the sign-in prompt since we're signed in
-                document.querySelectorAll('.submit-anon').forEach(el => el.style.display = 'none');
+                statusEl.textContent = 'Submitting score...';
+                statusEl.style.color = 'var(--text-secondary)';
 
                 const mode = game.isDailyChallenge ? 'daily' : 'main';
                 const DailyChallenge = (await import('./js/validation/DailyChallenge.js')).DailyChallenge;
@@ -660,50 +665,39 @@
                     spawnerCount: game.spawners.length,
                 });
 
-                if (statusEl) {
-                    statusEl.dataset.submitted = 'true';
+                statusEl.dataset.submitted = 'true';
 
-                    if (result.isNewBest) {
-                        statusEl.textContent = 'Score submitted - new personal best!';
-                        statusEl.style.color = '#FFD700';
+                // Get rank
+                const rank = await service.getUserRank(mode, game.gameTime);
+                const rankText = rank ? `#${rank}` : '';
 
-                        // Video upload for main game top 10
-                        if (mode === 'main' && window.videoUploader) {
-                            const isTop = await service.isTop10(game.gameTime);
-                            if (isTop) {
-                                const recorder = game.replayRecorder;
-                                let videoBlob = recorder.videoBlob;
+                if (result.isNewBest) {
+                    statusEl.innerHTML = `<span class="leaderboard-rank">${rankText} on the leaderboard</span> <span class="leaderboard-best">New personal best!</span>`;
 
-                                if (!videoBlob && recorder.canGenerateMP4()) {
-                                    statusEl.textContent = 'Top 10! Generating replay...';
-                                    await game.generateReplayMP4();
-                                    videoBlob = recorder.videoBlob;
-                                }
+                    // Video upload for main game top 10
+                    if (mode === 'main' && rank && rank <= 10 && window.videoUploader) {
+                        const recorder = game.replayRecorder;
+                        let videoBlob = recorder.videoBlob;
 
-                                if (videoBlob) {
-                                    statusEl.textContent = 'Top 10! Uploading replay...';
-                                    await window.videoUploader.uploadReplayVideo(
-                                        videoBlob, game.gameTime, result.docId,
-                                        (percent) => {
-                                            statusEl.textContent = `Uploading replay... ${percent}%`;
-                                        }
-                                    );
-                                    statusEl.textContent = 'Top 10! Replay uploaded!';
-                                }
-                            }
+                        if (!videoBlob && recorder.canGenerateMP4()) {
+                            await game.generateReplayMP4();
+                            videoBlob = recorder.videoBlob;
                         }
-                    } else {
-                        statusEl.textContent = 'Score submitted';
-                        statusEl.style.color = 'var(--text-secondary)';
+
+                        if (videoBlob) {
+                            await window.videoUploader.uploadReplayVideo(
+                                videoBlob, game.gameTime, result.docId
+                            );
+                        }
                     }
+                } else {
+                    statusEl.innerHTML = `<span class="leaderboard-rank">${rankText} on the leaderboard</span>`;
                 }
 
             } catch (error) {
                 console.error('Score submission failed:', error);
-                if (statusEl) {
-                    statusEl.textContent = 'Submission failed';
-                    statusEl.style.color = '#E84E6A';
-                }
+                statusEl.textContent = 'Submission failed';
+                statusEl.style.color = '#E84E6A';
             }
         }
 

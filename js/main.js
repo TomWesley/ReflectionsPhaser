@@ -35,19 +35,10 @@ async function initFirebaseServices(cacheBust) {
         }
     });
 
-    updateSubmitUI(auth);
-
     // Show the leaderboard submit UI in modals
     document.querySelectorAll('.leaderboard-submit').forEach(el => el.classList.remove('hidden'));
 }
 
-// Toggle sign-in prompt visibility based on auth state
-function updateSubmitUI(auth) {
-    const signedIn = auth.isSignedIn();
-    document.querySelectorAll('.submit-anon').forEach(el => {
-        el.style.display = signedIn ? 'none' : '';
-    });
-}
 
 // Auth modal functions
 window.openAuthModal = function() {
