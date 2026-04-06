@@ -181,7 +181,7 @@
         /* Table Header */
         .leaderboard-header {
             display: grid;
-            grid-template-columns: 60px 1fr 120px;
+            grid-template-columns: 60px 1fr 80px 100px;
             padding: 15px 20px;
             background: rgba(0, 0, 0, 0.4);
             border-bottom: 1px solid rgba(78, 120, 232, 0.3);
@@ -193,14 +193,26 @@
             letter-spacing: 1.5px;
         }
 
+        .leaderboard-header.daily-mode,
+        .leaderboard-row.daily-mode {
+            grid-template-columns: 60px 1fr 120px;
+        }
+
         /* Leaderboard Row */
         .leaderboard-row {
             display: grid;
-            grid-template-columns: 60px 1fr 120px;
+            grid-template-columns: 60px 1fr 80px 100px;
             padding: 16px 20px;
             border-bottom: 1px solid rgba(78, 120, 232, 0.1);
             align-items: center;
             transition: all 0.2s ease;
+        }
+
+        .mirror-count {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            text-align: center;
         }
 
         .leaderboard-row:last-child {
@@ -582,14 +594,23 @@
             }
 
             .leaderboard-header {
-                grid-template-columns: 45px 1fr 90px;
+                grid-template-columns: 35px 1fr 55px 70px;
                 padding: 12px 15px;
                 font-size: 0.65rem;
             }
 
+            .leaderboard-header.daily-mode,
+            .leaderboard-row.daily-mode {
+                grid-template-columns: 35px 1fr 70px;
+            }
+
             .leaderboard-row {
-                grid-template-columns: 45px 1fr 90px;
+                grid-template-columns: 35px 1fr 55px 70px;
                 padding: 12px 15px;
+            }
+
+            .mirror-count {
+                font-size: 0.75rem;
             }
 
             .player-avatar {
@@ -721,9 +742,10 @@
 
         <!-- Leaderboard Table -->
         <div class="leaderboard-card">
-            <div class="leaderboard-header">
+            <div class="leaderboard-header" id="leaderboardHeader">
                 <span>Rank</span>
                 <span>Player</span>
+                <span style="text-align: center;">Mirrors</span>
                 <span style="text-align: right;">Time</span>
             </div>
             <div id="leaderboardBody">
@@ -910,19 +932,30 @@
                     return;
                 }
 
+                // Toggle mirrors column based on mode
+                const header = document.getElementById('leaderboardHeader');
+                const isDaily = currentMode === 'daily';
+                header.className = 'leaderboard-header' + (isDaily ? ' daily-mode' : '');
+                header.innerHTML = isDaily
+                    ? '<span>Rank</span><span>Player</span><span style="text-align:right;">Time</span>'
+                    : '<span>Rank</span><span>Player</span><span style="text-align:center;">Mirrors</span><span style="text-align:right;">Time</span>';
+
                 body.innerHTML = entries.map((entry, i) => {
                     const rank = i + 1;
                     const rankClass = rank <= 3 ? ` rank-${rank}` : '';
                     const youClass = entry.uid === uid ? ' you' : '';
+                    const modeClass = isDaily ? ' daily-mode' : '';
                     const initial = (entry.displayName || 'A').charAt(0).toUpperCase();
+                    const mirrorsCol = isDaily ? '' : `<span class="mirror-count">${entry.mirrorCount || '--'}</span>`;
 
                     return `
-                        <div class="leaderboard-row${rankClass}${youClass}">
+                        <div class="leaderboard-row${rankClass}${youClass}${modeClass}">
                             <span class="rank">#${rank}</span>
                             <div class="player-info">
                                 <div class="player-avatar">${initial}</div>
                                 <span class="player-name">${escapeHtml(entry.displayName || 'Anonymous')}</span>
                             </div>
+                            ${mirrorsCol}
                             <span class="score">${escapeHtml(entry.scoreFormatted || formatScore(entry.score))}</span>
                         </div>
                     `;
