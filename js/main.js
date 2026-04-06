@@ -29,11 +29,14 @@ async function initFirebaseServices(cacheBust) {
     // Update UI when auth state changes (e.g., after Google/email sign-in)
     auth.onAuthChange(() => {
         syncNameInputs();
+        updateNavbarUser(auth);
         // Auto-submit score if game is over and user just signed in
         if (window.game && window.game.gameOver && !auth.isAnonymous()) {
             if (typeof window.submitScore === 'function') window.submitScore();
         }
     });
+
+    updateNavbarUser(auth);
 
     // Show the leaderboard submit UI in modals
     document.querySelectorAll('.leaderboard-submit').forEach(el => el.classList.remove('hidden'));
@@ -143,6 +146,22 @@ window.doPasswordReset = async function() {
         errorEl.textContent = result.error;
     }
 };
+
+function updateNavbarUser(auth) {
+    const el = document.getElementById('navbarUser');
+    if (!el) return;
+    if (auth.isSignedIn()) {
+        el.textContent = auth.getDisplayNameOrDefault();
+        el.onclick = null;
+        el.style.cursor = 'default';
+        el.title = 'Signed in';
+    } else {
+        el.textContent = 'Sign In';
+        el.onclick = () => openAuthModal();
+        el.style.cursor = 'pointer';
+        el.title = 'Sign in to save scores';
+    }
+}
 
 function syncNameInputs() {
     if (!window.firebaseAuth) return;

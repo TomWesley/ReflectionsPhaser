@@ -89,6 +89,23 @@ body {
     justify-content: flex-end;
 }
 
+.navbar-user {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 120px;
+    transition: color 0.2s ease;
+}
+
+.navbar-user:hover {
+    color: var(--text-primary);
+}
+
 .navbar-center {
     flex: 0;
     display: flex;

@@ -159,71 +159,7 @@
             box-shadow: 0 0 12px rgba(50, 255, 180, 0.3);
         }
 
-        /* Daily date picker */
-        .daily-date-picker {
-            display: none;
-            justify-content: center;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
 
-        .daily-date-picker.visible {
-            display: flex;
-        }
-
-        .daily-date-input {
-            background: rgba(0, 0, 0, 0.4);
-            border: 1px solid rgba(50, 255, 180, 0.4);
-            border-radius: 8px;
-            color: #7FFFD4;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.85rem;
-            padding: 8px 12px;
-            outline: none;
-        }
-
-        .daily-date-input:focus {
-            border-color: #32FFB4;
-            box-shadow: 0 0 8px rgba(50, 255, 180, 0.3);
-        }
-
-        /* Time Period Tabs */
-        .period-tabs {
-            display: flex;
-            justify-content: center;
-            gap: 8px;
-            margin-bottom: 25px;
-            flex-wrap: wrap;
-        }
-
-        .period-tab {
-            padding: 10px 20px;
-            background: rgba(78, 120, 232, 0.1);
-            border: 1px solid rgba(78, 120, 232, 0.3);
-            border-radius: 25px;
-            color: var(--text-secondary);
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 0.9rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .period-tab:hover {
-            background: rgba(78, 120, 232, 0.2);
-            border-color: var(--arc);
-            color: var(--text-primary);
-        }
-
-        .period-tab.active {
-            background: linear-gradient(135deg, var(--arc), var(--pink));
-            border-color: transparent;
-            color: white;
-            box-shadow: 0 4px 15px rgba(78, 120, 232, 0.4);
-        }
 
         /* Leaderboard Card */
         .leaderboard-card {
@@ -331,6 +267,10 @@
             font-size: 1rem;
             font-weight: 600;
             color: var(--text-primary);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 180px;
         }
 
         /* Score */
@@ -422,67 +362,6 @@
             letter-spacing: 1px;
         }
 
-        /* Auth Section */
-        .auth-section {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 20px;
-            padding: 12px 16px;
-            background: var(--card-bg);
-            border: 1px solid var(--border-glow);
-            border-radius: 10px;
-        }
-
-        .auth-status {
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 0.85rem;
-            color: var(--text-secondary);
-        }
-
-        .auth-status strong {
-            color: var(--text-primary);
-        }
-
-        .btn-google-signin-lg {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            background: rgba(78, 120, 232, 0.15);
-            border: 1px solid rgba(78, 120, 232, 0.3);
-            border-radius: 8px;
-            color: var(--text-primary);
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 0.85rem;
-            font-weight: 600;
-            padding: 8px 16px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .btn-google-signin-lg:hover {
-            background: rgba(78, 120, 232, 0.25);
-            border-color: var(--arc);
-            box-shadow: 0 2px 8px rgba(78, 120, 232, 0.3);
-        }
-
-        .btn-sign-out {
-            background: none;
-            border: 1px solid rgba(232, 78, 106, 0.3);
-            border-radius: 6px;
-            color: var(--text-secondary);
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 0.75rem;
-            padding: 6px 12px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .btn-sign-out:hover {
-            border-color: #E84E6A;
-            color: #E84E6A;
-        }
 
         /* Auth overlay for leaderboard page */
         .auth-overlay {
@@ -702,15 +581,6 @@
                 font-size: 0.85rem;
             }
 
-            .period-tabs {
-                gap: 6px;
-            }
-
-            .period-tab {
-                padding: 8px 14px;
-                font-size: 0.8rem;
-            }
-
             .leaderboard-header {
                 grid-template-columns: 45px 1fr 90px;
                 padding: 12px 15px;
@@ -782,6 +652,7 @@
             <a href="index.html" class="nav-icon-btn" title="Back to Game">
                 <i class="iconoir-arrow-left"></i>
             </a>
+            <span id="navbarUser" class="navbar-user" title="Account"></span>
         </div>
 
         <div class="navbar-center">
@@ -804,11 +675,6 @@
     </div>
 
     <div class="leaderboard-container">
-        <!-- Auth Section -->
-        <div class="auth-section" id="authSection">
-            <span class="auth-status" id="authStatus">Loading...</span>
-        </div>
-
         <!-- Auth Modal (leaderboard page) -->
         <div class="auth-overlay hidden" id="lbAuthOverlay">
             <div class="auth-panel">
@@ -851,19 +717,6 @@
             <button class="mode-tab daily" data-mode="daily">
                 <i class="iconoir-calendar"></i> Daily Challenge
             </button>
-        </div>
-
-        <!-- Daily Date Picker (hidden by default) -->
-        <div class="daily-date-picker" id="dailyDatePicker">
-            <label style="color: var(--text-secondary); font-family: 'Space Grotesk', sans-serif; font-size: 0.85rem;">Date:</label>
-            <input type="date" class="daily-date-input" id="dailyDateInput">
-        </div>
-
-        <!-- Time Period Tabs -->
-        <div class="period-tabs" id="periodTabs">
-            <button class="period-tab active" data-period="all">All Time</button>
-            <button class="period-tab" data-period="weekly">This Week</button>
-            <button class="period-tab" data-period="today">Today</button>
         </div>
 
         <!-- Leaderboard Table -->
@@ -909,7 +762,6 @@
 
         // State
         let currentMode = 'main';
-        let currentPeriod = 'all';
         let currentDailyDate = new Date().toISOString().slice(0, 10);
         let auth = null;
         let service = null;
@@ -920,15 +772,10 @@
             await auth.ensureAuth();
             service = new LeaderboardService(auth);
 
-            // Set daily date input to today
-            const dateInput = document.getElementById('dailyDateInput');
-            dateInput.value = currentDailyDate;
-            dateInput.max = currentDailyDate;
-
-            // Update auth UI
-            updateAuthUI();
+            // Update navbar user display
+            updateNavbarUser();
             auth.onAuthChange(() => {
-                updateAuthUI();
+                updateNavbarUser();
                 loadLeaderboard();
                 loadStats();
             });
@@ -938,23 +785,20 @@
             loadStats();
         }
 
-        function updateAuthUI() {
-            const section = document.getElementById('authSection');
-
+        function updateNavbarUser() {
+            const el = document.getElementById('navbarUser');
+            if (!el) return;
             if (auth.isSignedIn()) {
                 const name = auth.getDisplayName() || auth.getUser().displayName || 'User';
-                section.innerHTML = `
-                    <span class="auth-status">Signed in as <strong>${escapeHtml(name)}</strong></span>
-                    <button class="btn-sign-out" onclick="window.doSignOut()">Sign Out</button>
-                `;
+                el.textContent = name;
+                el.onclick = null;
+                el.style.cursor = 'default';
+                el.title = 'Signed in';
             } else {
-                section.innerHTML = `
-                    <span class="auth-status">Playing as guest</span>
-                    <button class="btn-google-signin-lg" onclick="window.openLbAuth()">
-                        <i class="iconoir-user"></i>
-                        Sign In / Create Account
-                    </button>
-                `;
+                el.textContent = 'Sign In';
+                el.onclick = () => window.openLbAuth();
+                el.style.cursor = 'pointer';
+                el.title = 'Sign in to save scores';
             }
         }
 
@@ -1045,34 +889,11 @@
                     currentMode = tab.dataset.mode;
 
                     // Show/hide daily date picker
-                    const picker = document.getElementById('dailyDatePicker');
-                    picker.classList.toggle('visible', currentMode === 'daily');
-
-                    // Show/hide period tabs for main mode only
-                    const periodTabs = document.getElementById('periodTabs');
-                    periodTabs.style.display = currentMode === 'main' ? 'flex' : 'none';
-
                     loadLeaderboard();
                     loadStats();
                 });
             });
 
-            // Period tabs
-            document.querySelectorAll('.period-tab').forEach(tab => {
-                tab.addEventListener('click', () => {
-                    document.querySelectorAll('.period-tab').forEach(t => t.classList.remove('active'));
-                    tab.classList.add('active');
-                    currentPeriod = tab.dataset.period;
-                    loadLeaderboard();
-                });
-            });
-
-            // Daily date picker
-            document.getElementById('dailyDateInput').addEventListener('change', (e) => {
-                currentDailyDate = e.target.value;
-                loadLeaderboard();
-                loadStats();
-            });
         }
 
         async function loadLeaderboard() {
@@ -1081,7 +902,7 @@
 
             try {
                 const dailyDate = currentMode === 'daily' ? currentDailyDate : null;
-                const entries = await service.getLeaderboard(currentMode, currentPeriod, dailyDate, 50);
+                const entries = await service.getLeaderboard(currentMode, 'all', dailyDate, 50);
                 const uid = auth.getUID();
 
                 if (entries.length === 0) {
