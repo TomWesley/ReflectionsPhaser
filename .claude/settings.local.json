@@ -58,7 +58,12 @@
       "Bash(grep -rn \"alert\\(\" /Users/tomwesley/LocalGithubFiles/ReflectionsPhaser/*.html)",
       "Bash(grep -n \"calculateVertices\\\\|updateVertices\" /Users/tomwesley/LocalGithubFiles/ReflectionsPhaser/js/mirrors/*.js | head -20)",
       "Bash(grep -r \"leaderboard\\\\|score.*api\\\\|submit.*score\\\\|global.*score\" /Users/tomwesley/LocalGithubFiles/ReflectionsPhaser/js /Users/tomwesley/LocalGithubFiles/ReflectionsPhaser/*.html)",
-      "Bash(git status:*)"
+      "Bash(git status:*)",
+      "Bash(sips:*)",
+      "Bash(cp replacement.png favicon.png)",
+      "Bash(cp replacement.png favicon-transparent.png)",
+      "Bash(python3 -c \":*)",
+      "Bash(ls:*)"
     ],
     "deny": [],
     "ask": []
