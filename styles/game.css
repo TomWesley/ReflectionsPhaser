@@ -1949,6 +1949,31 @@ h1 {
         transform: scale(0.98);
     }
 
+    .mobile-menu-footer {
+        padding: 14px 15px;
+        border-top: 1px solid rgba(78, 120, 232, 0.15);
+    }
+
+    .mobile-account-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+        cursor: pointer;
+    }
+
+    .mobile-account-row i {
+        font-size: 16px;
+        color: var(--arc);
+    }
+
+    .mobile-account-row.signed-in {
+        cursor: default;
+        color: var(--text-primary);
+    }
+
     .mobile-menu-item.daily-active {
         background: rgba(50, 255, 180, 0.15);
         border-color: rgba(50, 255, 180, 0.4);

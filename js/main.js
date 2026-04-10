@@ -148,18 +148,38 @@ window.doPasswordReset = async function() {
 };
 
 function updateNavbarUser(auth) {
+    // Desktop navbar
     const el = document.getElementById('navbarUser');
-    if (!el) return;
-    if (auth.isSignedIn()) {
-        el.textContent = auth.getDisplayNameOrDefault();
-        el.onclick = null;
-        el.style.cursor = 'default';
-        el.title = 'Signed in';
-    } else {
-        el.textContent = 'Sign In';
-        el.onclick = () => openAuthModal();
-        el.style.cursor = 'pointer';
-        el.title = 'Sign in to save scores';
+    if (el) {
+        if (auth.isSignedIn()) {
+            el.textContent = auth.getDisplayNameOrDefault();
+            el.onclick = null;
+            el.style.cursor = 'default';
+            el.title = 'Signed in';
+        } else {
+            el.textContent = 'Sign In';
+            el.onclick = () => openAuthModal();
+            el.style.cursor = 'pointer';
+            el.title = 'Sign in to save scores';
+        }
+    }
+
+    // Mobile menu footer
+    const mobileRow = document.getElementById('mobileAccountRow');
+    const mobileName = document.getElementById('mobileAccountName');
+    if (mobileRow && mobileName) {
+        if (auth.isSignedIn()) {
+            mobileName.textContent = auth.getDisplayNameOrDefault();
+            mobileRow.classList.add('signed-in');
+            mobileRow.onclick = null;
+        } else {
+            mobileName.textContent = 'Sign in';
+            mobileRow.classList.remove('signed-in');
+            mobileRow.onclick = () => {
+                closeMobileMenu();
+                openAuthModal();
+            };
+        }
     }
 }
 
