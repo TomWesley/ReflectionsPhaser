@@ -63,7 +63,8 @@
       "Bash(cp replacement.png favicon.png)",
       "Bash(cp replacement.png favicon-transparent.png)",
       "Bash(python3 -c \":*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(grep:*)"
     ],
     "deny": [],
     "ask": []
