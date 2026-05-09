@@ -4,6 +4,7 @@
   "description": "Geometric laser defense puzzle game",
   "type": "module",
   "scripts": {
+    "dev": "node dev-server.js",
     "test": "node tests/run-tests.js",
     "test:watch": "nodemon tests/run-tests.js"
   },

@@ -7,7 +7,7 @@ export class PerformanceRating {
     static async loadRatings() {
         if (!this.ratings) {
             try {
-                const response = await fetch('./data/performance-ratings.json');
+                const response = await fetch('/data/performance-ratings.json');
                 const data = await response.json();
                 this.ratings = data.performanceRatings;
             } catch (error) {

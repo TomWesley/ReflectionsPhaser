@@ -64,7 +64,21 @@
       "Bash(cp replacement.png favicon-transparent.png)",
       "Bash(python3 -c \":*)",
       "Bash(ls:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(git *)",
+      "Bash(PORT=8765 node *)",
+      "Bash(curl -s -o /dev/null -w \"GET / => %{http_code}\\\\n\" http://localhost:8765/)",
+      "Bash(curl -s -o /dev/null -w \"GET /about => %{http_code}\\\\n\" http://localhost:8765/about)",
+      "Bash(curl -s -o /dev/null -w \"GET /leaderboard => %{http_code}\\\\n\" http://localhost:8765/leaderboard)",
+      "Bash(curl -s -o /dev/null -w \"GET /styles/game.css => %{http_code}\\\\n\" http://localhost:8765/styles/game.css)",
+      "Bash(curl -s -o /dev/null -w \"GET /js/main.js => %{http_code}\\\\n\" http://localhost:8765/js/main.js)",
+      "Bash(curl -s http://localhost:8765/about)",
+      "Bash(curl -s -o /dev/null -w \"GET /about/ => %{http_code}\\\\n\" http://localhost:8765/about/)",
+      "Bash(curl -s http://localhost:8765/about/)",
+      "Bash(curl -s -o /dev/null -w \"GET /leaderboard/ => %{http_code}\\\\n\" http://localhost:8765/leaderboard/)",
+      "Bash(curl -s -o /dev/null -w \"GET /about/ \\(trailing slash\\) => %{http_code}\\\\n\" http://localhost:8765/about/)",
+      "Bash(curl -s -o /dev/null -w \"GET /leaderboard/ \\(trailing slash\\) => %{http_code}\\\\n\" http://localhost:8765/leaderboard/)",
+      "Bash(curl -s -o /dev/null -w \"GET /about \\(no slash\\) => %{http_code}\\\\n\" http://localhost:8765/about)"
     ],
     "deny": [],
     "ask": []
