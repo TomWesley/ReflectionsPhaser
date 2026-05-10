@@ -697,6 +697,92 @@
                 font-size: 0.85rem;
                 order: 1;
             }
+
+            /* Two-column compact leaderboard for mobile */
+            .leaderboard-header {
+                display: none;
+            }
+
+            .leaderboard-card {
+                background: transparent;
+                border: none;
+                box-shadow: none;
+                backdrop-filter: none;
+                min-height: 0;
+                overflow: visible;
+            }
+
+            #leaderboardBody {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 6px;
+            }
+
+            .leaderboard-row,
+            .leaderboard-row.daily-mode {
+                display: grid;
+                grid-template-columns: auto 1fr;
+                grid-template-rows: auto auto;
+                column-gap: 6px;
+                row-gap: 2px;
+                padding: 8px 10px;
+                border: 1px solid rgba(78, 120, 232, 0.18);
+                border-bottom: 1px solid rgba(78, 120, 232, 0.18);
+                border-radius: 8px;
+                background: rgba(13, 13, 26, 0.5);
+                align-items: center;
+            }
+
+            .leaderboard-row .rank {
+                grid-column: 1;
+                grid-row: 1;
+                font-size: 0.8rem;
+            }
+
+            .leaderboard-row .player-info {
+                grid-column: 2;
+                grid-row: 1;
+                min-width: 0;
+                gap: 0;
+            }
+
+            .leaderboard-row .player-avatar {
+                display: none;
+            }
+
+            .leaderboard-row .player-name {
+                font-size: 0.78rem;
+                max-width: none;
+            }
+
+            .leaderboard-row.you .player-name::after {
+                content: ' (You)';
+                font-size: 0.65rem;
+            }
+
+            .leaderboard-row .mirror-count {
+                grid-column: 1;
+                grid-row: 2;
+                text-align: left;
+                font-size: 0.62rem;
+                opacity: 0.7;
+            }
+
+            .leaderboard-row .score {
+                grid-column: 2;
+                grid-row: 2;
+                text-align: right;
+                font-size: 0.95rem;
+            }
+
+            .leaderboard-row.daily-mode .score {
+                grid-column: 1 / -1;
+            }
+
+            .loading-state,
+            .empty-state {
+                grid-column: 1 / -1;
+            }
         }
 
         /* Mobile landscape */
