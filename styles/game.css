@@ -120,8 +120,10 @@ body {
 .navbar-btn-secondary {
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 6px;
     padding: 8px 16px;
+    min-width: 100px;
     border: none;
     border-radius: 8px;
     font-family: 'Space Grotesk', sans-serif;
@@ -166,8 +168,10 @@ body {
 .navbar-btn-daily {
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 6px;
     padding: 8px 16px;
+    min-width: 100px;
     border: none;
     border-radius: 8px;
     font-family: 'Space Grotesk', sans-serif;
@@ -202,8 +206,10 @@ body {
 .navbar-btn-snap {
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 6px;
     padding: 8px 16px;
+    min-width: 100px;
     border: none;
     border-radius: 8px;
     font-family: 'Space Grotesk', sans-serif;
@@ -275,7 +281,7 @@ body {
 
 /* Mode Selector - REMOVED (keeping for cleanup) */
 
-/* Animated background particles */
+/* Scan lines background */
 body::before {
     content: '';
     position: fixed;
@@ -283,20 +289,15 @@ body::before {
     left: 0;
     width: 100%;
     height: 100%;
-    background-image:
-        radial-gradient(2px 2px at 20px 30px, var(--arc), transparent),
-        radial-gradient(2px 2px at 40px 70px, var(--pink), transparent),
-        radial-gradient(1px 1px at 90px 40px, var(--flare), transparent);
-    background-repeat: repeat;
-    background-size: 120px 120px;
-    animation: float 15s ease-in-out infinite;
-    opacity: 0.15;
+    background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 3px,
+        rgba(78, 120, 232, 0.06) 3px,
+        rgba(78, 120, 232, 0.06) 4px
+    );
     z-index: -1;
-}
-
-@keyframes float {
-    0%, 100% { transform: translateY(0px) rotate(0deg); }
-    50% { transform: translateY(-20px) rotate(180deg); }
+    pointer-events: none;
 }
 
 /* Typography - LEGACY h1 (Hidden, now in navbar) */
