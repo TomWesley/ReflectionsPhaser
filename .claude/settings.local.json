@@ -80,7 +80,11 @@
       "Bash(curl -s -o /dev/null -w \"GET /leaderboard/ \\(trailing slash\\) => %{http_code}\\\\n\" http://localhost:8765/leaderboard/)",
       "Bash(curl -s -o /dev/null -w \"GET /about \\(no slash\\) => %{http_code}\\\\n\" http://localhost:8765/about)",
       "Bash(curl -s -o /dev/null -w \"leaderboard => %{http_code}\\\\n\" http://localhost:8765/leaderboard)",
-      "Bash(curl -s http://localhost:8765/leaderboard)"
+      "Bash(curl -s http://localhost:8765/leaderboard)",
+      "Bash(gh auth:*)",
+      "Bash(gh repo:*)",
+      "Bash(gh run:*)",
+      "Bash(gh api:*)"
     ],
     "deny": [],
     "ask": []
