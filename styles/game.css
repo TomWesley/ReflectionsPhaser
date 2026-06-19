@@ -720,12 +720,12 @@ h1 {
 }
 
 .btn-primary:disabled, .btn-secondary:disabled, .btn-debug:disabled {
-    background: rgba(100, 100, 100, 0.3);
-    color: rgba(255, 255, 255, 0.4);
+    background: rgba(100, 100, 100, 0.4);
+    color: rgba(255, 255, 255, 0.55);
     cursor: not-allowed;
     transform: none;
     box-shadow: none;
-    border: 1px solid rgba(100, 100, 100, 0.3);
+    border: 1px solid rgba(100, 100, 100, 0.4);
 }
 
 /* Game Over Modal */
@@ -1730,8 +1730,8 @@ h1 {
     /* Mobile Launch & Reset Buttons */
     .mobile-launch-btn,
     .mobile-reset-btn {
-        width: 34px;
-        height: 34px;
+        width: 44px;
+        height: 44px;
         border-radius: 8px;
         border: none;
         font-size: 16px;
@@ -1753,8 +1753,8 @@ h1 {
     }
 
     .mobile-snap-btn {
-        width: 34px;
-        height: 34px;
+        width: 44px;
+        height: 44px;
         border-radius: 8px;
         border: 1px solid rgba(78, 120, 232, 0.5);
         background: rgba(78, 120, 232, 0.3);
@@ -2323,4 +2323,13 @@ h1 {
     }
 
     /* btn-replay/save/share sizing unified in .modal-buttons rule */
+}
+
+/* Respect user preference for reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
 }

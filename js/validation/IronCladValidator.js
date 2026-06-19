@@ -418,46 +418,28 @@ export class IronCladValidator {
     static generateReport(mirrors) {
         const validation = this.validateAllMirrors(mirrors);
 
-        console.log('='.repeat(80));
-        console.log('IRON-CLAD VALIDATION REPORT');
-        console.log('='.repeat(80));
-        console.log(`Total Mirrors: ${validation.totalMirrors}`);
-        console.log(`Valid Mirrors: ${validation.validMirrors}`);
-        console.log(`Invalid Mirrors: ${validation.invalidMirrors}`);
-        console.log(`Overall Status: ${validation.allValid ? '✓ ALL VALID' : '✗ VIOLATIONS DETECTED'}`);
-        console.log('='.repeat(80));
 
         if (validation.violations.length > 0) {
-            console.log('\nVIOLATIONS DETECTED:');
             validation.violations.forEach((violation, idx) => {
-                console.log(`\nMirror ${violation.mirrorIndex} (${violation.mirror.shape}):`);
 
                 if (!violation.rule1.valid) {
-                    console.log(`  ✗ RULE 1 VIOLATION: ${violation.rule1.violations.length} vertices not on grid`);
                     violation.rule1.violations.forEach(v => {
-                        console.log(`    - ${v.message}`);
                     });
                 }
 
                 if (!violation.rule2.valid) {
-                    console.log(`  ✗ RULE 2 VIOLATION: ${violation.rule2.violations.length} overlap issues`);
                     violation.rule2.violations.forEach(v => {
-                        console.log(`    - ${v.message}`);
                     });
                 }
 
                 if (!violation.rule3.valid) {
-                    console.log(`  ✗ RULE 3 VIOLATION: ${violation.rule3.violations.length} forbidden zone issues`);
                     violation.rule3.violations.forEach(v => {
-                        console.log(`    - ${v.message}`);
                     });
                 }
             });
         } else {
-            console.log('\n✓ No violations detected - all mirrors are valid!');
         }
 
-        console.log('='.repeat(80));
 
         return validation;
     }

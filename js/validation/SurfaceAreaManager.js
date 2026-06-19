@@ -204,11 +204,9 @@ export class SurfaceAreaManager {
      * SIMPLE APPROACH: Add mirrors one at a time, then pick final mirror to hit exact total
      */
     static generateMirrorsWithTargetSurfaceArea() {
-        console.log('🔧 Starting simple mirror generation...');
         const targetArea = this.TARGET_SURFACE_AREA;
         const minMirrors = 6;
         const possibleMirrors = this.getAllPossibleMirrors();
-        console.log(`📦 Got ${possibleMirrors.length} possible mirror types`);
 
         const selectedMirrors = [];
         let currentArea = 0;
@@ -223,7 +221,6 @@ export class SurfaceAreaManager {
         ];
 
         const strategy = strategies[Math.floor(Math.random() * strategies.length)];
-        console.log(`  Using strategy: ${strategy.name} (area ${strategy.range[0]}-${strategy.range[1]}, ~${strategy.targetCount} mirrors)`);
 
         // Step 1: Add random mirrors until we're close to target (leave room for final mirror)
         const mirrorPool = possibleMirrors.filter(m =>
@@ -246,12 +243,10 @@ export class SurfaceAreaManager {
 
             selectedMirrors.push(mirrorCopy);
             currentArea += randomMirror.surfaceArea;
-            console.log(`  Added ${mirrorCopy.shape} (${randomMirror.surfaceArea}) - total: ${currentArea}/${targetArea}`);
         }
 
         // Step 2: Find the EXACT mirror(s) needed to hit targetArea
         const remaining = targetArea - currentArea;
-        console.log(`  Need exactly ${remaining} more surface area to reach ${targetArea}`);
 
         // Try to find a single mirror with exact remaining area
         const exactMatch = possibleMirrors.find(m => m.surfaceArea === remaining);
@@ -259,7 +254,6 @@ export class SurfaceAreaManager {
             const finalMirror = { ...exactMatch, rotation: 0 };
             selectedMirrors.push(finalMirror);
             currentArea += exactMatch.surfaceArea;
-            console.log(`  ✓ Found exact match: ${exactMatch.shape} (${exactMatch.surfaceArea})`);
         } else {
             // Try to find two mirrors that sum to remaining
             let found = false;
@@ -274,7 +268,6 @@ export class SurfaceAreaManager {
                     selectedMirrors.push({ ...first, rotation: 0 });
                     selectedMirrors.push({ ...second, rotation: 0 });
                     currentArea += first.surfaceArea + second.surfaceArea;
-                    console.log(`  ✓ Found pair: ${first.shape} (${first.surfaceArea}) + ${second.shape} (${second.surfaceArea})`);
                     found = true;
                 }
             }
@@ -291,7 +284,6 @@ export class SurfaceAreaManager {
         }
 
         const finalArea = this.calculateTotalSurfaceArea(selectedMirrors);
-        console.log(`✅ Generated ${selectedMirrors.length} mirrors with ${finalArea} total surface area`);
 
         if (finalArea !== targetArea) {
             console.warn(`⚠️ Surface area is ${finalArea}, expected ${targetArea} (diff: ${finalArea - targetArea})`);
@@ -403,17 +395,14 @@ export class SurfaceAreaManager {
      * But we want fewer mirrors (6-12), so use average size of 8-9 units per mirror
      */
     static generateDeterministicExactArea(targetArea, possibleMirrors, minMirrors = 6) {
-        console.log(`🔧 Using deterministic approach to guarantee exactly ${targetArea} surface area with ${minMirrors}+ mirrors`);
 
         // Find the smallest mirror surface area (will be smallest square: 20px = 1 grid unit = 4 perimeter)
         const smallestMirror = possibleMirrors.reduce((min, m) =>
             m.surfaceArea < min.surfaceArea ? m : min
         );
-        console.log(`Smallest available mirror has ${smallestMirror.surfaceArea} surface area`);
 
         // Get all unique surface area values, sorted ASCENDING (prefer smaller for more mirrors)
         const uniqueAreas = [...new Set(possibleMirrors.map(m => m.surfaceArea))].sort((a, b) => a - b);
-        console.log(`Available surface area values: ${uniqueAreas.join(', ')}`);
 
         // Strategy: Build with medium-small mirrors to hit minMirrors count
         // Average target per mirror: 84 / 10 = 8.4 units per mirror
@@ -430,7 +419,6 @@ export class SurfaceAreaManager {
                 // Only use exact match if we're at or above minimum count
                 mirrors.push({ ...exactMatch, rotation: 0 });
                 currentArea += exactMatch.surfaceArea;
-                console.log(`✓ Added exact match: ${exactMatch.shape} (${exactMatch.surfaceArea}) - total now ${currentArea}`);
                 break;
             }
 
@@ -461,7 +449,6 @@ export class SurfaceAreaManager {
 
             mirrors.push({ ...selected, rotation: 0 });
             currentArea += selected.surfaceArea;
-            console.log(`✓ Added ${selected.shape} (${selected.surfaceArea}) - total now ${currentArea}/${targetArea}, count: ${mirrors.length}`);
 
             // Safety check
             if (mirrors.length > 100) {
@@ -471,7 +458,6 @@ export class SurfaceAreaManager {
         }
 
         const finalArea = this.calculateTotalSurfaceArea(mirrors);
-        console.log(`✅ Deterministic generation complete: ${mirrors.length} mirrors, ${finalArea} area`);
 
         if (finalArea !== targetArea) {
             console.error(`❌ CRITICAL: Failed to achieve exact target! Got ${finalArea}, expected ${targetArea}`);

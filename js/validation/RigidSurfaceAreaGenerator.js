@@ -228,7 +228,6 @@ export class RigidSurfaceAreaGenerator {
             });
         });
 
-        console.log(`📦 Mirror catalog: ${catalog.length} total configurations`);
 
         // Group by surface area for easy lookup
         const bySurfaceArea = {};
@@ -241,7 +240,6 @@ export class RigidSurfaceAreaGenerator {
 
         // Log available surface areas
         const uniqueAreas = Object.keys(bySurfaceArea).map(Number).sort((a, b) => a - b);
-        console.log(`📊 Available surface areas: ${uniqueAreas.join(', ')}`);
 
         return { catalog, bySurfaceArea, uniqueAreas };
     }
@@ -269,7 +267,6 @@ export class RigidSurfaceAreaGenerator {
             }
         });
 
-        console.log(`🎯 Generating configuration for EXACTLY ${TARGET} surface area (true random)...`);
 
         const selectedMirrors = [];
         let currentTotal = 0;
@@ -316,7 +313,6 @@ export class RigidSurfaceAreaGenerator {
                 selectedMirrors.push({ ...exactMirror });
                 currentTotal += exactMirror.surfaceArea;
                 shapeCount[exactMirror.shape]++;
-                console.log(`  ✓ Exact match: ${exactMirror.shape} (${exactMirror.surfaceArea}) - Total: ${currentTotal}/${TARGET}`);
                 break;
             }
 
@@ -328,7 +324,6 @@ export class RigidSurfaceAreaGenerator {
                 selectedMirrors.push({ ...exactMirror });
                 currentTotal += exactMirror.surfaceArea;
                 shapeCount[exactMirror.shape]++;
-                console.log(`  ✓ Exact match (any): ${exactMirror.shape} (${exactMirror.surfaceArea}) - Total: ${currentTotal}/${TARGET}`);
                 break;
             }
 
@@ -360,15 +355,12 @@ export class RigidSurfaceAreaGenerator {
             currentTotal += selectedMirror.surfaceArea;
             shapeCount[selectedMirror.shape]++;
 
-            console.log(`  Added ${selectedMirror.shape} (${selectedMirror.surfaceArea}) - Total: ${currentTotal}/${TARGET}`);
         }
 
         // Log shape diversity
-        console.log(`  Shape distribution:`, Object.entries(shapeCount).filter(([k,v]) => v > 0).map(([k,v]) => `${k}:${v}`).join(', '));
 
         // If we didn't hit exactly 84, use backtracking to fix
         if (currentTotal !== TARGET) {
-            console.log(`📍 Adjusting: Current ${currentTotal}, need exactly ${TARGET}`);
             return this.backtrackToExact84(selectedMirrors, currentTotal, bySurfaceArea, uniqueAreas, byShape, ALL_SHAPES);
         }
 
@@ -383,8 +375,6 @@ export class RigidSurfaceAreaGenerator {
             return this.emergencyFix84(selectedMirrors, finalTotal, bySurfaceArea, uniqueAreas);
         }
 
-        console.log(`✅ SUCCESS: Generated ${selectedMirrors.length} mirrors with EXACTLY ${finalTotal} surface area`);
-        console.log(`   Breakdown: ${selectedMirrors.map(m => `${m.shape}(${m.surfaceArea})`).join(', ')}`);
 
         return selectedMirrors;
     }
@@ -406,7 +396,6 @@ export class RigidSurfaceAreaGenerator {
                 if (mirrors.length === 0) break;
                 const removed = mirrors.pop();
                 currentTotal -= removed.surfaceArea;
-                console.log(`  - Removed ${removed.shape} (${removed.surfaceArea}), total now ${currentTotal}`);
             } else {
                 // Under target - try to add exact match or smallest that fits
                 const remaining = TARGET - currentTotal;
@@ -416,7 +405,6 @@ export class RigidSurfaceAreaGenerator {
                     const match = bySurfaceArea[remaining][Math.floor(Math.random() * bySurfaceArea[remaining].length)];
                     mirrors.push({ ...match });
                     currentTotal += match.surfaceArea;
-                    console.log(`  ✓ Exact fill: ${match.shape} (${match.surfaceArea}) - Total: ${currentTotal}`);
                     break;
                 }
 
@@ -429,7 +417,6 @@ export class RigidSurfaceAreaGenerator {
                     const pick = options[Math.floor(Math.random() * options.length)];
                     mirrors.push({ ...pick });
                     currentTotal += pick.surfaceArea;
-                    console.log(`  + Exact backtrack fill: ${pick.shape} (${pick.surfaceArea}) - Total: ${currentTotal}`);
                     break;
                 }
                 if (fitAreas.length === 0) {
@@ -446,15 +433,12 @@ export class RigidSurfaceAreaGenerator {
                 const pick = options[Math.floor(Math.random() * options.length)];
                 mirrors.push({ ...pick });
                 currentTotal += pick.surfaceArea;
-                console.log(`  + Added ${pick.shape} (${pick.surfaceArea}) - Total: ${currentTotal}`);
             }
         }
 
         // Verify we hit the target
         const finalTotal = mirrors.reduce((sum, m) => sum + m.surfaceArea, 0);
         if (finalTotal === TARGET) {
-            console.log(`✅ SUCCESS: Generated ${mirrors.length} mirrors with EXACTLY ${finalTotal} surface area`);
-            console.log(`   Breakdown: ${mirrors.map(m => `${m.shape}(${m.surfaceArea})`).join(', ')}`);
             return mirrors;
         }
 
@@ -474,12 +458,10 @@ export class RigidSurfaceAreaGenerator {
 
         if (diff > 0) {
             // Need to add more
-            console.log(`  Need to add ${diff} units`);
 
             // Try to find exact match
             if (bySurfaceArea[diff]) {
                 mirrors.push({ ...bySurfaceArea[diff][0] });
-                console.log(`  ✓ Added ${bySurfaceArea[diff][0].shape} (${diff})`);
             } else {
                 // Add multiple small mirrors to reach target
                 let remaining = diff;
@@ -490,30 +472,25 @@ export class RigidSurfaceAreaGenerator {
                     const area = fitAreas[fitAreas.length - 1];
                     mirrors.push({ ...bySurfaceArea[area][0] });
                     remaining -= area;
-                    console.log(`  + Added ${bySurfaceArea[area][0].shape} (${area}), ${remaining} left`);
                 }
             }
         } else if (diff < 0) {
             // Have too much - remove mirrors
-            console.log(`  Need to remove ${-diff} units`);
 
             // Remove the last mirror(s) until we're under target, then re-add filler
             while (mirrors.length > 0 && currentTotal > TARGET) {
                 const removed = mirrors.pop();
                 currentTotal -= removed.surfaceArea;
-                console.log(`  - Removed ${removed.shape} (${removed.surfaceArea}), total now ${currentTotal}`);
             }
 
             // Now add back to exactly 84
             const remaining = TARGET - currentTotal;
             if (remaining > 0 && bySurfaceArea[remaining]) {
                 mirrors.push({ ...bySurfaceArea[remaining][0] });
-                console.log(`  ✓ Added ${bySurfaceArea[remaining][0].shape} (${remaining})`);
             }
         }
 
         const finalTotal = mirrors.reduce((sum, m) => sum + m.surfaceArea, 0);
-        console.log(`  Emergency fix complete: ${finalTotal} (${finalTotal === TARGET ? 'SUCCESS' : 'FAILED'})`);
 
         return mirrors;
     }

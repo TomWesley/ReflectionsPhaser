@@ -114,7 +114,6 @@ export class ReplayRecorder {
             this.isRecording = true;
             this.useWebCodecs = true;
 
-            console.log('WebCodecs MP4 recording started');
             return true;
         } catch (error) {
             console.error('Failed to start WebCodecs recording:', error);
@@ -181,7 +180,6 @@ export class ReplayRecorder {
             this.videoURL = URL.createObjectURL(this.videoBlob);
             this.isRecording = false;
 
-            console.log('MP4 recording complete:', this.videoBlob.size, 'bytes,', this.frameCount, 'frames');
             return this.videoBlob;
         } catch (error) {
             console.error('Failed to finalize MP4:', error);
@@ -221,7 +219,6 @@ export class ReplayRecorder {
 
             this.isRecording = true;
             this.useWebCodecs = false;
-            console.log('MediaRecorder fallback started, mimeType:', options.mimeType || 'default');
             return true;
         } catch (error) {
             console.error('MediaRecorder fallback failed:', error);

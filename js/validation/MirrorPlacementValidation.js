@@ -28,7 +28,6 @@ export class MirrorPlacementValidation {
             }
         }
         
-        console.log(`Generated ${this.gridIntersections.length} grid intersections`);
     }
     
     /**
@@ -89,7 +88,6 @@ export class MirrorPlacementValidation {
             height: CONFIG.CANVAS_HEIGHT
         });
 
-        console.log(`Generated ${this.forbiddenZones.length} forbidden zones (1 center + 4 edges)`);
     }
     
     /**

@@ -231,6 +231,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Initialize Firebase leaderboard services (non-blocking)
         initFirebaseServices(cacheBust).catch(err => {
             console.warn('Firebase leaderboard unavailable:', err.message);
+            if (typeof showToast === 'function') {
+                showToast('Leaderboard unavailable - scores won\'t be saved', 5000);
+            }
+        });
+
+        // Offline/online indicators
+        window.addEventListener('offline', () => {
+            if (typeof showToast === 'function') {
+                showToast('You are offline - scores won\'t be saved', 5000);
+            }
+        });
+        window.addEventListener('online', () => {
+            if (typeof showToast === 'function') {
+                showToast('Back online', 2000);
+            }
         });
 
     } catch (error) {

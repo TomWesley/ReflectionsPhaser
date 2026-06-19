@@ -41,6 +41,14 @@
             padding: 0;
             display: block !important;
         }
+        /* Remove portrait rotation lock on non-game pages */
+        body::after {
+            display: none !important;
+            content: none !important;
+        }
+        body > * {
+            opacity: 1 !important;
+        }
 
         .leaderboard-container {
             max-width: 520px;
@@ -921,9 +929,9 @@
     </div>
 
     <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 
     <script type="module">
         import { FirebaseAuth } from './js/firebase/FirebaseAuth.js';
@@ -1071,7 +1079,11 @@
 
             try {
                 const dailyDate = currentMode === 'daily' ? currentDailyDate : null;
-                const entries = await service.getLeaderboard(currentMode, 'all', dailyDate, 25);
+                const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 10000));
+                const entries = await Promise.race([
+                    service.getLeaderboard(currentMode, 'all', dailyDate, 25),
+                    timeout
+                ]);
                 const uid = auth.getUID();
 
                 if (entries.length === 0) {

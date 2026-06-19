@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; font-src https://fonts.gstatic.com https://cdn.jsdelivr.net; img-src 'self' data: blob: https:; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com https://*.cloudfunctions.net wss://*.firebaseio.com; media-src 'self' blob:; frame-ancestors 'none';">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -78,7 +79,7 @@
     <main class="main-content">
         <!-- Game Canvas Container (Independent Module) -->
         <div id="gameContainer">
-            <canvas id="gameCanvas" width="800" height="600"></canvas>
+            <canvas id="gameCanvas" width="800" height="600" role="img" aria-label="REFLECTIONS game board - place mirrors to deflect lasers"></canvas>
             <!-- Rotation Control - appears when a mirror is selected -->
             <div id="rotationControl" class="rotation-control hidden">
                 <div class="rotation-control-label">ROTATE</div>
@@ -88,7 +89,7 @@
     </main>
 
     <!-- Hidden Mission Briefing Modal -->
-    <div id="rulesModal" class="rules-modal hidden">
+    <div id="rulesModal" class="rules-modal hidden" role="dialog" aria-modal="true" aria-label="Mission Briefing">
         <div class="rules-content">
             <div class="instruction-header"><i class="iconoir-flash"></i> MISSION BRIEFING <i class="iconoir-flash"></i></div>
             <div class="instruction-content">
@@ -103,7 +104,7 @@
     </div>
 
     <!-- Game Over Modal -->
-    <div id="gameOverModal" class="rules-modal hidden">
+    <div id="gameOverModal" class="rules-modal hidden" role="dialog" aria-modal="true" aria-label="Game Over">
         <div class="rules-content snapshot-modal">
             <div class="snapshot-header">
                 <div id="finalTime" class="score-value">0:00.00</div>
@@ -134,7 +135,7 @@
     </div>
 
     <!-- Victory Modal -->
-    <div id="victoryModal" class="rules-modal hidden">
+    <div id="victoryModal" class="rules-modal hidden" role="dialog" aria-modal="true" aria-label="Victory">
         <div class="rules-content snapshot-modal victory-modal">
             <div class="snapshot-header victory">
                 <div id="victoryTime" class="score-value">5:00.00</div>
@@ -192,7 +193,7 @@
     </div>
 
     <!-- Auth Modal -->
-    <div id="authModal" class="rules-modal hidden">
+    <div id="authModal" class="rules-modal hidden" role="dialog" aria-modal="true" aria-label="Sign In">
         <div class="rules-content auth-modal-content">
             <div class="auth-modal-header">
                 <span class="auth-modal-title">Sign In</span>
@@ -840,6 +841,25 @@
                 closeAuthModal();
             }
         });
+
+        // ESC key closes the topmost open modal
+        document.addEventListener('keydown', function(e) {
+            if (e.key !== 'Escape') return;
+            const modals = [
+                { id: 'replayModal', close: closeReplay },
+                { id: 'authModal', close: closeAuthModal },
+                { id: 'victoryModal', close: closeVictory },
+                { id: 'gameOverModal', close: closeGameOver },
+                { id: 'rulesModal', close: closeRules },
+            ];
+            for (const m of modals) {
+                const el = document.getElementById(m.id);
+                if (el && !el.classList.contains('hidden')) {
+                    m.close();
+                    break;
+                }
+            }
+        });
     </script>
 
     <!-- Dev Tools (localhost only) -->
@@ -906,10 +926,10 @@
     </script>
 
     <!-- Firebase SDK (compat mode for CDN usage) -->
-    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-storage-compat.js"></script>
 
     <!-- Main Game Module -->
     <script type="module" src="/js/main.js?v=15"></script>

@@ -37,7 +37,6 @@ export class MirrorGenerator {
     generateFreePlayMirrors(mirrors) {
         const maxConfigAttempts = 50; // Try many different configurations
 
-        console.log(`🎯 Generating mirrors with RIGID 84 surface area requirement...`);
 
         for (let attempt = 0; attempt < maxConfigAttempts; attempt++) {
             mirrors.length = 0; // Clear previous attempt
@@ -53,7 +52,6 @@ export class MirrorGenerator {
                 continue;
             }
 
-            console.log(`🔄 Attempt ${attempt + 1}: Placing ${mirrorConfigs.length} mirrors (total: ${configTotal})...`);
 
             let allPlacedSuccessfully = true;
 
@@ -73,7 +71,6 @@ export class MirrorGenerator {
             if (allPlacedSuccessfully) {
                 // SUCCESS! Verify final surface area
                 const totalSurfaceArea = SurfaceAreaManager.calculateTotalSurfaceArea(mirrors);
-                console.log(`✅ Successfully placed ${mirrors.length} mirrors`);
 
                 // CRITICAL VERIFICATION
                 if (totalSurfaceArea !== 84) {
@@ -84,7 +81,6 @@ export class MirrorGenerator {
                 }
 
                 // Final validation check
-                console.log(`🔍 Running final validation on all ${mirrors.length} mirrors...`);
                 let allValid = true;
 
                 for (let i = 0; i < mirrors.length; i++) {
@@ -100,7 +96,6 @@ export class MirrorGenerator {
                 }
 
                 if (allValid) {
-                    console.log(`✅✅✅ Configuration complete: ${mirrors.length} mirrors, EXACTLY 84 surface area`);
                     return mirrors;
                 } else {
                     console.warn(`⚠️ Validation failed, generating new configuration...`);
@@ -155,7 +150,6 @@ export class MirrorGenerator {
             }
         ];
 
-        console.log(`🔧 Generating guaranteed fallback: 3 rectangles in safe positions`);
 
         // Place each mirror at predefined safe locations
         for (let config of safeConfigs) {
@@ -168,7 +162,6 @@ export class MirrorGenerator {
                 const validation = SimpleValidator.validateMirror(mirror, mirrors);
                 if (validation.valid) {
                     mirrors.push(mirror);
-                    console.log(`  ✓ Placed ${mirror.shape} at (${mirror.x}, ${mirror.y})`);
                 } else {
                     console.error(`  ❌ Fallback mirror failed validation: ${validation.reason}`);
                 }
@@ -177,7 +170,6 @@ export class MirrorGenerator {
 
         // Verify surface area
         const totalSurfaceArea = SurfaceAreaManager.calculateTotalSurfaceArea(mirrors);
-        console.log(`✅ Fallback complete: ${mirrors.length} mirrors, surface area: ${totalSurfaceArea}`);
 
         if (totalSurfaceArea !== 84) {
             console.error(`❌ CRITICAL: Fallback has wrong surface area! ${totalSurfaceArea} !== 84`);
@@ -215,12 +207,10 @@ export class MirrorGenerator {
             const validation = SimpleValidator.validateMirror(mirror, existingMirrors);
 
             if (validation.valid) {
-                console.log(`✓ Created valid ${mirror.shape} mirror at (${mirror.x}, ${mirror.y}) [${existingMirrors.length} existing mirrors]`);
                 return mirror;
             } else {
                 // Log why it's invalid (but only occasionally to avoid spam)
                 if (attempt % 20 === 0) {
-                    console.log(`  Attempt ${attempt}: ${mirror.shape} at (${mirror.x}, ${mirror.y}) invalid - ${validation.reason}`);
                 }
             }
 
@@ -245,7 +235,6 @@ export class MirrorGenerator {
         for (let simpleConfig of simpleMirrors) {
             let mirror = this.createValidatedMirror(simpleConfig, existingMirrors);
             if (mirror) {
-                console.log('Generated replacement mirror:', simpleConfig.shape);
                 return mirror;
             }
         }
