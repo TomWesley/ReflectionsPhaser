@@ -22,22 +22,36 @@ export class RotationControl {
     }
 
     setupEvents() {
-        this.canvas.addEventListener('mousedown', (e) => this.onPointerDown(e));
-        window.addEventListener('mousemove', (e) => this.onPointerMove(e));
-        window.addEventListener('mouseup', () => this.onPointerUp());
-
-        this.canvas.addEventListener('touchstart', (e) => {
+        // Store bound handlers for proper cleanup
+        this._onMouseDown = (e) => this.onPointerDown(e);
+        this._onMouseMove = (e) => this.onPointerMove(e);
+        this._onMouseUp = () => this.onPointerUp();
+        this._onTouchStart = (e) => {
             e.preventDefault();
             e.stopPropagation();
             this.onPointerDown(e.touches[0]);
-        }, { passive: false });
-        window.addEventListener('touchmove', (e) => {
+        };
+        this._onTouchMove = (e) => {
             if (this.isDragging) {
                 e.preventDefault();
                 this.onPointerMove(e.touches[0]);
             }
-        }, { passive: false });
-        window.addEventListener('touchend', () => this.onPointerUp());
+        };
+        this._onTouchEnd = () => this.onPointerUp();
+
+        this.canvas.addEventListener('mousedown', this._onMouseDown);
+        window.addEventListener('mousemove', this._onMouseMove);
+        window.addEventListener('mouseup', this._onMouseUp);
+        this.canvas.addEventListener('touchstart', this._onTouchStart, { passive: false });
+        window.addEventListener('touchmove', this._onTouchMove, { passive: false });
+        window.addEventListener('touchend', this._onTouchEnd);
+    }
+
+    destroy() {
+        window.removeEventListener('mousemove', this._onMouseMove);
+        window.removeEventListener('mouseup', this._onMouseUp);
+        window.removeEventListener('touchmove', this._onTouchMove);
+        window.removeEventListener('touchend', this._onTouchEnd);
     }
 
     getAngleFromEvent(e) {

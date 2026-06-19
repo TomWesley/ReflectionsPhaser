@@ -107,6 +107,12 @@ export class Game {
         this.rotationControl = new RotationControl(rotCanvas, (angle) => this.onRotationChange(angle));
         this.rotationControlEl = document.getElementById('rotationControl');
 
+        // Track RAF ID for cleanup and tab visibility for pausing
+        this._rafId = null;
+        this._paused = false;
+        this._boundVisibilityChange = () => this._onVisibilityChange();
+        document.addEventListener('visibilitychange', this._boundVisibilityChange);
+
         this.init();
     }
 
@@ -118,6 +124,30 @@ export class Game {
         this.generateMirrors();
         this.generateSpawners();
         this.gameLoop();
+    }
+
+    /**
+     * Pause/resume when browser tab gains/loses visibility.
+     * Prevents physics accumulator blowup and unfair time loss.
+     */
+    _onVisibilityChange() {
+        if (document.hidden) {
+            this._paused = true;
+            // Freeze the start time offset so gameTime doesn't jump on resume
+            if (this.isPlaying && !this.gameOver) {
+                this._pausedAt = Date.now();
+            }
+        } else {
+            if (this._paused && this._pausedAt && this.isPlaying && !this.gameOver) {
+                // Shift startTime forward by the paused duration so gameTime stays continuous
+                const pausedDuration = Date.now() - this._pausedAt;
+                this.startTime += pausedDuration;
+            }
+            this._paused = false;
+            this._pausedAt = null;
+            this.lastTimestamp = null; // Reset so frameDt doesn't spike
+            this.physicsAccumulator = 0;
+        }
     }
     
     setupEventListeners() {
@@ -1341,14 +1371,16 @@ export class Game {
 
         // Update game time
         this.gameTime = (Date.now() - this.startTime) / 1000;
-        this.updateTimerDisplay();
 
-        // Check for victory (perfect score - survived max time)
+        // Check for victory BEFORE collision checks (prevents losing at exactly 5:00.00)
         if (this.gameTime >= CONFIG.MAX_GAME_TIME) {
-            this.gameTime = CONFIG.MAX_GAME_TIME; // Cap at exactly max time
+            this.gameTime = CONFIG.MAX_GAME_TIME;
+            this.updateTimerDisplay();
             this.showVictoryModal();
             return;
         }
+
+        this.updateTimerDisplay();
 
         // Update lasers with new collision system
         for (let i = this.lasers.length - 1; i >= 0; i--) {
@@ -1959,6 +1991,12 @@ export class Game {
     }
 
     gameLoop(timestamp) {
+        // Skip physics and rendering while tab is hidden
+        if (this._paused) {
+            this._rafId = requestAnimationFrame((t) => this.gameLoop(t));
+            return;
+        }
+
         // Calculate real elapsed time since last frame
         let frameDt = this.PHYSICS_DT; // default for first frame
         if (this.lastTimestamp !== null && timestamp !== undefined) {
@@ -1985,6 +2023,6 @@ export class Game {
             this.replayRecorder.captureFrame(timestamp);
         }
 
-        requestAnimationFrame((t) => this.gameLoop(t));
+        this._rafId = requestAnimationFrame((t) => this.gameLoop(t));
     }
 }

@@ -671,11 +671,21 @@
                 const rank = await service.getUserRank(mode, game.gameTime);
                 const rankText = rank ? `#${rank}` : '';
 
+                const rankNum = Number(rank);
+                const safeRank = (Number.isFinite(rankNum) && rankNum > 0) ? `#${rankNum}` : '';
+
                 if (result.isNewBest) {
-                    statusEl.innerHTML = `<span class="leaderboard-rank">${rankText} on the leaderboard</span> <span class="leaderboard-best">New personal best!</span>`;
+                    statusEl.textContent = '';
+                    const rankSpan = document.createElement('span');
+                    rankSpan.className = 'leaderboard-rank';
+                    rankSpan.textContent = `${safeRank} on the leaderboard`;
+                    const bestSpan = document.createElement('span');
+                    bestSpan.className = 'leaderboard-best';
+                    bestSpan.textContent = ' New personal best!';
+                    statusEl.append(rankSpan, bestSpan);
 
                     // Video upload for main game top 10
-                    if (mode === 'main' && rank && rank <= 10 && window.videoUploader) {
+                    if (mode === 'main' && rankNum <= 10 && window.videoUploader) {
                         const recorder = game.replayRecorder;
                         let videoBlob = recorder.videoBlob;
 
@@ -691,7 +701,11 @@
                         }
                     }
                 } else {
-                    statusEl.innerHTML = `<span class="leaderboard-rank">${rankText} on the leaderboard</span>`;
+                    statusEl.textContent = '';
+                    const rankSpan = document.createElement('span');
+                    rankSpan.className = 'leaderboard-rank';
+                    rankSpan.textContent = `${safeRank} on the leaderboard`;
+                    statusEl.appendChild(rankSpan);
                 }
 
             } catch (error) {

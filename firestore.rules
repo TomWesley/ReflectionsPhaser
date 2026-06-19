@@ -1,0 +1,28 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Scores collection - leaderboard entries
+    match /scores/{document} {
+      // Any authenticated user can read scores
+      allow read: if request.auth != null;
+
+      // Users can only create/update their own scores
+      allow create, update: if request.auth != null
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.score is number
+        && request.resource.data.score >= 0
+        && request.resource.data.score <= 300
+        && request.resource.data.mode in ['main', 'daily']
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.size() <= 16;
+
+      // No deletions allowed
+      allow delete: if false;
+    }
+
+    // Deny everything else by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

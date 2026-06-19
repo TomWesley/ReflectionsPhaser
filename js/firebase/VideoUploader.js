@@ -22,6 +22,12 @@ export class VideoUploader {
         const uid = this.auth.getUID();
         if (!uid || !videoBlob) return null;
 
+        // Reject oversized uploads (50MB max)
+        const MAX_VIDEO_SIZE = 50 * 1024 * 1024;
+        if (videoBlob.size > MAX_VIDEO_SIZE) {
+            throw new Error('Video too large (max 50MB)');
+        }
+
         const storage = getStorage();
         const ext = videoBlob.type.includes('mp4') ? 'mp4' : 'webm';
         const timestamp = Date.now();

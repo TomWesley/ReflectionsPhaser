@@ -279,7 +279,9 @@ export class FirebaseAuth {
      * Save display name to localStorage
      */
     setDisplayName(name) {
-        const cleaned = (name || '').trim().slice(0, 16);
+        let cleaned = (name || '').trim().slice(0, 16);
+        // Strip HTML tags and dangerous characters
+        cleaned = cleaned.replace(/<[^>]*>/g, '').replace(/[<>"'&]/g, '');
         if (!cleaned) return;
         try {
             localStorage.setItem('reflections_display_name', cleaned);
