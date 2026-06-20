@@ -16,43 +16,33 @@ export class MirrorCreationHelper {
      * Apply configuration properties to a mirror
      */
     static applyConfiguration(mirror, config, game) {
-        let propertiesChanged = false;
-
-        if (config.size && config.size !== mirror.size) {
+        // Unconditionally apply all config dimensions to ensure surface area matches.
+        // The factory creates mirrors with random defaults -- we must override them.
+        if (config.size !== undefined) {
             mirror.size = config.size;
-            mirror.width = config.width || config.size;
-            mirror.height = config.height || config.size;
-            propertiesChanged = true;
         }
-        if (config.width && config.width !== mirror.width) {
+        if (config.width !== undefined) {
             mirror.width = config.width;
-            propertiesChanged = true;
+        } else if (config.size !== undefined) {
+            mirror.width = config.size;
         }
-        if (config.height && config.height !== mirror.height) {
+        if (config.height !== undefined) {
             mirror.height = config.height;
-            propertiesChanged = true;
+        } else if (config.size !== undefined) {
+            mirror.height = config.size;
         }
-        if (config.rotation !== undefined && config.rotation !== mirror.rotation) {
+        if (config.rotation !== undefined) {
             mirror.rotation = config.rotation;
-            propertiesChanged = true;
         }
-
-        // Copy special shape properties
-        if (config.topWidth && config.topWidth !== mirror.topWidth) {
+        if (config.topWidth !== undefined) {
             mirror.topWidth = config.topWidth;
-            propertiesChanged = true;
         }
-        if (config.skew && config.skew !== mirror.skew) {
+        if (config.skew !== undefined) {
             mirror.skew = config.skew;
-            propertiesChanged = true;
         }
 
-        // If we modified any properties, recalculate vertices
-        if (propertiesChanged) {
-            game.safeUpdateVertices(mirror);
-        }
-
-        return propertiesChanged;
+        game.safeUpdateVertices(mirror);
+        return true;
     }
 
     /**

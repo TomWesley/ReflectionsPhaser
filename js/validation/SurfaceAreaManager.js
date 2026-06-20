@@ -59,14 +59,19 @@ export class SurfaceAreaManager {
                 const paraBase = mirror.width / gridSize;        // Base length
                 const paraHeight = mirror.height / gridSize;     // Vertical height
                 const paraSkew = mirror.skew / gridSize;         // Horizontal skew amount
-                
+
                 // Calculate the slanted side using Pythagorean theorem
                 // Slanted side = sqrt(height^2 + skew^2)
                 const paraSlantedSide = Math.sqrt(paraHeight * paraHeight + paraSkew * paraSkew);
                 const roundedParaSlantedSide = Math.round(paraSlantedSide);
-                
+
                 return 2 * (paraBase + roundedParaSlantedSide);
-                
+
+            case 'hexagon':
+                // Regular hexagon: perimeter = 6 * side, where side = radius = size/2
+                const hexSide = (mirror.size / 2) / gridSize;
+                return Math.round(6 * hexSide);
+
             default:
                 return 0;
         }
