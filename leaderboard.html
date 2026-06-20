@@ -244,6 +244,10 @@
             border-bottom: none;
         }
 
+        .leaderboard-row.has-replay:hover {
+            background: rgba(78, 120, 232, 0.15);
+        }
+
         .leaderboard-row:hover {
             background: rgba(78, 120, 232, 0.08);
         }
@@ -928,10 +932,32 @@
         </div>
     </div>
 
+    <!-- Replay Video Modal -->
+    <div id="replayModal" class="auth-overlay hidden" style="z-index: 10001;">
+        <div class="auth-panel" style="max-width: 500px; width: 95%;">
+            <div class="auth-panel-header">
+                <span class="auth-panel-title" id="replayTitle">Replay</span>
+                <button class="auth-panel-close" onclick="closeReplayModal()"><i class="iconoir-xmark"></i></button>
+            </div>
+            <div style="padding: 0;">
+                <video id="replayVideo" playsinline controls style="width: 100%; display: block; border-radius: 0 0 15px 15px; background: #000;"></video>
+                <div id="replayLoading" style="text-align: center; padding: 40px 20px; color: var(--text-secondary); font-family: 'Space Grotesk', sans-serif;">
+                    <i class="iconoir-refresh" style="font-size: 1.5rem; display: block; margin-bottom: 8px; animation: spin 1.5s linear infinite;"></i>
+                    Loading replay...
+                </div>
+                <div id="replayError" style="text-align: center; padding: 30px 20px; color: var(--text-secondary); font-family: 'Space Grotesk', sans-serif; display: none;">
+                    <i class="iconoir-video-camera-off" style="font-size: 1.5rem; display: block; margin-bottom: 8px; opacity: 0.5;"></i>
+                    No replay available for this score
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-storage-compat.js"></script>
 
     <script type="module">
         import { FirebaseAuth } from './js/firebase/FirebaseAuth.js';
@@ -1133,19 +1159,34 @@
                     const modeClass = isDaily ? ' daily-mode' : '';
                     const initial = (entry.displayName || 'A').charAt(0).toUpperCase();
                     const mirrorsCol = isDaily ? '' : `<span class="mirror-count">${entry.mirrorCount || '--'}</span>`;
+                    const hasVideo = !isDaily && rank <= 10 && entry.videoPath;
+                    const videoAttr = hasVideo ? ` data-video-path="${escapeHtml(entry.videoPath)}" data-player="${escapeHtml(entry.displayName || 'Anonymous')}" data-score="${escapeHtml(entry.scoreFormatted || formatScore(entry.score))}"` : '';
+                    const playIcon = hasVideo ? '<i class="iconoir-play" style="font-size: 10px; opacity: 0.5; margin-left: 4px;"></i>' : '';
+                    const clickClass = hasVideo ? ' has-replay' : '';
 
                     return `
-                        <div class="leaderboard-row${rankClass}${youClass}${modeClass}">
+                        <div class="leaderboard-row${rankClass}${youClass}${modeClass}${clickClass}"${videoAttr}>
                             <span class="rank">#${rank}</span>
                             <div class="player-info">
                                 <div class="player-avatar">${initial}</div>
-                                <span class="player-name">${escapeHtml(entry.displayName || 'Anonymous')}</span>
+                                <span class="player-name">${escapeHtml(entry.displayName || 'Anonymous')}${playIcon}</span>
                             </div>
                             ${mirrorsCol}
                             <span class="score">${escapeHtml(entry.scoreFormatted || formatScore(entry.score))}</span>
                         </div>
                     `;
                 }).join('');
+
+                // Attach click handlers for replay-enabled rows
+                body.querySelectorAll('.has-replay').forEach(row => {
+                    row.style.cursor = 'pointer';
+                    row.addEventListener('click', () => {
+                        const videoPath = row.dataset.videoPath;
+                        const player = row.dataset.player;
+                        const score = row.dataset.score;
+                        openReplayModal(videoPath, player, score);
+                    });
+                });
 
             } catch (error) {
                 console.error('Failed to load leaderboard:', error);
@@ -1189,6 +1230,59 @@
             div.textContent = str;
             return div.innerHTML;
         }
+
+        // Replay video modal
+        async function openReplayModal(videoPath, playerName, score) {
+            const modal = document.getElementById('replayModal');
+            const video = document.getElementById('replayVideo');
+            const loading = document.getElementById('replayLoading');
+            const error = document.getElementById('replayError');
+            const title = document.getElementById('replayTitle');
+
+            title.textContent = `${playerName} - ${score}`;
+            video.style.display = 'none';
+            video.src = '';
+            loading.style.display = 'block';
+            error.style.display = 'none';
+            modal.classList.remove('hidden');
+
+            try {
+                const { getStorage } = await import('./js/firebase/FirebaseConfig.js');
+                const storage = getStorage();
+                const url = await storage.ref(videoPath).getDownloadURL();
+
+                loading.style.display = 'none';
+                video.style.display = 'block';
+                video.src = url;
+                video.play().catch(() => {});
+            } catch (err) {
+                loading.style.display = 'none';
+                error.style.display = 'block';
+            }
+        }
+
+        window.closeReplayModal = function() {
+            const modal = document.getElementById('replayModal');
+            const video = document.getElementById('replayVideo');
+            video.pause();
+            video.src = '';
+            modal.classList.add('hidden');
+        };
+
+        // Close on backdrop click
+        document.getElementById('replayModal').addEventListener('click', function(e) {
+            if (e.target === this) closeReplayModal();
+        });
+
+        // ESC key closes replay modal
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                const modal = document.getElementById('replayModal');
+                if (modal && !modal.classList.contains('hidden')) {
+                    closeReplayModal();
+                }
+            }
+        });
 
         // Start
         init().catch(err => {
