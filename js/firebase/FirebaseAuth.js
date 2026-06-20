@@ -225,11 +225,7 @@ export class FirebaseAuth {
      * If signed in with Google, auto-save Google display name
      */
     _syncGoogleDisplayName(user) {
-        if (!user || user.isAnonymous) return;
-        const googleName = user.displayName;
-        if (googleName && !this.getDisplayName()) {
-            this.setDisplayName(googleName);
-        }
+        // No longer auto-saves Google name -- let the UI prompt the user to choose
     }
 
     getUser() {

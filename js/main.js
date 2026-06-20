@@ -44,14 +44,25 @@ async function initFirebaseServices(cacheBust) {
 
 
 // Auth modal functions
+let _authModalOriginalHTML = null;
+
 window.openAuthModal = function() {
-    document.getElementById('authModal').classList.remove('hidden');
-    document.getElementById('authError').textContent = '';
+    const modal = document.getElementById('authModal');
+    const body = modal.querySelector('.auth-modal-body');
+    // Restore original content if it was replaced by name picker
+    if (_authModalOriginalHTML && !document.getElementById('authSignInForm')) {
+        body.innerHTML = _authModalOriginalHTML;
+        modal.querySelector('.auth-modal-title').textContent = 'Sign In';
+    }
+    modal.classList.remove('hidden');
+    const errEl = document.getElementById('authError');
+    if (errEl) errEl.textContent = '';
 };
 
 window.closeAuthModal = function() {
     document.getElementById('authModal').classList.add('hidden');
-    document.getElementById('authError').textContent = '';
+    const errEl = document.getElementById('authError');
+    if (errEl) errEl.textContent = '';
 };
 
 window.switchAuthTab = function(tab) {
@@ -119,13 +130,67 @@ window.doGoogleSignInFromModal = async function() {
     errorEl.textContent = '';
     const result = await window.firebaseAuth.signInWithGoogle();
     if (result.success) {
-        closeAuthModal();
-        syncNameInputs();
-        showToast('Signed in with Google!');
+        // If user hasn't chosen a display name yet, prompt them
+        if (!window.firebaseAuth.getDisplayName()) {
+            showNamePicker(result.user.displayName || '');
+        } else {
+            closeAuthModal();
+            syncNameInputs();
+            showToast('Signed in with Google!');
+        }
     } else if (result.error) {
         errorEl.textContent = result.error;
     }
 };
+
+// Show inline name picker inside the auth modal
+function showNamePicker(suggestedName) {
+    const body = document.querySelector('#authModal .auth-modal-body');
+    const title = document.querySelector('#authModal .auth-modal-title');
+    // Save original HTML so we can restore it later
+    if (!_authModalOriginalHTML) {
+        _authModalOriginalHTML = body.innerHTML;
+    }
+    title.textContent = 'Choose Display Name';
+    body.innerHTML = `
+        <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 12px;">
+            This is how you'll appear on the leaderboard.
+        </p>
+        <div class="auth-form">
+            <input type="text" id="namePickerInput" class="auth-input" placeholder="Display name" maxlength="16" value="${suggestedName.replace(/"/g, '&quot;').slice(0, 16)}">
+            <button class="auth-btn-primary" onclick="confirmNamePick()">Confirm</button>
+        </div>
+        <div id="namePickerError" class="auth-error"></div>
+    `;
+    document.getElementById('namePickerInput').focus();
+    document.getElementById('namePickerInput').select();
+}
+
+window.confirmNamePick = function() {
+    const input = document.getElementById('namePickerInput');
+    const name = (input.value || '').trim();
+    const errorEl = document.getElementById('namePickerError');
+
+    if (!name) {
+        errorEl.textContent = 'Please enter a display name.';
+        return;
+    }
+
+    window.firebaseAuth.setDisplayName(name);
+    closeAuthModal();
+    syncNameInputs();
+    showToast('Welcome, ' + name + '!');
+
+    // Restore auth modal to default state for next open
+    restoreAuthModal();
+};
+
+function restoreAuthModal() {
+    const title = document.querySelector('#authModal .auth-modal-title');
+    title.textContent = 'Sign In';
+    // Re-render the original auth modal body on next open
+    // (openAuthModal already resets state via switchAuthTab)
+}
 
 window.doPasswordReset = async function() {
     if (!window.firebaseAuth) return;

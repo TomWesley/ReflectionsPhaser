@@ -1037,7 +1037,34 @@
             const errorEl = document.getElementById('lbAuthError');
             errorEl.textContent = '';
             const result = await auth.signInWithGoogle();
-            if (result.success) { window.closeLbAuth(); }
+            if (result.success) {
+                if (!auth.getDisplayName()) {
+                    // Show name picker inline
+                    const body = document.querySelector('#lbAuthOverlay .auth-panel-body');
+                    const title = document.querySelector('#lbAuthOverlay .auth-panel-title');
+                    title.textContent = 'Choose Display Name';
+                    const suggested = (result.user.displayName || '').slice(0, 16).replace(/"/g, '&quot;');
+                    body.innerHTML = `
+                        <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 12px;">
+                            This is how you'll appear on the leaderboard.
+                        </p>
+                        <div class="auth-form">
+                            <input type="text" id="lbNameInput" class="auth-input" placeholder="Display name" maxlength="16" value="${suggested}">
+                            <button class="auth-btn-primary" id="lbNameConfirm">Confirm</button>
+                        </div>
+                    `;
+                    document.getElementById('lbNameInput').focus();
+                    document.getElementById('lbNameInput').select();
+                    document.getElementById('lbNameConfirm').addEventListener('click', () => {
+                        const name = document.getElementById('lbNameInput').value.trim();
+                        if (!name) return;
+                        auth.setDisplayName(name);
+                        window.location.reload();
+                    });
+                } else {
+                    window.closeLbAuth();
+                }
+            }
             else if (result.error) { errorEl.textContent = result.error; }
         };
 
