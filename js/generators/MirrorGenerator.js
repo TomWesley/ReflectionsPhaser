@@ -62,7 +62,6 @@ export class MirrorGenerator {
                     mirrors.push(mirror);
                 } else {
                     // Failed to place - will generate a different configuration next attempt
-                    console.warn(`  ⚠️ Failed to place ${config.shape} (${config.surfaceArea})`);
                     allPlacedSuccessfully = false;
                     break;
                 }
@@ -74,9 +73,7 @@ export class MirrorGenerator {
 
                 // CRITICAL VERIFICATION
                 if (totalSurfaceArea !== 84) {
-                    console.error(`❌❌❌ CRITICAL BUG: Placed mirrors sum to ${totalSurfaceArea} instead of 84!`);
-                    console.error('Configs:', mirrorConfigs.map(m => `${m.shape}(${m.surfaceArea})`).join(', '));
-                    console.error('Placed:', mirrors.map(m => `${m.shape}(${SurfaceAreaManager.calculateMirrorSurfaceArea(m)})`).join(', '));
+                    // Surface area mismatch after placement — retry with new config
                     continue;
                 }
 
@@ -97,16 +94,12 @@ export class MirrorGenerator {
 
                 if (allValid) {
                     return mirrors;
-                } else {
-                    console.warn(`⚠️ Validation failed, generating new configuration...`);
                 }
             }
         }
 
         // If we exhausted all attempts, use guaranteed fallback
-        console.error(`❌ Could not place any configuration after ${maxConfigAttempts} attempts`);
-        console.warn(`🔧 Using guaranteed-simple fallback...`);
-
+        console.warn('Mirror placement: using fallback configuration');
         return this.generateGuaranteedFallback();
     }
 
@@ -217,7 +210,7 @@ export class MirrorGenerator {
             // Could add nearby position search here if needed in the future
         }
 
-        console.warn(`✗ Failed to place ${config.shape} mirror after ${maxAttempts} attempts`);
+        // Could not find valid position for this mirror shape
         return null;
     }
 
