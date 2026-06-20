@@ -754,6 +754,10 @@ export class Game {
             return;
         }
 
+        // Hide any open game-end modals before resetting state
+        document.getElementById('gameOverModal').classList.add('hidden');
+        document.getElementById('victoryModal').classList.add('hidden');
+
         this.isPlaying = false;
         this.gameOver = false;
         this.isBreach = false;
@@ -1359,7 +1363,12 @@ export class Game {
             if (this.breachProgress >= 1) {
                 this.breachProgress = 1;
                 this.isBreach = false;
-                this.showGameOverModal();
+                this.gameOver = true; // Set immediately to prevent re-entry
+                this.showGameOverModal().catch(err => {
+                    console.error('Game over modal failed:', err);
+                    // Ensure modal shows even if replay recording fails
+                    document.getElementById('gameOverModal').classList.remove('hidden');
+                });
             }
             return;
         }
@@ -1371,7 +1380,11 @@ export class Game {
         if (this.gameTime >= CONFIG.MAX_GAME_TIME) {
             this.gameTime = CONFIG.MAX_GAME_TIME;
             this.updateTimerDisplay();
-            this.showVictoryModal();
+            this.gameOver = true; // Set immediately to prevent re-entry
+            this.showVictoryModal().catch(err => {
+                console.error('Victory modal failed:', err);
+                document.getElementById('victoryModal').classList.remove('hidden');
+            });
             return;
         }
 
@@ -1641,9 +1654,19 @@ export class Game {
             return;
         }
 
-        // Save duration and stop recording for replay
-        this.replayRecorder.saveGameDuration(this.gameTime);
-        await this.replayRecorder.stopRecording();
+        // Capture the final game time before any async work (prevents reset race)
+        const finalGameTime = this.gameTime;
+
+        // Save duration and stop recording for replay (non-blocking on failure)
+        try {
+            this.replayRecorder.saveGameDuration(finalGameTime);
+            await this.replayRecorder.stopRecording();
+        } catch (err) {
+            console.warn('Replay recording failed:', err);
+        }
+
+        // If game was reset while we were awaiting, abort showing the modal
+        if (!this.gameOver) return;
 
         // Use the snapshot captured at peak breach intensity
         const snapshotImg = document.getElementById('gameOverSnapshot');
@@ -1651,15 +1674,15 @@ export class Game {
             snapshotImg.src = this.breachSnapshotDataUrl || this.canvas.toDataURL('image/png');
         }
 
-        // Format final time with centiseconds
-        const minutes = Math.floor(this.gameTime / 60);
-        const seconds = Math.floor(this.gameTime % 60);
-        const centiseconds = Math.floor((this.gameTime % 1) * 100);
+        // Format final time with centiseconds (use captured time, not this.gameTime)
+        const minutes = Math.floor(finalGameTime / 60);
+        const seconds = Math.floor(finalGameTime % 60);
+        const centiseconds = Math.floor((finalGameTime % 1) * 100);
         const finalTimeString = `${minutes}:${seconds.toString().padStart(2, '0')}.${centiseconds.toString().padStart(2, '0')}`;
 
         // Save daily challenge result if applicable
         if (this.isDailyChallenge && !this.isReplayMode) {
-            DailyChallenge.markCompleted(this.gameTime, finalTimeString, this.mirrors, this.lasers);
+            DailyChallenge.markCompleted(finalGameTime, finalTimeString, this.mirrors, this.lasers);
         }
 
         // Update modal content
@@ -1667,7 +1690,7 @@ export class Game {
 
         // Get performance rating based on survival time
         try {
-            const performanceData = await PerformanceRating.getRating(this.gameTime);
+            const performanceData = await PerformanceRating.getRating(finalGameTime);
             const performanceElement = document.getElementById('missionPerformance');
             performanceElement.textContent = performanceData.rating;
             performanceElement.style.color = performanceData.color;
@@ -1709,9 +1732,19 @@ export class Game {
             return;
         }
 
-        // Save duration and stop recording for replay
-        this.replayRecorder.saveGameDuration(this.gameTime);
-        await this.replayRecorder.stopRecording();
+        // Capture the final game time before any async work (prevents reset race)
+        const finalGameTime = this.gameTime;
+
+        // Save duration and stop recording for replay (non-blocking on failure)
+        try {
+            this.replayRecorder.saveGameDuration(finalGameTime);
+            await this.replayRecorder.stopRecording();
+        } catch (err) {
+            console.warn('Replay recording failed:', err);
+        }
+
+        // If game was reset while we were awaiting, abort
+        if (!this.gameOver) return;
 
         // Capture canvas snapshot before any modal overlay
         const snapshotImg = document.getElementById('victorySnapshot');
@@ -1720,14 +1753,14 @@ export class Game {
         }
 
         // Format final time (should be exactly 5:00.00)
-        const minutes = Math.floor(this.gameTime / 60);
-        const seconds = Math.floor(this.gameTime % 60);
-        const centiseconds = Math.floor((this.gameTime % 1) * 100);
+        const minutes = Math.floor(finalGameTime / 60);
+        const seconds = Math.floor(finalGameTime % 60);
+        const centiseconds = Math.floor((finalGameTime % 1) * 100);
         const finalTimeString = `${minutes}:${seconds.toString().padStart(2, '0')}.${centiseconds.toString().padStart(2, '0')}`;
 
         // Save daily challenge result if applicable
         if (this.isDailyChallenge && !this.isReplayMode) {
-            DailyChallenge.markCompleted(this.gameTime, finalTimeString, this.mirrors, this.lasers);
+            DailyChallenge.markCompleted(finalGameTime, finalTimeString, this.mirrors, this.lasers);
         }
 
         // Update modal content
