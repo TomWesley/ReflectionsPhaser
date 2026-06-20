@@ -1730,8 +1730,8 @@ h1 {
     /* Mobile Launch & Reset Buttons */
     .mobile-launch-btn,
     .mobile-reset-btn {
-        width: 44px;
-        height: 44px;
+        width: 34px;
+        height: 34px;
         border-radius: 8px;
         border: none;
         font-size: 16px;
@@ -1753,8 +1753,8 @@ h1 {
     }
 
     .mobile-snap-btn {
-        width: 44px;
-        height: 44px;
+        width: 34px;
+        height: 34px;
         border-radius: 8px;
         border: 1px solid rgba(78, 120, 232, 0.5);
         background: rgba(78, 120, 232, 0.3);
