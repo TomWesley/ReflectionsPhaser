@@ -72,6 +72,9 @@
             <a href="/about" class="nav-icon-btn" title="About">
                 <i class="iconoir-book"></i>
             </a>
+            <button class="nav-icon-btn" title="Feedback" onclick="openFeedbackModal()">
+                <i class="iconoir-chat-lines"></i>
+            </button>
         </div>
     </nav>
 
@@ -233,6 +236,28 @@
         </div>
     </div>
 
+    <!-- Feedback Modal -->
+    <div id="feedbackModal" class="rules-modal hidden" role="dialog" aria-modal="true" aria-label="Feedback">
+        <div class="rules-content auth-modal-content">
+            <div class="auth-modal-header">
+                <span class="auth-modal-title">Feedback</span>
+                <button class="auth-modal-close" onclick="closeFeedbackModal()">
+                    <i class="iconoir-xmark"></i>
+                </button>
+            </div>
+            <div class="auth-modal-body">
+                <div id="feedbackEmailRow" class="auth-form" style="margin-bottom: 10px;">
+                    <input type="email" id="feedbackEmail" class="auth-input" placeholder="Your email (for replies)" autocomplete="email">
+                </div>
+                <div class="auth-form">
+                    <textarea id="feedbackMessage" class="auth-input" placeholder="Bug report, suggestion, or just say hi..." rows="4" maxlength="2000" style="resize: vertical; min-height: 80px; font-family: 'Space Grotesk', sans-serif;"></textarea>
+                    <button class="auth-btn-primary" onclick="submitFeedback()">Send Feedback</button>
+                </div>
+                <div id="feedbackStatus" class="auth-error" style="color: var(--text-secondary);"></div>
+            </div>
+        </div>
+    </div>
+
     <!-- Mobile info bubble (legacy - hidden on mobile landscape) -->
     <div class="info-bubble">
         <button class="info-button" onclick="toggleInfoPopup()">?</button>
@@ -297,6 +322,10 @@
                     <i class="iconoir-book"></i>
                     <span>About</span>
                 </a>
+                <button class="mobile-menu-item" onclick="closeMobileMenu(); openFeedbackModal()">
+                    <i class="iconoir-chat-lines"></i>
+                    <span>Feedback</span>
+                </button>
             </div>
         </div>
         <!-- Account footer -->
@@ -352,6 +381,85 @@
                 setTimeout(() => toast.remove(), 300);
             }, duration);
         }
+
+        // Feedback Modal
+        function openFeedbackModal() {
+            const modal = document.getElementById('feedbackModal');
+            const emailRow = document.getElementById('feedbackEmailRow');
+            const statusEl = document.getElementById('feedbackStatus');
+            statusEl.textContent = '';
+            statusEl.style.color = 'var(--text-secondary)';
+            document.getElementById('feedbackMessage').value = '';
+
+            // Hide email field if user is signed in (we have their email)
+            const auth = window.firebaseAuth;
+            if (auth && auth.isSignedIn() && auth.getUser().email) {
+                emailRow.style.display = 'none';
+            } else {
+                emailRow.style.display = 'block';
+                document.getElementById('feedbackEmail').value = '';
+            }
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeFeedbackModal() {
+            document.getElementById('feedbackModal').classList.add('hidden');
+        }
+
+        async function submitFeedback() {
+            const message = document.getElementById('feedbackMessage').value.trim();
+            const statusEl = document.getElementById('feedbackStatus');
+
+            if (!message) {
+                statusEl.style.color = '#E84E6A';
+                statusEl.textContent = 'Please enter a message.';
+                return;
+            }
+
+            const auth = window.firebaseAuth;
+            let email = '';
+            if (auth && auth.isSignedIn() && auth.getUser().email) {
+                email = auth.getUser().email;
+            } else {
+                email = document.getElementById('feedbackEmail').value.trim();
+                if (!email) {
+                    statusEl.style.color = '#E84E6A';
+                    statusEl.textContent = 'Please enter your email so we can reply.';
+                    return;
+                }
+            }
+
+            statusEl.style.color = 'var(--text-secondary)';
+            statusEl.textContent = 'Sending...';
+
+            try {
+                if (typeof firebase === 'undefined' || !firebase.firestore) {
+                    throw new Error('Not connected');
+                }
+                const db = firebase.firestore();
+                await db.collection('feedback').add({
+                    message,
+                    email,
+                    displayName: (auth && auth.getDisplayName()) || 'Anonymous',
+                    uid: (auth && auth.getUID()) || null,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    userAgent: navigator.userAgent,
+                });
+
+                statusEl.style.color = '#32FFB4';
+                statusEl.textContent = 'Thanks for your feedback!';
+                document.getElementById('feedbackMessage').value = '';
+                setTimeout(() => closeFeedbackModal(), 1500);
+            } catch (err) {
+                statusEl.style.color = '#E84E6A';
+                statusEl.textContent = 'Failed to send. Please try again.';
+            }
+        }
+
+        document.getElementById('feedbackModal').addEventListener('click', function(e) {
+            if (e.target === this) closeFeedbackModal();
+        });
 
         // UI Functions
         function openRules() {
@@ -846,6 +954,7 @@
         document.addEventListener('keydown', function(e) {
             if (e.key !== 'Escape') return;
             const modals = [
+                { id: 'feedbackModal', close: closeFeedbackModal },
                 { id: 'replayModal', close: closeReplay },
                 { id: 'authModal', close: closeAuthModal },
                 { id: 'victoryModal', close: closeVictory },

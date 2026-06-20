@@ -1,14 +1,10 @@
 import { CONFIG } from '../config.js';
-import { Mirror } from './Mirror.js';
 import { MirrorFactory } from '../mirrors/MirrorFactory.js';
 import { Laser } from './Laser.js';
 import { Spawner } from './Spawner.js';
-import { SurfaceAreaManager } from '../validation/SurfaceAreaManager.js';
 import { PerformanceRating } from '../validation/PerformanceRating.js';
 import { MirrorPlacementValidation } from '../validation/MirrorPlacementValidation.js';
 import { IronCladValidator } from '../validation/IronCladValidator.js';
-import { GridAlignmentEnforcer } from '../validation/GridAlignmentEnforcer.js';
-// New modular components
 import { CollisionSystem } from '../core/CollisionSystem.js';
 import { LaserCollisionHandler } from '../core/LaserCollisionHandler.js';
 import { ShapeGeometry } from '../geometry/ShapeGeometry.js';
@@ -16,7 +12,6 @@ import { GameRenderer } from '../rendering/GameRenderer.js';
 import { MirrorGenerator } from '../generators/MirrorGenerator.js';
 import { SpawnerGenerator } from '../generators/SpawnerGenerator.js';
 import { GridAlignmentSystem } from '../systems/GridAlignmentSystem.js';
-import { MirrorPlacementHelper } from '../generators/MirrorPlacementHelper.js';
 import { MirrorDragAndSnapHandler } from '../handlers/MirrorDragAndSnapHandler.js';
 import { ReplayRecorder } from './ReplayRecorder.js';
 import { RotationControl } from './RotationControl.js';
