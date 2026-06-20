@@ -27,7 +27,42 @@ export class Spawner {
         ctx.arc(this.x, this.y, 6, 0, Math.PI * 2);
         ctx.fill();
 
-        // Draw laser preview path only during setup phase
+        // Always draw a small directional tick on the spawner
+        // so the launch angle is visible during gameplay and replays
+        {
+            const tickStart = 10; // spawner outer radius
+            const tickEnd = 16;
+            const tipX = this.x + Math.cos(this.angle) * tickEnd;
+            const tipY = this.y + Math.sin(this.angle) * tickEnd;
+
+            ctx.shadowColor = outerColor;
+            ctx.shadowBlur = 6;
+            ctx.strokeStyle = outerColor;
+            ctx.lineWidth = 2.5;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(
+                this.x + Math.cos(this.angle) * tickStart,
+                this.y + Math.sin(this.angle) * tickStart
+            );
+            ctx.lineTo(tipX, tipY);
+            ctx.stroke();
+
+            // Mini arrowhead
+            const aSize = 5;
+            const a1 = this.angle + Math.PI * 0.75;
+            const a2 = this.angle - Math.PI * 0.75;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(tipX, tipY);
+            ctx.lineTo(tipX + Math.cos(a1) * aSize, tipY + Math.sin(a1) * aSize);
+            ctx.moveTo(tipX, tipY);
+            ctx.lineTo(tipX + Math.cos(a2) * aSize, tipY + Math.sin(a2) * aSize);
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+        }
+
+        // Draw full laser preview path only during setup phase
         if (showPreview) {
             const pathLength = 30;
             const endX = this.x + Math.cos(this.angle) * pathLength;
