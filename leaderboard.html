@@ -1247,7 +1247,7 @@
             modal.classList.remove('hidden');
 
             try {
-                const { getStorage } = await import('./js/firebase/FirebaseConfig.js');
+                const { getStorage } = await import('/js/firebase/FirebaseConfig.js');
                 const storage = getStorage();
                 const url = await storage.ref(videoPath).getDownloadURL();
 
