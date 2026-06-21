@@ -1657,16 +1657,14 @@ export class Game {
         // Capture the final game time before any async work (prevents reset race)
         const finalGameTime = this.gameTime;
 
-        // Save duration and stop recording for replay (non-blocking on failure)
-        try {
-            this.replayRecorder.saveGameDuration(finalGameTime);
-            await this.replayRecorder.stopRecording();
-        } catch (err) {
-            console.warn('Replay recording failed:', err);
-        }
-
-        // If game was reset while we were awaiting, abort showing the modal
-        if (!this.gameOver) return;
+        // Stop recording in background -- don't block the modal
+        this.replayRecorder.saveGameDuration(finalGameTime);
+        this._replayReady = false;
+        this.replayRecorder.stopRecording().then(() => {
+            this._replayReady = true;
+        }).catch(() => {
+            this._replayReady = true; // Mark ready even on failure so buttons aren't stuck
+        });
 
         // Use the snapshot captured at peak breach intensity
         const snapshotImg = document.getElementById('gameOverSnapshot');
@@ -1735,16 +1733,14 @@ export class Game {
         // Capture the final game time before any async work (prevents reset race)
         const finalGameTime = this.gameTime;
 
-        // Save duration and stop recording for replay (non-blocking on failure)
-        try {
-            this.replayRecorder.saveGameDuration(finalGameTime);
-            await this.replayRecorder.stopRecording();
-        } catch (err) {
-            console.warn('Replay recording failed:', err);
-        }
-
-        // If game was reset while we were awaiting, abort
-        if (!this.gameOver) return;
+        // Stop recording in background -- don't block the modal
+        this.replayRecorder.saveGameDuration(finalGameTime);
+        this._replayReady = false;
+        this.replayRecorder.stopRecording().then(() => {
+            this._replayReady = true;
+        }).catch(() => {
+            this._replayReady = true;
+        });
 
         // Capture canvas snapshot before any modal overlay
         const snapshotImg = document.getElementById('victorySnapshot');

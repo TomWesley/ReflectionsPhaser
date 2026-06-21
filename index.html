@@ -504,9 +504,17 @@
 
         // Replay Functions
         function watchReplay() {
-            if (!window.game || !window.game.replayRecorder.hasReplay()) {
-                console.warn('No replay available');
-                showToast('No replay available. Try playing a game first.');
+            if (!window.game) return;
+
+            // If replay is still processing, show a toast and retry shortly
+            if (!window.game._replayReady) {
+                showToast('Replay is still processing...', 2000);
+                setTimeout(watchReplay, 1500);
+                return;
+            }
+
+            if (!window.game.replayRecorder.hasReplay()) {
+                showToast('No replay available for this run.');
                 return;
             }
 
@@ -569,6 +577,16 @@
         // Save replay video - MP4 on both desktop and mobile
         async function saveReplay() {
             if (!window.game) return;
+
+            // If replay is still processing, wait for it
+            if (!window.game._replayReady) {
+                showToast('Replay is still processing...', 2000);
+                const waitForReady = () => new Promise(resolve => {
+                    const check = () => window.game._replayReady ? resolve() : setTimeout(check, 500);
+                    check();
+                });
+                await waitForReady();
+            }
 
             const recorder = window.game.replayRecorder;
             const time = document.getElementById('finalTime').textContent.replace(/:/g, '-').replace(/\./g, '-');
