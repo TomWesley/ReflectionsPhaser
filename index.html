@@ -81,6 +81,11 @@
     <main class="main-content">
         <!-- Game Canvas Container (Independent Module) -->
         <div id="gameContainer">
+            <!-- Loading overlay - shown until game engine initializes -->
+            <div id="canvasLoader" class="canvas-loader">
+                <div class="loader-ring"></div>
+                <div class="loader-text">INITIALIZING</div>
+            </div>
             <canvas id="gameCanvas" width="800" height="600" role="img" aria-label="REFLECTIONS game board - place mirrors to deflect lasers"></canvas>
             <!-- Rotation Control - appears when a mirror is selected -->
             <div id="rotationControl" class="rotation-control hidden">

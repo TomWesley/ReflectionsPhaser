@@ -274,6 +274,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const game = new Game();
 
+        // Hide the loading overlay now that the game is rendering
+        const loader = document.getElementById('canvasLoader');
+        if (loader) loader.classList.add('hidden');
+
         // Expose game instance globally for modal functions
         window.game = game;
 
