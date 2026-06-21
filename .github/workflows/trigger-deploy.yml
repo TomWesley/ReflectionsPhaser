@@ -19,9 +19,9 @@ jobs:
           repositories: WesleyArcadeSite
 
       - name: Trigger WesleyArcadeSite deployment
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
-          curl -X POST \
-            -H "Accept: application/vnd.github.v3+json" \
-            -H "Authorization: token ${{ steps.app-token.outputs.token }}" \
-            https://api.github.com/repos/TomWesley/WesleyArcadeSite/dispatches \
-            -d '{"event_type":"deploy"}'
+          gh api repos/TomWesley/WesleyArcadeSite/dispatches \
+            --method POST \
+            -f event_type=deploy
