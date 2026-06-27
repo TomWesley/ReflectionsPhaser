@@ -512,8 +512,8 @@
 
             // If replay is still processing, show a toast and retry shortly
             if (!window.game._replayReady) {
-                showToast('Replay is still processing...', 2000);
-                setTimeout(watchReplay, 1500);
+                showToast('Video finishing up -- one moment...', 4000);
+                setTimeout(watchReplay, 2000);
                 return;
             }
 
@@ -584,12 +584,13 @@
 
             // If replay is still processing, wait for it
             if (!window.game._replayReady) {
-                showToast('Replay is still processing...', 2000);
+                showToast('Video finishing up -- one moment...', 4000);
                 const waitForReady = () => new Promise(resolve => {
                     const check = () => window.game._replayReady ? resolve() : setTimeout(check, 500);
                     check();
                 });
                 await waitForReady();
+                showToast('Video ready!', 1500);
             }
 
             const recorder = window.game.replayRecorder;
