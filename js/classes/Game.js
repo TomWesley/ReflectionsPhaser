@@ -634,8 +634,6 @@ export class Game {
             // Mirror already has vertices - no action needed
             // This happens with test mirrors created by spread operator
             return;
-        } else {
-            console.error('Mirror has no way to calculate vertices!', mirror);
         }
     }
 
