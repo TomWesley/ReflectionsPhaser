@@ -71,6 +71,11 @@ export class GameRenderer {
         // Draw lasers
         this.game.lasers.forEach(laser => laser.draw(ctx));
 
+        // Draw laser path preview during setup
+        if (!this.game.isPlaying && !this.game.dailyCompleted) {
+            this.drawLaserPathPreview();
+        }
+
         // Draw zones and validation when not playing (but not on completed daily view)
         if (!this.game.isPlaying && !this.game.dailyCompleted) {
             ZoneRenderer.drawForbiddenZones(ctx);
@@ -112,6 +117,125 @@ export class GameRenderer {
         if (this.game.dailyCompleted) {
             this.drawDailyCompletedOverlay();
         }
+    }
+
+    /**
+     * Draw dashed laser path previews showing where each laser will travel,
+     * bouncing off the first mirror it hits.
+     */
+    drawLaserPathPreview() {
+        const ctx = this.ctx;
+        const mirrors = this.game.mirrors;
+        const W = CONFIG.CANVAS_WIDTH;
+        const H = CONFIG.CANVAS_HEIGHT;
+
+        ctx.save();
+
+        for (const spawner of this.game.spawners) {
+            let x = spawner.x;
+            let y = spawner.y;
+            let dx = Math.cos(spawner.angle);
+            let dy = Math.sin(spawner.angle);
+
+            const segments = [];
+            const maxBounces = 1; // Only show first reflection
+
+            for (let bounce = 0; bounce <= maxBounces; bounce++) {
+                // Find closest mirror edge intersection along this ray
+                let closestT = Infinity;
+                let hitEdge = null;
+
+                for (const mirror of mirrors) {
+                    if (!mirror.vertices || mirror.vertices.length < 2) continue;
+                    const verts = mirror.vertices;
+                    for (let i = 0; i < verts.length; i++) {
+                        const v1 = verts[i];
+                        const v2 = verts[(i + 1) % verts.length];
+                        const t = this._rayEdgeIntersect(x, y, dx, dy, v1, v2);
+                        if (t !== null && t > 1 && t < closestT) {
+                            closestT = t;
+                            hitEdge = { v1, v2 };
+                        }
+                    }
+                }
+
+                // Find canvas boundary intersection
+                const boundaryT = this._rayBoundaryIntersect(x, y, dx, dy, W, H);
+
+                if (hitEdge && closestT < boundaryT) {
+                    // Ray hits a mirror
+                    const hitX = x + dx * closestT;
+                    const hitY = y + dy * closestT;
+                    segments.push({ x1: x, y1: y, x2: hitX, y2: hitY });
+
+                    // Calculate reflection for next segment
+                    const edgeDx = hitEdge.v2.x - hitEdge.v1.x;
+                    const edgeDy = hitEdge.v2.y - hitEdge.v1.y;
+                    const edgeLen = Math.sqrt(edgeDx * edgeDx + edgeDy * edgeDy);
+                    const nx = -edgeDy / edgeLen;
+                    const ny = edgeDx / edgeLen;
+                    const dot = dx * nx + dy * ny;
+                    dx = dx - 2 * dot * nx;
+                    dy = dy - 2 * dot * ny;
+                    x = hitX;
+                    y = hitY;
+                } else {
+                    // Ray hits boundary
+                    const endX = x + dx * boundaryT;
+                    const endY = y + dy * boundaryT;
+                    segments.push({ x1: x, y1: y, x2: endX, y2: endY });
+                    break;
+                }
+            }
+
+            // Draw all segments as dashed lines
+            const isDaily = spawner.isDailyChallenge;
+            const color = isDaily ? 'rgba(50, 255, 180, 0.55)' : 'rgba(78, 120, 232, 0.55)';
+
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([6, 8]);
+            ctx.lineCap = 'round';
+
+            for (const seg of segments) {
+                ctx.beginPath();
+                ctx.moveTo(seg.x1, seg.y1);
+                ctx.lineTo(seg.x2, seg.y2);
+                ctx.stroke();
+            }
+        }
+
+        ctx.setLineDash([]);
+        ctx.restore();
+    }
+
+    /**
+     * Ray-edge intersection: returns distance t along ray (x+dx*t, y+dy*t)
+     * where it crosses the line segment v1-v2, or null if no intersection.
+     */
+    _rayEdgeIntersect(ox, oy, dx, dy, v1, v2) {
+        const ex = v2.x - v1.x;
+        const ey = v2.y - v1.y;
+        const denom = dx * ey - dy * ex;
+        if (Math.abs(denom) < 1e-10) return null;
+
+        const t = ((v1.x - ox) * ey - (v1.y - oy) * ex) / denom;
+        const u = ((v1.x - ox) * dy - (v1.y - oy) * dx) / denom;
+
+        if (u >= 0 && u <= 1 && t > 0) return t;
+        return null;
+    }
+
+    /**
+     * Find where a ray exits the canvas bounds.
+     */
+    _rayBoundaryIntersect(ox, oy, dx, dy, W, H) {
+        let tMin = Infinity;
+        if (dx > 0) tMin = Math.min(tMin, (W - ox) / dx);
+        if (dx < 0) tMin = Math.min(tMin, -ox / dx);
+        if (dy > 0) tMin = Math.min(tMin, (H - oy) / dy);
+        if (dy < 0) tMin = Math.min(tMin, -oy / dy);
+        return Math.max(tMin, 0);
     }
 
     /**

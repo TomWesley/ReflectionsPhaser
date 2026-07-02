@@ -88,7 +88,13 @@
       "Bash(npx firebase:*)",
       "Bash(firebase projects:list)",
       "Bash(firebase deploy:*)",
-      "Bash(cp:*)"
+      "Bash(cp:*)",
+      "Bash(firebase auth:export-config --project singularity-c216f)",
+      "Bash(firebase --project singularity-c216f auth:import)",
+      "Bash(gh workflow:*)",
+      "Bash(firebase storage:ls --project singularity-c216f gs://reflections-n6czi/replays/)",
+      "Bash(gsutil ls:*)",
+      "Bash(xargs -I {} gh run view {} --repo TomWesley/ReflectionsPhaser --log-failed)"
     ],
     "deny": [],
     "ask": []
