@@ -138,7 +138,7 @@ export class GameRenderer {
             let dy = Math.sin(spawner.angle);
 
             const segments = [];
-            const maxBounces = 1; // Only show first reflection
+            const maxBounces = 4; // Cap to avoid performance issues with mirror loops
 
             for (let bounce = 0; bounce <= maxBounces; bounce++) {
                 // Find closest mirror edge intersection along this ray
@@ -190,12 +190,29 @@ export class GameRenderer {
 
             // Draw all segments as dashed lines
             const isDaily = spawner.isDailyChallenge;
-            const color = isDaily ? 'rgba(50, 255, 180, 0.55)' : 'rgba(78, 120, 232, 0.55)';
+            const baseColor = isDaily ? '50, 255, 180' : '78, 120, 232';
+            const pulse = 0.65 + 0.15 * Math.sin(Date.now() / 600);
 
-            ctx.strokeStyle = color;
-            ctx.lineWidth = 1.5;
+            // Glow layer
+            ctx.strokeStyle = `rgba(${baseColor}, ${pulse * 0.4})`;
+            ctx.lineWidth = 3.5;
             ctx.setLineDash([6, 8]);
             ctx.lineCap = 'round';
+            ctx.shadowColor = `rgba(${baseColor}, 0.6)`;
+            ctx.shadowBlur = 10;
+
+            for (const seg of segments) {
+                ctx.beginPath();
+                ctx.moveTo(seg.x1, seg.y1);
+                ctx.lineTo(seg.x2, seg.y2);
+                ctx.stroke();
+            }
+
+            ctx.shadowBlur = 0;
+
+            // Bright core line
+            ctx.strokeStyle = `rgba(${baseColor}, ${pulse})`;
+            ctx.lineWidth = 1;
 
             for (const seg of segments) {
                 ctx.beginPath();
