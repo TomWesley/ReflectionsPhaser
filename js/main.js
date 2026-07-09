@@ -261,12 +261,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const today = new Date().toISOString().slice(0, 10);
     const cacheBust = `?v=${today}`;
 
-    // Show loading indicator
-    const statusEl = document.getElementById('status');
-    if (statusEl) {
-        statusEl.textContent = 'Loading defense systems...';
-        statusEl.className = 'status-modern';
-    }
+    // Loading is indicated by the #canvasLoader overlay, removed once the game renders.
 
     try {
         // Import modules with cache-busting
@@ -285,20 +280,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.game = game;
 
         // Setup game control buttons
-        const launchBtn = document.getElementById('launchBtn');
-        const resetBtn = document.getElementById('resetBtn');
-
-        if (launchBtn) {
-            launchBtn.addEventListener('click', () => {
-                game.launchLasers();
-            });
-        }
-
-        if (resetBtn) {
-            resetBtn.addEventListener('click', () => {
-                game.resetGame();
-            });
-        }
+        // Launch/Reset click handlers are bound once in Game.setupEventListeners().
+        // Do NOT bind them again here — a second listener fires launchLasers()/resetGame()
+        // twice per click, double-starting the recorder and churning laser state.
 
         // Initialize Firebase leaderboard services (non-blocking)
         initFirebaseServices(cacheBust).catch(err => {
@@ -323,11 +307,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch (error) {
         console.error('Failed to load game modules:', error);
 
-        // Show user-friendly error message
-        const statusEl = document.getElementById('status');
-        if (statusEl) {
-            statusEl.textContent = 'Loading failed. Please refresh the page.';
-            statusEl.className = 'status-modern status-game-over';
+        // Surface a visible error. There is no #status element in the DOM, so use
+        // the toast system (otherwise this failure is silent until the confirm below).
+        if (typeof showToast === 'function') {
+            showToast('Loading failed. Please refresh the page.', 6000);
         }
 
         // Try to reload after a short delay

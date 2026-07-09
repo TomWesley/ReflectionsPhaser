@@ -391,6 +391,23 @@ describe('Device Independence - Scoring Consistency', () => {
             `Game time is identical regardless of frame rate (diff: ${Math.abs(time60 - time30).toFixed(6)}s)`);
     });
 
+    test('Score is derived from simulated physics steps, not the wall clock', () => {
+        // Guards the anti-cheat / fairness fix: gameTime must advance by the fixed
+        // physics step inside update(), NOT from Date.now(). A wall-clock score can be
+        // desynced from the simulation via CPU throttling or a debugger pause, and is
+        // non-deterministic (so it can't be verified server-side).
+        const gameSrc = readFileSync(join(projectRoot, 'js/classes/Game.js'), 'utf8');
+
+        assert.ok(
+            gameSrc.includes('this.gameTime += this.deltaTime'),
+            'update() advances gameTime by the fixed physics step (this.gameTime += this.deltaTime)'
+        );
+        assert.ok(
+            !/this\.gameTime\s*=\s*\(Date\.now\(\)\s*-\s*this\.startTime\)/.test(gameSrc),
+            'gameTime is NOT computed from wall-clock time (Date.now() - startTime)'
+        );
+    });
+
     test('MAX_GAME_TIME is defined as fixed constant (300s / 5 min)', () => {
         const configSrc = readFileSync(join(projectRoot, 'js/config.js'), 'utf8');
 

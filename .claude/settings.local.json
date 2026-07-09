@@ -94,7 +94,14 @@
       "Bash(gh workflow:*)",
       "Bash(firebase storage:ls --project singularity-c216f gs://reflections-n6czi/replays/)",
       "Bash(gsutil ls:*)",
-      "Bash(xargs -I {} gh run view {} --repo TomWesley/ReflectionsPhaser --log-failed)"
+      "Bash(xargs -I {} gh run view {} --repo TomWesley/ReflectionsPhaser --log-failed)",
+      "Bash(awk 'NR>=1683 && NR<=2152 && /hidden/' /Users/tomwesley/LocalGithubFiles/ReflectionsPhaser/styles/game.css)",
+      "Skill(artifact-design)",
+      "Artifact",
+      "Bash(node --check js/classes/Game.js)",
+      "Bash(node --check js/main.js)",
+      "Bash(python3 -c \"import json;json.load\\(open\\('data/performance-ratings.json'\\)\\);print\\('JSON OK'\\)\")",
+      "Bash(node --check js/validation/PerformanceRating.js)"
     ],
     "deny": [],
     "ask": []

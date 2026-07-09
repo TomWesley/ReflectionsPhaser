@@ -1,20 +1,51 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Scores collection - leaderboard entries
-    match /scores/{document} {
+
+    // Validate the full shape of a score document. Every field a client can
+    // write is checked here for type, range, and length. Fields that later get
+    // rendered into the leaderboard DOM (displayName, scoreFormatted, videoPath)
+    // additionally reject the characters used for HTML-attribute breakout, and
+    // videoPath is pinned to this user's own replay path.
+    function validScorePayload(data, uid) {
+      return data.uid == uid
+        && data.score is number && data.score >= 0 && data.score <= 300
+        && data.mode in ['main', 'daily']
+        && data.displayName is string
+          && data.displayName.size() <= 16
+          && data.displayName.matches("[^<>\"']*")
+        && data.scoreFormatted is string
+          && data.scoreFormatted.size() <= 16
+          && data.scoreFormatted.matches("[^<>\"']*")
+        && data.mirrorCount is number && data.mirrorCount >= 0 && data.mirrorCount <= 100
+        && data.spawnerCount is number && data.spawnerCount >= 0 && data.spawnerCount <= 100
+        && (data.dailyDate == null
+          || (data.dailyDate is string && data.dailyDate.size() <= 10))
+        && (data.videoPath == null
+          || (data.videoPath is string
+            && data.videoPath.size() <= 200
+            && data.videoPath.matches('replays/' + uid + '/.*')));
+    }
+
+    // Scores collection - leaderboard entries.
+    // Document ID must be "{uid}_..." so a user can only write their OWN doc.
+    match /scores/{scoreId} {
       // Any authenticated user can read scores
       allow read: if request.auth != null;
 
-      // Users can only create/update their own scores
-      allow create, update: if request.auth != null
-        && request.resource.data.uid == request.auth.uid
-        && request.resource.data.score is number
-        && request.resource.data.score >= 0
-        && request.resource.data.score <= 300
-        && request.resource.data.mode in ['main', 'daily']
-        && request.resource.data.displayName is string
-        && request.resource.data.displayName.size() <= 16;
+      // Create: the doc ID must belong to the caller, and the payload must validate.
+      allow create: if request.auth != null
+        && scoreId.matches(request.auth.uid + '_.*')
+        && validScorePayload(request.resource.data, request.auth.uid);
+
+      // Update: must be the caller's own existing doc, must validate, and the
+      // score may only ever increase (blocks tampering with a rival's entry and
+      // blocks lowering/replacing your own with junk).
+      allow update: if request.auth != null
+        && scoreId.matches(request.auth.uid + '_.*')
+        && resource.data.uid == request.auth.uid
+        && validScorePayload(request.resource.data, request.auth.uid)
+        && request.resource.data.score >= resource.data.score;
 
       // No deletions allowed
       allow delete: if false;

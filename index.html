@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="object-src 'none'; base-uri 'self';">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -371,6 +372,9 @@
             if (!container) {
                 container = document.createElement('div');
                 container.id = 'toastContainer';
+                // Announce toasts to screen readers as they appear.
+                container.setAttribute('role', 'status');
+                container.setAttribute('aria-live', 'polite');
                 container.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:10000;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;';
                 document.body.appendChild(container);
             }
@@ -383,6 +387,32 @@
                 toast.style.opacity = '0';
                 setTimeout(() => toast.remove(), 300);
             }, duration);
+        }
+        // Expose globally so ES modules (Game.js, main.js) can surface status messages.
+        window.showToast = showToast;
+
+        // Persistent "preparing replay" indicator. Unlike a toast, it stays visible
+        // until the replay actually begins playing, so there's no anxious gap.
+        function showReplayPreparing() {
+            let el = document.getElementById('replayPreparing');
+            if (!el) {
+                el = document.createElement('div');
+                el.id = 'replayPreparing';
+                el.setAttribute('role', 'status');
+                el.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:10001;background:rgba(27,27,47,0.95);color:#D4D4E8;padding:10px 18px;border-radius:8px;border:1px solid rgba(78,120,232,0.5);font-family:"Space Grotesk",sans-serif;font-size:13px;backdrop-filter:blur(8px);box-shadow:0 4px 16px rgba(0,0,0,0.4);display:flex;align-items:center;gap:10px;opacity:0;transition:opacity 0.25s ease;pointer-events:none;';
+                el.innerHTML = '<i class="iconoir-refresh" style="display:inline-block;animation:loader-spin 0.8s linear infinite;"></i><span>Preparing your replay…</span>';
+                document.body.appendChild(el);
+                requestAnimationFrame(() => { el.style.opacity = '1'; });
+            } else {
+                el.style.opacity = '1';
+            }
+        }
+        function hideReplayPreparing() {
+            const el = document.getElementById('replayPreparing');
+            if (el) {
+                el.style.opacity = '0';
+                setTimeout(() => { if (el.parentNode) el.remove(); }, 300);
+            }
         }
 
         // Feedback Modal
@@ -507,30 +537,42 @@
         }
 
         // Replay Functions
-        function watchReplay() {
+        function watchReplay(attempt) {
+            attempt = attempt || 0;
             if (!window.game) return;
 
-            // If replay is still processing, show a toast and retry shortly
-            if (!window.game._replayReady) {
-                showToast('Video finishing up -- one moment...', 4000);
-                setTimeout(watchReplay, 2000);
+            // Wait briefly for the recording to finalize, but never spam or hang:
+            // one toast, and give up waiting after ~6s (then use whatever we have --
+            // the canvas re-simulation fallback always works).
+            if (!window.game._replayReady && attempt < 12) {
+                if (attempt === 0) showReplayPreparing();
+                setTimeout(() => watchReplay(attempt + 1), 500);
                 return;
             }
 
             if (!window.game.replayRecorder.hasReplay()) {
-                showToast('No replay available for this run.');
+                hideReplayPreparing();
+                showToast('Replay unavailable for this run.');
                 return;
             }
+
+            // Remember which end-screen launched the replay so we can restore it on close.
+            window._replayOrigin = document.getElementById('victoryModal').classList.contains('hidden')
+                ? 'gameOver' : 'victory';
 
             // Canvas replay: re-simulate on the game canvas (mobile fallback)
             if (window.game.replayRecorder.hasCanvasReplay()) {
                 document.getElementById('gameOverModal').classList.add('hidden');
                 document.getElementById('victoryModal').classList.add('hidden');
                 window.game.startCanvasReplay();
+                hideReplayPreparing(); // re-sim renders immediately
                 return;
             }
 
-            // Video replay: play recorded MP4/WebM in modal
+            // Video replay: play recorded MP4/WebM in modal.
+            // Keep the "preparing" indicator up through video load, even if the
+            // recording was already finalized (loading itself takes a beat).
+            showReplayPreparing();
             const video = document.getElementById('replayVideo');
             const videoURL = window.game.replayRecorder.getVideoURL();
 
@@ -543,12 +585,15 @@
 
             // Set up video event handlers before loading
             video.onloadeddata = function() {
+                hideReplayPreparing();
                 document.getElementById('replayPlayIcon').className = 'iconoir-pause';
                 video.play().catch(e => console.error('Play failed:', e));
             };
 
             video.onerror = function(e) {
+                hideReplayPreparing();
                 console.error('Video error:', video.error);
+                showToast('Could not play the replay video.');
             };
 
             video.onended = function() {
@@ -594,7 +639,9 @@
             }
 
             const recorder = window.game.replayRecorder;
-            const time = document.getElementById('finalTime').textContent.replace(/:/g, '-').replace(/\./g, '-');
+            const isVictory = !document.getElementById('victoryModal').classList.contains('hidden');
+            const scoreText = document.getElementById(isVictory ? 'victoryTime' : 'finalTime').textContent;
+            const time = scoreText.replace(/:/g, '-').replace(/\./g, '-');
             const filename = `reflections-replay-${time}.mp4`;
 
             // If no video yet but we can generate one, do it now
@@ -664,7 +711,8 @@
 
         // Share screenshot with score
         async function shareReplay() {
-            const snapshotImg = document.getElementById('gameOverSnapshot') || document.getElementById('victorySnapshot');
+            const isVictory = !document.getElementById('victoryModal').classList.contains('hidden');
+            const snapshotImg = document.getElementById(isVictory ? 'victorySnapshot' : 'gameOverSnapshot');
 
             if (!snapshotImg || !snapshotImg.src) {
                 console.warn('No snapshot available');
@@ -683,8 +731,8 @@
             });
 
             try {
-                // Get the score
-                const scoreEl = document.getElementById('finalTime') || document.getElementById('victoryTime');
+                // Get the score from whichever end-screen is showing
+                const scoreEl = document.getElementById(isVictory ? 'victoryTime' : 'finalTime');
                 const score = scoreEl ? scoreEl.textContent : 'Unknown';
                 const time = score.replace(/:/g, '-').replace(/\./g, '-');
 
@@ -698,13 +746,13 @@
                     await navigator.share({
                         files: [file],
                         title: 'REFLECTIONS',
-                        text: `Try to beat my score @ wesleyarcade.com/reflections`
+                        text: `I survived ${score} in REFLECTIONS — try to beat it: https://wesleyarcade.com/reflections`
                     });
                 } else if (navigator.share) {
                     // Fallback: share without file
                     await navigator.share({
                         title: 'REFLECTIONS',
-                        text: `Try to beat my score @ wesleyarcade.com/reflections`
+                        text: `I survived ${score} in REFLECTIONS — try to beat it: https://wesleyarcade.com/reflections`
                     });
                 } else {
                     showToast('Sharing is not supported on this device.');
@@ -724,13 +772,15 @@
         }
 
         function closeReplay() {
+            hideReplayPreparing();
             const video = document.getElementById('replayVideo');
             video.pause();
             video.src = '';
             document.getElementById('replayModal').classList.add('hidden');
 
-            // Show game over modal again
-            document.getElementById('gameOverModal').classList.remove('hidden');
+            // Restore whichever end-screen launched the replay (not always game over).
+            const originId = window._replayOrigin === 'victory' ? 'victoryModal' : 'gameOverModal';
+            document.getElementById(originId).classList.remove('hidden');
         }
 
         // Score submission to Firebase leaderboard

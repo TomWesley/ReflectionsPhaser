@@ -128,19 +128,13 @@ export class Game {
     _onVisibilityChange() {
         if (document.hidden) {
             this._paused = true;
-            // Freeze the start time offset so gameTime doesn't jump on resume
-            if (this.isPlaying && !this.gameOver) {
-                this._pausedAt = Date.now();
-            }
         } else {
-            if (this._paused && this._pausedAt && this.isPlaying && !this.gameOver) {
-                // Shift startTime forward by the paused duration so gameTime stays continuous
-                const pausedDuration = Date.now() - this._pausedAt;
-                this.startTime += pausedDuration;
-            }
+            // gameTime now advances only via simulated physics steps, so paused time
+            // is excluded automatically (the loop early-returns while hidden). We just
+            // reset the frame timing so the accumulator doesn't spike on the first
+            // frame back.
             this._paused = false;
-            this._pausedAt = null;
-            this.lastTimestamp = null; // Reset so frameDt doesn't spike
+            this.lastTimestamp = null;
             this.physicsAccumulator = 0;
         }
     }
@@ -675,17 +669,17 @@ export class Game {
     }
     
     launchLasers() {
-        if (this.isPlaying) return;
+        // Guard against re-entry BEFORE the async body sets isPlaying (50ms later),
+        // so a double click (or any duplicate handler) can't launch twice.
+        if (this.isPlaying || this._launching) return;
 
         // Daily challenge: one attempt only
         if (this.isDailyChallenge && DailyChallenge.hasAttemptedToday()) {
-            const statusEl = document.getElementById('status');
-            if (statusEl) {
-                statusEl.textContent = "Already completed today's challenge!";
-                statusEl.className = 'status-modern';
-            }
+            window.showToast?.("You've already played today's challenge — come back tomorrow!");
             return;
         }
+
+        this._launching = true;
 
         // Reset zoom and clear snap indicators for gameplay
         this.resetZoom();
@@ -698,13 +692,6 @@ export class Game {
         // Skip validation check - player has manually positioned mirrors
         // Let them play with their chosen configuration
 
-        // Show brief loading message
-        const statusEl = document.getElementById('status');
-        if (statusEl) {
-            statusEl.textContent = 'Calculating collision boundaries...';
-            statusEl.className = 'status-modern';
-        }
-
         // Allow UI to update before heavy computation
         setTimeout(async () => {
             // Initialize collision boundaries for all mirrors (iron-clad system)
@@ -712,6 +699,7 @@ export class Game {
             this.laserCollisionHandler.initialize(this.mirrors);
 
             this.isPlaying = true;
+            this._launching = false;
             this.gameOver = false;
             this.startTime = Date.now();
             this.gameTime = 0;
@@ -725,13 +713,7 @@ export class Game {
 
             // Create lasers from spawners
             this.createLasersFromSpawners();
-
-            // Update status
-            if (statusEl) {
-                statusEl.textContent = 'Defense systems active!';
-                statusEl.className = 'status-modern';
-            }
-        }, 50); // 50ms delay to show loading message
+        }, 50); // 50ms delay to let the UI paint before heavy computation
     }
 
     createLasersFromSpawners() {
@@ -757,6 +739,7 @@ export class Game {
         document.getElementById('victoryModal').classList.add('hidden');
 
         this.isPlaying = false;
+        this._launching = false;
         this.gameOver = false;
         this.isBreach = false;
         this.breachProgress = 0;
@@ -777,14 +760,9 @@ export class Game {
         this.generateSpawners();
 
         document.getElementById('launchBtn').disabled = false;
-        const statusEl = document.getElementById('status');
-
-        if (statusEl) {
-            statusEl.textContent = this.isDailyChallenge
-                ? 'Daily Challenge - position your mirrors!'
-                : 'Position your mirrors to protect the center!';
-            statusEl.className = 'status-modern';
-        }
+        window.showToast?.(this.isDailyChallenge
+            ? 'Daily Challenge — position your mirrors'
+            : 'Position your mirrors to protect the core');
 
         this.updateModeUI();
     }
@@ -1371,8 +1349,13 @@ export class Game {
             return;
         }
 
-        // Update game time
-        this.gameTime = (Date.now() - this.startTime) / 1000;
+        // Advance game time by the fixed physics step, NOT wall-clock time.
+        // update() runs once per fixed timestep inside the accumulator loop, so the
+        // score tracks simulated time exactly. This makes scoring frame-rate
+        // independent and immune to CPU throttling / debugger pauses (which would
+        // otherwise let the wall clock outrun the simulation), and makes a full
+        // run deterministically reproducible for server-side verification.
+        this.gameTime += this.deltaTime;
 
         // Check for victory BEFORE collision checks (prevents losing at exactly 5:00.00)
         if (this.gameTime >= CONFIG.MAX_GAME_TIME) {
@@ -1640,7 +1623,21 @@ export class Game {
         // Timer is now rendered directly on the canvas via GameRenderer.drawTimerHUD()
         // No external DOM elements needed
     }
-    
+
+    /**
+     * Finalize the replay recording and flag it ready. Runs in the background so it
+     * doesn't block the end-of-game modal. A safety timeout guarantees _replayReady
+     * flips to true even if stopRecording() never settles (a hung encoder would
+     * otherwise leave the Replay button spinning forever); the canvas re-simulation
+     * fallback still works in that case.
+     */
+    _finalizeReplay() {
+        this._replayReady = false;
+        const stop = Promise.resolve(this.replayRecorder.stopRecording()).catch(() => null);
+        const safety = new Promise(resolve => setTimeout(resolve, 6000));
+        Promise.race([stop, safety]).then(() => { this._replayReady = true; });
+    }
+
     async showGameOverModal() {
         this.gameOver = true;
 
@@ -1657,12 +1654,7 @@ export class Game {
 
         // Stop recording in background -- don't block the modal
         this.replayRecorder.saveGameDuration(finalGameTime);
-        this._replayReady = false;
-        this.replayRecorder.stopRecording().then(() => {
-            this._replayReady = true;
-        }).catch(() => {
-            this._replayReady = true; // Mark ready even on failure so buttons aren't stuck
-        });
+        this._finalizeReplay();
 
         // Use the snapshot captured at peak breach intensity
         const snapshotImg = document.getElementById('gameOverSnapshot');
@@ -1691,7 +1683,6 @@ export class Game {
             performanceElement.textContent = performanceData.rating;
             performanceElement.style.color = performanceData.color;
             performanceElement.style.textShadow = `0 0 10px ${performanceData.color}`;
-            performanceElement.title = performanceData.description;
         } catch (error) {
             console.error('Error loading performance rating:', error);
             const performanceElement = document.getElementById('missionPerformance');
@@ -1708,13 +1699,6 @@ export class Game {
 
         // Auto-submit score to leaderboard
         if (typeof window.submitScore === 'function') window.submitScore();
-
-        // Update status (if element exists)
-        const statusEl = document.getElementById('status');
-        if (statusEl) {
-            statusEl.textContent = 'CORE BREACH! Check your final score above.';
-            statusEl.className = 'status-modern status-game-over';
-        }
     }
 
     async showVictoryModal() {
@@ -1733,12 +1717,7 @@ export class Game {
 
         // Stop recording in background -- don't block the modal
         this.replayRecorder.saveGameDuration(finalGameTime);
-        this._replayReady = false;
-        this.replayRecorder.stopRecording().then(() => {
-            this._replayReady = true;
-        }).catch(() => {
-            this._replayReady = true;
-        });
+        this._finalizeReplay();
 
         // Capture canvas snapshot before any modal overlay
         const snapshotImg = document.getElementById('victorySnapshot');
@@ -1769,13 +1748,6 @@ export class Game {
 
         // Auto-submit score to leaderboard
         if (typeof window.submitScore === 'function') window.submitScore();
-
-        // Update status (if element exists)
-        const statusEl = document.getElementById('status');
-        if (statusEl) {
-            statusEl.textContent = 'PERFECT DEFENSE! You protected the core for the maximum time!';
-            statusEl.className = 'status-modern status-game-over';
-        }
     }
 
     continueAfterGameOver() {
