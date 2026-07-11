@@ -14,5 +14,6 @@ export const CONFIG = {
     EDGE_MARGIN: 40,
     ANGLE_INCREMENT: 1, // degrees
     MIRROR_COUNT: 8,
-    MAX_GAME_TIME: 300 // 5 minutes - perfect score threshold
+    MAX_GAME_TIME: 300, // 5 minutes - perfect score threshold
+    PHYSICS_DT: 1 / 60 // Fixed simulation timestep (shared by the live loop and server verification)
 };

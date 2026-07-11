@@ -15,6 +15,7 @@
  */
 
 import { describe, test, assert } from './run-tests.js';
+import { CONFIG } from '../js/config.js';
 import { readFileSync, readdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -74,10 +75,16 @@ describe('Device Independence - Fixed Canvas Dimensions', () => {
 describe('Device Independence - Fixed Physics Timestep', () => {
 
     test('Physics timestep is fixed at 1/60 second', () => {
-        const gameSrc = readFileSync(join(projectRoot, 'js/classes/Game.js'), 'utf8');
+        // The timestep now lives in CONFIG so the live loop and the headless
+        // server simulation share one constant. Verify the actual value, and
+        // that Game.js sources it from CONFIG rather than hardcoding its own.
+        assert.equal(CONFIG.PHYSICS_DT, 1 / 60, 'CONFIG.PHYSICS_DT is 1/60');
 
-        const dtMatch = gameSrc.match(/PHYSICS_DT\s*=\s*1\s*\/\s*60/);
-        assert.ok(dtMatch, 'PHYSICS_DT is set to 1/60');
+        const gameSrc = readFileSync(join(projectRoot, 'js/classes/Game.js'), 'utf8');
+        assert.ok(
+            gameSrc.includes('CONFIG.PHYSICS_DT'),
+            'Game.js sources the timestep from CONFIG.PHYSICS_DT'
+        );
     });
 
     test('Game loop uses accumulator pattern for fixed timestep', () => {

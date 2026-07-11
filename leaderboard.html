@@ -362,6 +362,18 @@
             to { transform: rotate(360deg); }
         }
 
+        /* Clean ring spinner: a faint track with one bright accent arc. */
+        .lb-spinner {
+            width: 30px;
+            height: 30px;
+            margin: 0 auto 14px;
+            border-radius: 50%;
+            border: 3px solid rgba(78, 120, 232, 0.18);
+            border-top-color: #4E78E8;
+            animation: spin 0.8s linear infinite;
+            box-sizing: border-box;
+        }
+
         .empty-state i {
             font-size: 2rem;
             margin-bottom: 10px;
@@ -926,7 +938,7 @@
             </div>
             <div id="leaderboardBody">
                 <div class="loading-state">
-                    <i class="iconoir-refresh"></i>
+                    <div class="lb-spinner"></div>
                     <div>Loading scores...</div>
                 </div>
             </div>
@@ -943,7 +955,7 @@
             <div style="padding: 0;">
                 <video id="replayVideo" playsinline controls style="width: 100%; display: block; border-radius: 0 0 15px 15px; background: #000;"></video>
                 <div id="replayLoading" style="text-align: center; padding: 40px 20px; color: var(--text-secondary); font-family: 'Space Grotesk', sans-serif;">
-                    <i class="iconoir-refresh" style="font-size: 1.5rem; display: block; margin-bottom: 8px; animation: spin 1.5s linear infinite;"></i>
+                    <div class="lb-spinner"></div>
                     Loading replay...
                 </div>
                 <div id="replayError" style="text-align: center; padding: 30px 20px; color: var(--text-secondary); font-family: 'Space Grotesk', sans-serif; display: none;">
@@ -1129,7 +1141,7 @@
 
         async function loadLeaderboard() {
             const body = document.getElementById('leaderboardBody');
-            body.innerHTML = '<div class="loading-state"><i class="iconoir-refresh"></i><div>Loading scores...</div></div>';
+            body.innerHTML = '<div class="loading-state"><div class="lb-spinner"></div><div>Loading scores...</div></div>';
 
             try {
                 const dailyDate = currentMode === 'daily' ? currentDailyDate : null;

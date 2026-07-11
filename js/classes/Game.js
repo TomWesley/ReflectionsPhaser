@@ -7,6 +7,7 @@ import { MirrorPlacementValidation } from '../validation/MirrorPlacementValidati
 import { IronCladValidator } from '../validation/IronCladValidator.js';
 import { CollisionSystem } from '../core/CollisionSystem.js';
 import { LaserCollisionHandler } from '../core/LaserCollisionHandler.js';
+import { stepLasers } from '../core/Simulation.js';
 import { ShapeGeometry } from '../geometry/ShapeGeometry.js';
 import { GameRenderer } from '../rendering/GameRenderer.js';
 import { MirrorGenerator } from '../generators/MirrorGenerator.js';
@@ -36,9 +37,9 @@ export class Game {
         this.startTime = 0;
         this.gameTime = 0;
         this.lastTimestamp = null;
-        this.deltaTime = 1/60;
+        this.deltaTime = CONFIG.PHYSICS_DT;
         this.physicsAccumulator = 0;
-        this.PHYSICS_DT = 1/60; // Fixed physics timestep for deterministic simulation
+        this.PHYSICS_DT = CONFIG.PHYSICS_DT; // Fixed physics timestep for deterministic simulation
 
         // Game objects
         this.mirrors = [];
@@ -760,9 +761,6 @@ export class Game {
         this.generateSpawners();
 
         document.getElementById('launchBtn').disabled = false;
-        window.showToast?.(this.isDailyChallenge
-            ? 'Daily Challenge — position your mirrors'
-            : 'Position your mirrors to protect the core');
 
         this.updateModeUI();
     }
@@ -1371,24 +1369,11 @@ export class Game {
 
         this.updateTimerDisplay();
 
-        // Update lasers with new collision system
-        for (let i = this.lasers.length - 1; i >= 0; i--) {
-            const laser = this.lasers[i];
-            laser.update(this.deltaTime);
-
-            // Use new collision system for mirror collisions
-            this.laserCollisionHandler.checkAndHandleCollisions(laser, this.mirrors);
-
-            // Check collision with center target
-            if (this.laserCollisionHandler.checkTargetCollision(laser)) {
-                this.startBreach();
-                return;
-            }
-
-            // Remove laser if out of bounds
-            if (this.laserCollisionHandler.isOutOfBounds(laser)) {
-                this.lasers.splice(i, 1);
-            }
+        // Advance all lasers one physics step via the shared simulation core -- the
+        // exact same code path used for headless/server score verification.
+        if (stepLasers(this.lasers, this.mirrors, this.laserCollisionHandler, this.deltaTime)) {
+            this.startBreach();
+            return;
         }
     }
 

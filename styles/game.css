@@ -1774,9 +1774,28 @@ h1 {
         justify-content: center;
     }
 
+    /* Launch is the primary action, but stays the SAME size as Reset/Snap so the
+       row reads evenly. It's distinguished by its coral color and a gentle pulse
+       while positioning mirrors; the pulse stops once the round starts. */
     .mobile-launch-btn {
         background: linear-gradient(135deg, var(--flare), #c43a54);
         color: white;
+        box-shadow: 0 2px 10px rgba(232, 78, 106, 0.45);
+    }
+
+    .mobile-launch-btn:not(:disabled):not(.disabled) {
+        animation: launch-pulse 1.8s ease-in-out infinite;
+    }
+
+    .mobile-launch-btn:disabled,
+    .mobile-launch-btn.disabled {
+        opacity: 0.4;
+        animation: none;
+    }
+
+    @keyframes launch-pulse {
+        0%, 100% { box-shadow: 0 2px 10px rgba(232, 78, 106, 0.45); }
+        50% { box-shadow: 0 2px 18px rgba(232, 78, 106, 0.9); }
     }
 
     .mobile-reset-btn {

@@ -101,7 +101,20 @@
       "Bash(node --check js/classes/Game.js)",
       "Bash(node --check js/main.js)",
       "Bash(python3 -c \"import json;json.load\\(open\\('data/performance-ratings.json'\\)\\);print\\('JSON OK'\\)\")",
-      "Bash(node --check js/validation/PerformanceRating.js)"
+      "Bash(node --check js/validation/PerformanceRating.js)",
+      "Bash(node --check js/core/Simulation.js)",
+      "Bash(node --check js/core/GameVerifier.js)",
+      "Bash(node --check js/core/PuzzleGenerator.js)",
+      "Bash(node --check index.js)",
+      "Bash(node --check test-local.mjs)",
+      "Bash(node --check copy-shared.js)",
+      "Bash(node copy-shared.js)",
+      "Bash(node --input-type=module -e ' *)",
+      "Bash(npm install *)",
+      "Bash(/usr/libexec/java_home -V)",
+      "Bash(brew --version)",
+      "Bash(node --check functions/index.js)",
+      "Bash(node functions/copy-shared.js)"
     ],
     "deny": [],
     "ask": []
