@@ -18,6 +18,7 @@ connectFunctionsEmulator(functions, '127.0.0.1', 5001);
 
 const startGame = httpsCallable(functions, 'startGame');
 const submitGame = httpsCallable(functions, 'submitGame');
+const reserveUsername = httpsCallable(functions, 'reserveUsername');
 
 let pass = 0, fail = 0;
 const ok = (cond, msg) => { cond ? (pass++, console.log('  ✓', msg)) : (fail++, console.log('  ✗', msg)); };
@@ -61,6 +62,22 @@ const { data: daily } = await startGame({ mode: 'daily' });
 ok(daily.puzzle?.mode === 'daily' && daily.puzzle.mirrorInventory.length > 0,
    `daily startGame issued ${daily.puzzle.mirrorInventory.length} mirrors (theme: ${daily.puzzle.theme})`);
 await expectReject(() => startGame({ mode: 'daily' }), 'second daily attempt blocked (one per day)');
+
+console.log('\n6) Usernames: unique, and duplicates (case-insensitive) are blocked');
+const uname = 'Ace_' + Math.floor(Number(String(Date.now()).slice(-6)));
+const { data: reserved } = await reserveUsername({ username: uname });
+ok(reserved.ok, `reserved username "${uname}"`);
+ok((await reserveUsername({ username: uname })).data.ok, 'same user re-reserving their own name is fine');
+// A DIFFERENT user trying the same name (different case) must be blocked.
+const app2 = initializeApp({ projectId: 'singularity-c216f', apiKey: 'demo-emulator' }, 'u2');
+const auth2 = getAuth(app2);
+connectAuthEmulator(auth2, 'http://127.0.0.1:9099', { disableWarnings: true });
+const functions2 = getFunctions(app2);
+connectFunctionsEmulator(functions2, '127.0.0.1', 5001);
+await signInAnonymously(auth2);
+const reserve2 = httpsCallable(functions2, 'reserveUsername');
+await expectReject(() => reserve2({ username: uname.toUpperCase() }), 'duplicate username (other user, different case) blocked');
+await expectReject(() => reserveUsername({ username: 'no' }), 'too-short username rejected');
 
 console.log(`\n${fail === 0 ? 'ALL GOOD' : 'FAILURES'}: ${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);

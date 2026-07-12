@@ -7,7 +7,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>REFLECTIONS - Geometric Laser Defense</title>
+    <title>Reflections</title>
     <!-- Favicon -->
     <link rel="icon" type="image/x-icon" href="/public/favicon.ico">
     <link rel="icon" type="image/png" sizes="32x32" href="/public/favicon-32.png">
@@ -30,7 +30,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <!-- Iconoir Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/iconoir-icons/iconoir@main/css/iconoir.css">
-    <link rel="stylesheet" href="/styles/game.css?v=24">
+    <link rel="stylesheet" href="/styles/game.css?v=25">
     <!-- mp4-muxer for native MP4 recording via WebCodecs -->
     <script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5/build/mp4-muxer.min.js"></script>
     <!-- h264-mp4-encoder for WASM-based MP4 generation (mobile fallback) -->
@@ -210,19 +210,19 @@
             </div>
             <div class="auth-modal-body">
                 <div class="auth-tabs">
-                    <button class="auth-tab active" onclick="switchAuthTab('signin')">Sign In</button>
-                    <button class="auth-tab" onclick="switchAuthTab('signup')">Create Account</button>
+                    <button class="auth-tab active" data-tab="signup" onclick="switchAuthTab('signup')">Create Account</button>
+                    <button class="auth-tab" data-tab="signin" onclick="switchAuthTab('signin')">Sign In</button>
                 </div>
 
-                <div id="authSignInForm" class="auth-form">
+                <div id="authSignInForm" class="auth-form" style="display:none;">
                     <input type="email" id="authEmail" class="auth-input" placeholder="Email" autocomplete="email">
                     <input type="password" id="authPassword" class="auth-input" placeholder="Password" autocomplete="current-password">
                     <button class="auth-btn-primary" onclick="doEmailSignIn()">Sign In</button>
                     <button class="auth-btn-link" onclick="doPasswordReset()">Forgot password?</button>
                 </div>
 
-                <div id="authSignUpForm" class="auth-form" style="display:none;">
-                    <input type="text" id="authSignUpName" class="auth-input" placeholder="Display name" maxlength="16" autocomplete="username">
+                <div id="authSignUpForm" class="auth-form">
+                    <input type="text" id="authSignUpName" class="auth-input" placeholder="Username (3–16 chars, must be unique)" maxlength="16" autocomplete="username">
                     <input type="email" id="authSignUpEmail" class="auth-input" placeholder="Email" autocomplete="email">
                     <input type="password" id="authSignUpPassword" class="auth-input" placeholder="Password (6+ characters)" autocomplete="new-password">
                     <button class="auth-btn-primary" onclick="doEmailSignUp()">Create Account</button>
@@ -234,6 +234,13 @@
                     <svg viewBox="0 0 24 24" width="18" height="18"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
                     Continue with Google
                 </button>
+
+                <!-- Shown instead of the sign-in forms when already signed in -->
+                <div id="authSignedInView">
+                    <div class="auth-signedin-icon"><i class="iconoir-user"></i></div>
+                    <div class="auth-signedin-label">Signed in as <strong id="authSignedInName"></strong></div>
+                    <button class="auth-btn-primary" onclick="doSignOut()"><i class="iconoir-log-out"></i> Sign Out</button>
+                </div>
 
                 <div id="authError" class="auth-error"></div>
             </div>
@@ -790,10 +797,9 @@
         // Called when game over modal appears. Shows leaderboard rank or sign-in prompt.
         window.submitScore = submitScore;
         async function submitScore() {
-            if (!window.game || !window.leaderboardService || !window.firebaseAuth) return;
+            if (!window.game || !window.firebaseAuth) return;
 
             const auth = window.firebaseAuth;
-            const service = window.leaderboardService;
             const game = window.game;
 
             if (!game.gameOver || game.gameTime <= 0) return;
@@ -810,15 +816,10 @@
 
             // Show username if signed in
             if (identityEl) {
-                if (auth.isAnonymous()) {
-                    identityEl.textContent = '';
-                } else {
-                    const displayName = auth.getDisplayNameOrDefault();
-                    identityEl.textContent = displayName;
-                }
+                identityEl.textContent = auth.isAnonymous() ? '' : auth.getDisplayNameOrDefault();
             }
 
-            // Anonymous users: show sign-in prompt
+            // Anonymous users: show sign-in prompt (score isn't ranked until they do)
             if (auth.isAnonymous()) {
                 statusEl.innerHTML = '<span class="leaderboard-signin-link" onclick="openAuthModal()"><i class="iconoir-user"></i> Sign In To Join the Leaderboard</span>';
                 return;
@@ -827,68 +828,90 @@
             // Don't re-submit if already submitted this game
             if (statusEl.dataset.submitted === 'true') return;
 
+            const mode = game.isDailyChallenge ? 'daily' : 'main';
+
             try {
                 statusEl.textContent = 'Submitting score...';
                 statusEl.style.color = 'var(--text-secondary)';
 
-                const mode = game.isDailyChallenge ? 'daily' : 'main';
-                const DailyChallenge = (await import('./js/validation/DailyChallenge.js')).DailyChallenge;
-                const dailyDate = game.isDailyChallenge ? DailyChallenge.getTodayString() : null;
+                let score, scoreFormatted, isNewBest, docId;
 
-                const minutes = Math.floor(game.gameTime / 60);
-                const seconds = Math.floor(game.gameTime % 60);
-                const centiseconds = Math.floor((game.gameTime % 1) * 100);
-                const scoreFormatted = `${minutes}:${seconds.toString().padStart(2, '0')}.${centiseconds.toString().padStart(2, '0')}`;
-
-                const result = await service.submitScore(mode, game.gameTime, scoreFormatted, {
-                    dailyDate,
-                    mirrorCount: game.mirrors.length,
-                    spawnerCount: game.spawners.length,
-                });
+                if (game.isRanked && game.sessionId && window.gameService) {
+                    // Server-authoritative: the server re-simulates the exact board
+                    // and computes the score. The client's time is not trusted.
+                    const displayName = auth.getDisplayNameOrDefault();
+                    const res = await window.gameService.submitGame(
+                        game.sessionId, game.getPlacements(), displayName
+                    );
+                    score = res.score;
+                    scoreFormatted = res.scoreFormatted;
+                    isNewBest = res.isNewBest;
+                    docId = `${auth.getUID()}_main`;
+                } else if (window.leaderboardService) {
+                    // Unranked fallback (offline, or daily until it's server-backed).
+                    const DailyChallenge = (await import('./js/validation/DailyChallenge.js')).DailyChallenge;
+                    const dailyDate = game.isDailyChallenge ? DailyChallenge.getTodayString() : null;
+                    const minutes = Math.floor(game.gameTime / 60);
+                    const seconds = Math.floor(game.gameTime % 60);
+                    const centiseconds = Math.floor((game.gameTime % 1) * 100);
+                    scoreFormatted = `${minutes}:${seconds.toString().padStart(2, '0')}.${centiseconds.toString().padStart(2, '0')}`;
+                    score = game.gameTime;
+                    const result = await window.leaderboardService.submitScore(mode, game.gameTime, scoreFormatted, {
+                        dailyDate,
+                        mirrorCount: game.mirrors.length,
+                        spawnerCount: game.spawners.length,
+                    });
+                    isNewBest = result.isNewBest;
+                    docId = result.docId;
+                } else {
+                    statusEl.textContent = '';
+                    return;
+                }
 
                 statusEl.dataset.submitted = 'true';
 
-                // Get rank
-                const rank = await service.getUserRank(mode, game.gameTime);
-                const rankText = rank ? `#${rank}` : '';
-
+                // Rank (read-only query against the leaderboard)
+                const rank = window.leaderboardService
+                    ? await window.leaderboardService.getUserRank(mode, score)
+                    : null;
                 const rankNum = Number(rank);
                 const safeRank = (Number.isFinite(rankNum) && rankNum > 0) ? `#${rankNum}` : '';
 
-                if (result.isNewBest) {
-                    statusEl.textContent = '';
-                    const rankSpan = document.createElement('span');
-                    rankSpan.className = 'leaderboard-rank';
-                    rankSpan.textContent = `${safeRank} on the leaderboard`;
+                statusEl.textContent = '';
+                const rankSpan = document.createElement('span');
+                rankSpan.className = 'leaderboard-rank';
+                rankSpan.appendChild(document.createTextNode(safeRank ? `${safeRank} on the ` : 'on the '));
+                const lbLink = document.createElement('a');
+                lbLink.href = '/leaderboard';
+                lbLink.textContent = 'leaderboard';
+                lbLink.style.cssText = 'color: inherit; text-decoration: underline; cursor: pointer;';
+                rankSpan.appendChild(lbLink);
+                statusEl.appendChild(rankSpan);
+                if (isNewBest) {
                     const bestSpan = document.createElement('span');
                     bestSpan.className = 'leaderboard-best';
                     bestSpan.textContent = ' New personal best!';
-                    statusEl.append(rankSpan, bestSpan);
+                    statusEl.appendChild(bestSpan);
+                }
 
-                    // Video upload for main game top 10
-                    if (mode === 'main' && rankNum <= 10 && window.videoUploader) {
+                // Video upload for main-game top 10. Non-fatal: a failure here (e.g.
+                // Storage is on prod while auth is the emulator) must not clobber the
+                // score-success message the player just saw.
+                if (mode === 'main' && isNewBest && Number.isFinite(rankNum) && rankNum <= 10 && window.videoUploader && docId) {
+                    try {
                         const recorder = game.replayRecorder;
                         let videoBlob = recorder.videoBlob;
-
                         if (!videoBlob && recorder.canGenerateMP4()) {
                             await game.generateReplayMP4();
                             videoBlob = recorder.videoBlob;
                         }
-
                         if (videoBlob) {
-                            await window.videoUploader.uploadReplayVideo(
-                                videoBlob, game.gameTime, result.docId
-                            );
+                            await window.videoUploader.uploadReplayVideo(videoBlob, score, docId);
                         }
+                    } catch (videoErr) {
+                        console.warn('Replay video upload skipped/failed:', videoErr.message);
                     }
-                } else {
-                    statusEl.textContent = '';
-                    const rankSpan = document.createElement('span');
-                    rankSpan.className = 'leaderboard-rank';
-                    rankSpan.textContent = `${safeRank} on the leaderboard`;
-                    statusEl.appendChild(rankSpan);
                 }
-
             } catch (error) {
                 console.error('Score submission failed:', error);
                 statusEl.textContent = 'Submission failed';
@@ -1111,8 +1134,9 @@
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-storage-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-functions-compat.js"></script>
 
     <!-- Main Game Module -->
-    <script type="module" src="/js/main.js?v=15"></script>
+    <script type="module" src="/js/main.js?v=18"></script>
 </body>
 </html>

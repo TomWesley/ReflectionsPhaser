@@ -116,28 +116,46 @@ export class FirebaseAuth {
 
         try {
             const credential = firebase.auth.EmailAuthProvider.credential(email, password);
+            let result;
 
             if (this.user && this.user.isAnonymous) {
-                // Link anonymous account to email — preserves UID and scores
-                const result = await this.user.linkWithCredential(credential);
-                this.user = result.user;
-                // Set display name on the Firebase profile
-                await this.user.updateProfile({ displayName: displayName || email.split('@')[0] });
-                if (displayName) this.setDisplayName(displayName);
-                this._notifyAuthChange();
-                return { success: true, user: this.user, error: null };
+                // Link so the UID (and any existing scores/session) are preserved.
+                try {
+                    result = await this.user.linkWithCredential(credential);
+                } catch (linkErr) {
+                    // The email is already a real account (common after signing out and
+                    // re-entering the same details). If the password is correct, treat
+                    // "Create Account" as a sign-in so the user isn't stuck on an error.
+                    if (linkErr.code === 'auth/email-already-in-use' || linkErr.code === 'auth/credential-already-in-use') {
+                        result = await auth.signInWithEmailAndPassword(email, password);
+                    } else {
+                        throw linkErr;
+                    }
+                }
+            } else {
+                result = await auth.createUserWithEmailAndPassword(email, password);
             }
 
-            // Fresh sign-up (no anonymous session)
-            const result = await auth.createUserWithEmailAndPassword(email, password);
             this.user = result.user;
-            await this.user.updateProfile({ displayName: displayName || email.split('@')[0] });
+
+            // The account now exists and the user IS signed in. Everything below is
+            // best-effort polish — a hiccup here must NOT report the sign-up as failed
+            // (that would leave the user actually signed in but re-prompted to log in).
+            try {
+                await this.user.updateProfile({ displayName: displayName || email.split('@')[0] });
+            } catch (profileErr) {
+                console.warn('updateProfile after sign-up failed (non-fatal):', profileErr.message);
+            }
             if (displayName) this.setDisplayName(displayName);
             this._notifyAuthChange();
             return { success: true, user: this.user, error: null };
 
         } catch (error) {
-            if (error.code === 'auth/email-already-in-use') {
+            // Existing email but the entered password was wrong.
+            if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+                return { success: false, user: null, error: 'That email is already registered — check your password, or use Sign In.' };
+            }
+            if (error.code === 'auth/email-already-in-use' || error.code === 'auth/credential-already-in-use') {
                 return { success: false, user: null, error: 'Email already in use. Try signing in instead.' };
             }
             if (error.code === 'auth/weak-password') {

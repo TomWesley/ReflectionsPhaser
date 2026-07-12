@@ -1,3 +1,6 @@
 node_modules/
 # Generated at build time by copy-shared.js (a copy of the repo's /js tree).
 js/
+# Emulator debug logs
+*-debug.log
+*.log

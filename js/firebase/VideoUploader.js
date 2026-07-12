@@ -57,9 +57,14 @@ export class VideoUploader {
         await uploadTask;
         const downloadURL = await ref.getDownloadURL();
 
-        // Update the Firestore score document with the video path
+        // Record the video path on the score doc. Prefer the server function (works
+        // once scores become server-only); fall back to the direct write otherwise.
         if (docId) {
-            await this.leaderboardService.updateVideoPath(docId, path);
+            if (window.gameService) {
+                await window.gameService.setReplayVideoPath(docId, path);
+            } else {
+                await this.leaderboardService.updateVideoPath(docId, path);
+            }
         }
 
         return downloadURL;

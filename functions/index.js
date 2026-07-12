@@ -116,7 +116,13 @@ export const submitGame = onCall(async (request) => {
     }
 
     const score = result.score;
-    const cleanName = sanitizeName(displayName);
+    // The leaderboard name is the user's RESERVED username (server-owned), not
+    // whatever the client sent — so it can't be spoofed. Fall back to a sanitized
+    // client name only if no username is on file.
+    const userSnap = await db.collection('users').doc(uid).get();
+    const cleanName = (userSnap.exists && userSnap.data().username)
+        ? userSnap.data().username
+        : sanitizeName(displayName);
     const isDaily = session.mode === 'daily';
     const scoreDocId = isDaily ? `${uid}_${session.dailyDate}` : `${uid}_main`;
     const scoreRef = db.collection('scores').doc(scoreDocId);
@@ -149,4 +155,79 @@ export const submitGame = onCall(async (request) => {
         scoreFormatted: formatScore(score),
         isNewBest: outcome.isNewBest,
     };
+});
+
+/**
+ * setReplayVideoPath - record the Storage path of a top-score replay on the score
+ * doc. Needed because clients can no longer write the scores collection directly:
+ * the video is uploaded to Storage client-side, then this function stamps the path.
+ * Input: { docId, videoPath }
+ */
+export const setReplayVideoPath = onCall(async (request) => {
+    const uid = request.auth?.uid;
+    if (!uid) throw new HttpsError('unauthenticated', 'Sign in required.');
+
+    const { docId, videoPath } = request.data || {};
+    if (typeof docId !== 'string' || typeof videoPath !== 'string') {
+        throw new HttpsError('invalid-argument', 'Missing docId or videoPath.');
+    }
+    // The doc and the path must both belong to this user.
+    if (!docId.startsWith(`${uid}_`)) {
+        throw new HttpsError('permission-denied', 'Not your score.');
+    }
+    if (videoPath.length > 200 || !new RegExp(`^replays/${uid}/[^\\s]+$`).test(videoPath)) {
+        throw new HttpsError('invalid-argument', 'Invalid video path.');
+    }
+
+    const ref = db.collection('scores').doc(docId);
+    const snap = await ref.get();
+    if (!snap.exists || snap.data().uid !== uid) {
+        throw new HttpsError('not-found', 'Score not found.');
+    }
+    await ref.update({ videoPath });
+    return { ok: true };
+});
+
+const USERNAME_RE = /^[a-zA-Z0-9_-]{3,16}$/;
+
+/**
+ * reserveUsername - claim a unique username for this account.
+ *
+ * Uniqueness is enforced atomically in a transaction against a `usernames`
+ * registry (keyed by lowercased name, so "Alex" and "alex" can't both exist).
+ * A `users/{uid}` doc records the caller's current username; submitGame reads it
+ * so the leaderboard name is always the reserved one, never client-controlled.
+ * Called during sign-up BEFORE the email account is created, so a taken name
+ * blocks the whole flow.
+ */
+export const reserveUsername = onCall(async (request) => {
+    const uid = request.auth?.uid;
+    if (!uid) throw new HttpsError('unauthenticated', 'Sign in required.');
+
+    const username = String(request.data?.username || '').trim();
+    if (!USERNAME_RE.test(username)) {
+        throw new HttpsError('invalid-argument', 'Username must be 3–16 characters: letters, numbers, _ or -.');
+    }
+    const key = username.toLowerCase();
+
+    await db.runTransaction(async (tx) => {
+        const nameRef = db.collection('usernames').doc(key);
+        const userRef = db.collection('users').doc(uid);
+
+        const existing = await tx.get(nameRef);
+        if (existing.exists && existing.data().uid !== uid) {
+            throw new HttpsError('already-exists', 'That username is taken.');
+        }
+        // If this user already held a different name, free it.
+        const userDoc = await tx.get(userRef);
+        const prevKey = userDoc.exists ? userDoc.data().usernameLower : null;
+
+        tx.set(nameRef, { uid, username });
+        tx.set(userRef, { username, usernameLower: key });
+        if (prevKey && prevKey !== key) {
+            tx.delete(db.collection('usernames').doc(prevKey));
+        }
+    });
+
+    return { ok: true, username };
 });

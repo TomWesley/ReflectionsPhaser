@@ -114,7 +114,12 @@
       "Bash(/usr/libexec/java_home -V)",
       "Bash(brew --version)",
       "Bash(node --check functions/index.js)",
-      "Bash(node functions/copy-shared.js)"
+      "Bash(node functions/copy-shared.js)",
+      "Bash(node --check js/firebase/FirebaseAuth.js)",
+      "Bash(node --check js/firebase/GameService.js)",
+      "Bash(node --check js/firebase/VideoUploader.js)",
+      "Bash(python3 -c \"import json; json.load\\(open\\('firebase.json'\\)\\); print\\('firebase.json valid'\\)\")",
+      "Bash(node --check js/validation/DailyChallenge.js)"
     ],
     "deny": [],
     "ask": []

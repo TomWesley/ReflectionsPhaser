@@ -26,6 +26,22 @@ export function initFirebase() {
     if (!firebase.apps.length) {
         firebase.initializeApp(firebaseConfig);
     }
+
+    // On localhost, talk to the Firebase Local Emulator instead of production, so
+    // the whole server-authoritative flow can be tested end-to-end with nothing
+    // deployed and no real data touched.
+    const host = typeof location !== 'undefined' ? location.hostname : '';
+    if (host === 'localhost' || host === '127.0.0.1') {
+        try {
+            firebase.auth().useEmulator('http://127.0.0.1:9099', { disableWarnings: true });
+            firebase.firestore().useEmulator('127.0.0.1', 8080);
+            if (firebase.functions) firebase.functions().useEmulator('127.0.0.1', 5001);
+            console.info('[Firebase] Connected to local emulators (auth:9099, firestore:8080, functions:5001).');
+        } catch (e) {
+            console.warn('[Firebase] Emulator wiring skipped:', e.message);
+        }
+    }
+
     initialized = true;
 }
 
@@ -42,4 +58,9 @@ export function getFirestore() {
 export function getStorage() {
     initFirebase();
     return firebase.storage();
+}
+
+export function getFunctions() {
+    initFirebase();
+    return firebase.functions();
 }

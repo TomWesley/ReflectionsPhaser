@@ -1053,6 +1053,35 @@ h1 {
     padding: 20px 18px;
 }
 
+/* Signed-in view: swaps in for the sign-in forms when the user is already signed in. */
+#authSignedInView {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    text-align: center;
+    padding: 8px 0 4px;
+}
+.auth-signedin-icon {
+    font-size: 2.4rem;
+    color: var(--arc);
+    line-height: 1;
+}
+.auth-signedin-label {
+    font-family: 'Space Grotesk', sans-serif;
+    color: var(--text-primary);
+}
+.auth-modal-body.signed-in .auth-tabs,
+.auth-modal-body.signed-in #authSignInForm,
+.auth-modal-body.signed-in #authSignUpForm,
+.auth-modal-body.signed-in .auth-divider,
+.auth-modal-body.signed-in .auth-btn-google {
+    display: none !important;
+}
+.auth-modal-body.signed-in #authSignedInView {
+    display: flex !important;
+}
+
 .auth-tabs {
     display: flex;
     gap: 0;

@@ -8,16 +8,19 @@ async function initFirebaseServices(cacheBust) {
     const { FirebaseAuth } = await import(`./firebase/FirebaseAuth.js${cacheBust}`);
     const { LeaderboardService } = await import(`./firebase/LeaderboardService.js${cacheBust}`);
     const { VideoUploader } = await import(`./firebase/VideoUploader.js${cacheBust}`);
+    const { GameService } = await import(`./firebase/GameService.js${cacheBust}`);
 
     const auth = new FirebaseAuth();
     await auth.ensureAuth();
 
     const leaderboardService = new LeaderboardService(auth);
     const videoUploader = new VideoUploader(auth, leaderboardService);
+    const gameService = new GameService();
 
     window.firebaseAuth = auth;
     window.leaderboardService = leaderboardService;
     window.videoUploader = videoUploader;
+    window.gameService = gameService;
 
     // Pre-fill name input from saved name or Google profile
     const savedName = auth.getDisplayName() || auth.generateDefaultName();
@@ -54,9 +57,36 @@ window.openAuthModal = function() {
         body.innerHTML = _authModalOriginalHTML;
         modal.querySelector('.auth-modal-title').textContent = 'Sign In';
     }
+
+    // If already signed in, show the account/sign-out view instead of the forms.
+    const signedIn = window.firebaseAuth && window.firebaseAuth.isSignedIn();
+    if (signedIn) {
+        const nameEl = document.getElementById('authSignedInName');
+        if (nameEl) nameEl.textContent = window.firebaseAuth.getDisplayNameOrDefault();
+        body.classList.add('signed-in');
+        modal.querySelector('.auth-modal-title').textContent = 'Account';
+    } else {
+        body.classList.remove('signed-in');
+        // Default to Create Account — we optimize for getting new users in fast.
+        switchAuthTab('signup');
+    }
+
     modal.classList.remove('hidden');
     const errEl = document.getElementById('authError');
     if (errEl) errEl.textContent = '';
+};
+
+window.doSignOut = async function() {
+    if (!window.firebaseAuth) return;
+    try {
+        await window.firebaseAuth.signOut();
+    } catch (e) {
+        console.warn('Sign out error:', e.message);
+    }
+    updateNavbarUser(window.firebaseAuth);
+    syncNameInputs();
+    closeAuthModal();
+    if (typeof showToast === 'function') showToast('Signed out.');
 };
 
 window.closeAuthModal = function() {
@@ -66,17 +96,12 @@ window.closeAuthModal = function() {
 };
 
 window.switchAuthTab = function(tab) {
-    document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.auth-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
     document.getElementById('authError').textContent = '';
-    if (tab === 'signup') {
-        document.querySelectorAll('.auth-tab')[1].classList.add('active');
-        document.getElementById('authSignInForm').style.display = 'none';
-        document.getElementById('authSignUpForm').style.display = 'flex';
-    } else {
-        document.querySelectorAll('.auth-tab')[0].classList.add('active');
-        document.getElementById('authSignInForm').style.display = 'flex';
-        document.getElementById('authSignUpForm').style.display = 'none';
-    }
+    document.getElementById('authSignInForm').style.display = (tab === 'signin') ? 'flex' : 'none';
+    document.getElementById('authSignUpForm').style.display = (tab === 'signup') ? 'flex' : 'none';
+    const titleEl = document.querySelector('#authModal .auth-modal-title');
+    if (titleEl) titleEl.textContent = (tab === 'signup') ? 'Create Account' : 'Sign In';
 };
 
 window.doEmailSignIn = async function() {
@@ -108,12 +133,29 @@ window.doEmailSignUp = async function() {
     const password = document.getElementById('authSignUpPassword').value;
     const errorEl = document.getElementById('authError');
 
+    if (!/^[a-zA-Z0-9_-]{3,16}$/.test(name)) {
+        errorEl.textContent = 'Username must be 3–16 characters: letters, numbers, _ or -.';
+        return;
+    }
     if (!email || !password) {
         errorEl.textContent = 'Please enter email and password.';
         return;
     }
 
     errorEl.textContent = '';
+
+    // Claim the unique username FIRST — a taken name blocks account creation.
+    if (window.gameService) {
+        try {
+            await window.gameService.reserveUsername(name);
+        } catch (e) {
+            errorEl.textContent = /taken|already-exists/i.test(e.message || '')
+                ? 'That username is taken — pick another.'
+                : (e.message || 'Could not reserve that username.');
+            return;
+        }
+    }
+
     const result = await window.firebaseAuth.signUpWithEmail(email, password, name);
     if (result.success) {
         closeAuthModal();
@@ -218,9 +260,9 @@ function updateNavbarUser(auth) {
     if (el) {
         if (auth.isSignedIn()) {
             el.textContent = auth.getDisplayNameOrDefault();
-            el.onclick = null;
-            el.style.cursor = 'default';
-            el.title = 'Signed in';
+            el.onclick = () => openAuthModal();   // opens the account / sign-out view
+            el.style.cursor = 'pointer';
+            el.title = 'Account';
         } else {
             el.textContent = 'Sign In';
             el.onclick = () => openAuthModal();
@@ -236,7 +278,10 @@ function updateNavbarUser(auth) {
         if (auth.isSignedIn()) {
             mobileName.textContent = auth.getDisplayNameOrDefault();
             mobileRow.classList.add('signed-in');
-            mobileRow.onclick = null;
+            mobileRow.onclick = () => {   // opens the account / sign-out view
+                closeMobileMenu();
+                openAuthModal();
+            };
         } else {
             mobileName.textContent = 'Sign in';
             mobileRow.classList.remove('signed-in');
@@ -252,7 +297,6 @@ function syncNameInputs() {
     if (!window.firebaseAuth) return;
     const name = window.firebaseAuth.getDisplayName() || window.firebaseAuth.generateDefaultName();
     document.querySelectorAll('.player-name-input').forEach(input => { input.value = name; });
-    updateSubmitUI(window.firebaseAuth);
 }
 
 // Initialize the game when the page loads with error handling
@@ -269,12 +313,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const game = new Game();
 
-        // Hide the loading overlay now that the game is rendering
-        const loader = document.getElementById('canvasLoader');
-        if (loader) {
-            loader.classList.add('hidden');
-            loader.remove();
-        }
+        // NOTE: the loading overlay is removed by Game.setupBoard() once the first
+        // board is ready (it waits for the server-issued ranked board), not here.
 
         // Expose game instance globally for modal functions
         window.game = game;

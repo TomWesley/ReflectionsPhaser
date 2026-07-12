@@ -64,12 +64,17 @@ export function generateMainPuzzle() {
  */
 export function generateDailyPuzzle() {
     const config = DailyChallenge.generateDailyConfig();
+    // Position the mirrors server-side. placeMirrors is date-seeded (same layout for
+    // everyone) and may drop a mirror it can't fit, so we derive BOTH the rendered
+    // mirrors and the verification inventory from the actually-placed set — that keeps
+    // the client's placement count exactly matching what the server will verify.
+    const placed = DailyChallenge.placeMirrors(config.mirrors, STUB_GAME);
     return {
         mode: 'daily',
         dailyDate: DailyChallenge.getTodayString(),
         theme: config.theme,
-        mirrors: config.mirrors.map(m => ({ ...m })),   // client renders these
-        mirrorInventory: config.mirrors.map(toInventory),
+        mirrors: placed.map(toMirrorConfig),
+        mirrorInventory: placed.map(toInventory),
         spawners: config.spawners.map(s => ({ x: s.x, y: s.y, angle: s.angle })),
     };
 }

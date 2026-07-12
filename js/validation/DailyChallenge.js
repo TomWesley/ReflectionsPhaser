@@ -472,9 +472,21 @@ export class DailyChallenge {
     static placeMirrors(mirrorConfigs, game) {
         const today = DailyChallenge.getTodayString();
         const rng = new SeededRandom(today + '-placement');
+        // Separate seeded stream for shape params, so the daily board is identical
+        // for everyone (the trapezoid shape otherwise picks a random topWidth).
+        const shapeRng = new SeededRandom(today + '-shapes');
         const placed = [];
 
         for (const config of mirrorConfigs) {
+            // Deterministic trapezoid topWidth when the config doesn't fix one.
+            let topWidth = config.topWidth;
+            if (!topWidth && config.shape === 'trapezoid') {
+                const w = config.width || config.size || CONFIG.GRID_SIZE;
+                const g = CONFIG.GRID_SIZE;
+                const opts = [g, g * 2, g * 3].filter(r => w - r >= g);
+                topWidth = w - (opts.length ? opts[shapeRng.nextInt(0, opts.length - 1)] : g);
+            }
+
             let mirror = null;
             for (let attempt = 0; attempt < 150; attempt++) {
                 // Generate a seeded random position
@@ -492,7 +504,7 @@ export class DailyChallenge {
                 candidate.width = config.width || candidate.width;
                 candidate.height = config.height || candidate.height;
                 candidate.rotation = config.rotation || 0;
-                if (config.topWidth) candidate.topWidth = config.topWidth;
+                if (topWidth) candidate.topWidth = topWidth;
                 if (config.skew) candidate.skew = config.skew;
                 candidate.isDailyChallenge = true;
                 game.safeUpdateVertices(candidate);

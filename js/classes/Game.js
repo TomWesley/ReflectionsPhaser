@@ -7,7 +7,7 @@ import { MirrorPlacementValidation } from '../validation/MirrorPlacementValidati
 import { IronCladValidator } from '../validation/IronCladValidator.js';
 import { CollisionSystem } from '../core/CollisionSystem.js';
 import { LaserCollisionHandler } from '../core/LaserCollisionHandler.js';
-import { stepLasers } from '../core/Simulation.js';
+import { stepLasers, createMirrorFromConfig } from '../core/Simulation.js';
 import { ShapeGeometry } from '../geometry/ShapeGeometry.js';
 import { GameRenderer } from '../rendering/GameRenderer.js';
 import { MirrorGenerator } from '../generators/MirrorGenerator.js';
@@ -56,6 +56,14 @@ export class Game {
         this.selectedSpawner = null; // Track which spawner is selected (mobile tap)
         this.selectedMirror = null; // Track which mirror is selected for rotation
         this.isDailyChallenge = false; // Daily challenge mode flag
+
+        // Server-authoritative session state. When isRanked, the board came from the
+        // server (startGame) and the score will be verified server-side (submitGame).
+        // When the server is unreachable, the game falls back to local generation and
+        // plays unranked so it's never blocked.
+        this.sessionId = null;
+        this.isRanked = false;
+        this.boardReady = false;
 
         // Zoom/pan state for setup phase
         this.zoom = 1;
@@ -117,9 +125,9 @@ export class Game {
         MirrorPlacementValidation.initialize();
 
         this.setupEventListeners();
-        this.generateMirrors();
-        this.generateSpawners();
         this.gameLoop();
+        // Fetch the first board (server for ranked, local fallback otherwise).
+        this.setupBoard();
     }
 
     /**
@@ -641,6 +649,92 @@ export class Game {
         // Delegate spawner generation to the SpawnerGenerator
         this.spawners = this.spawnerGenerator.generateSpawners();
     }
+
+    /**
+     * Set up a new board. Main-game boards come from the server (ranked); if the
+     * server is unreachable, or for daily, we generate locally and play unranked.
+     * Async because the server round-trip is; the launch button stays disabled
+     * until the board is ready so a game can't start on an empty field.
+     */
+    async setupBoard() {
+        this.boardReady = false;
+        this.sessionId = null;
+        this.isRanked = false;
+        const launchBtn = document.getElementById('launchBtn');
+        if (launchBtn) launchBtn.disabled = true;
+
+        const mode = this.isDailyChallenge ? 'daily' : 'main';
+        try {
+            // Prefer a server-issued board so the puzzle can't be rigged. gameService
+            // may not exist yet on first load (Firebase inits after the Game object),
+            // so wait briefly for it before deciding.
+            const service = await this._waitForGameService(3000);
+            if (service) {
+                try {
+                    const { sessionId, puzzle } = await service.startGame(mode);
+                    this.applyServerPuzzle(puzzle);
+                    this.sessionId = sessionId;
+                    this.isRanked = true;
+                    return;
+                } catch (e) {
+                    console.warn(`[Ranked] startGame(${mode}) failed; using local unranked board:`, e.message);
+                }
+            }
+
+            // Fallback: local generation, unranked.
+            this.generateMirrors();
+            this.generateSpawners();
+        } finally {
+            this.boardReady = true;
+            if (launchBtn) launchBtn.disabled = false;
+            // Remove the initial loading overlay once the first board is ready.
+            const loader = document.getElementById('canvasLoader');
+            if (loader) { loader.classList.add('hidden'); loader.remove(); }
+        }
+    }
+
+    /**
+     * Resolve window.gameService once it exists, or null after timeoutMs.
+     */
+    _waitForGameService(timeoutMs) {
+        return new Promise(resolve => {
+            if (window.gameService) return resolve(window.gameService);
+            const start = Date.now();
+            const check = () => {
+                if (window.gameService) return resolve(window.gameService);
+                if (Date.now() - start >= timeoutMs) return resolve(null);
+                setTimeout(check, 100);
+            };
+            check();
+        });
+    }
+
+    /**
+     * Build the live board (mirrors + spawners) from a server-issued puzzle.
+     * Mirrors are kept in the issued order so submitted placements line up with
+     * the server's fixed inventory index-for-index.
+     */
+    applyServerPuzzle(puzzle) {
+        const isDaily = puzzle.mode === 'daily';
+        this.mirrors = puzzle.mirrors.map(cfg => {
+            const mirror = createMirrorFromConfig(cfg);
+            mirror.isDailyChallenge = isDaily;
+            return mirror;
+        });
+        this.spawners = puzzle.spawners.map(s => {
+            const spawner = new Spawner(s.x, s.y, s.angle);
+            spawner.isDailyChallenge = isDaily;
+            return spawner;
+        });
+        if (isDaily) this.dailyTheme = puzzle.theme;
+    }
+
+    /**
+     * Final mirror placements to submit for verification, in issued order.
+     */
+    getPlacements() {
+        return this.mirrors.map(m => ({ x: m.x, y: m.y, rotation: m.rotation || 0 }));
+    }
     
     snapToGrid(value) {
         return GridAlignmentSystem.snapToGrid(value);
@@ -756,11 +850,8 @@ export class Game {
         this.placementFeedback = [];
         this.resetZoom();
 
-        // Generate new mirrors and spawners
-        this.generateMirrors();
-        this.generateSpawners();
-
-        document.getElementById('launchBtn').disabled = false;
+        // Fetch a fresh board (server for ranked main games, local fallback / daily).
+        this.setupBoard();
 
         this.updateModeUI();
     }
