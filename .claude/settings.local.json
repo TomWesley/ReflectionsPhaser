@@ -119,7 +119,11 @@
       "Bash(node --check js/firebase/GameService.js)",
       "Bash(node --check js/firebase/VideoUploader.js)",
       "Bash(python3 -c \"import json; json.load\\(open\\('firebase.json'\\)\\); print\\('firebase.json valid'\\)\")",
-      "Bash(node --check js/validation/DailyChallenge.js)"
+      "Bash(node --check js/validation/DailyChallenge.js)",
+      "Bash(timeout 90 node verify-prod.mjs)",
+      "Bash(rm -f verify-prod.mjs)",
+      "Bash(cd *)",
+      "Bash(node --check js/firebase/FirebaseConfig.js)"
     ],
     "deny": [],
     "ask": []

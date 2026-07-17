@@ -14,6 +14,11 @@ const firebaseConfig = {
     measurementId: "G-MZSHXBSBR6"
 };
 
+// App Check reCAPTCHA v3 site key. Paste your key here (from Firebase Console →
+// App Check → your web app). Leave blank to disable App Check. It only activates
+// on the live site (never on localhost, where the emulator is used).
+const APP_CHECK_SITE_KEY = "6Ldr3lgtAAAAAHxEUfFSYuy1uvPrVxGp-rCJtxHn";
+
 let initialized = false;
 
 export function initFirebase() {
@@ -39,6 +44,15 @@ export function initFirebase() {
             console.info('[Firebase] Connected to local emulators (auth:9099, firestore:8080, functions:5001).');
         } catch (e) {
             console.warn('[Firebase] Emulator wiring skipped:', e.message);
+        }
+    } else if (APP_CHECK_SITE_KEY && firebase.appCheck) {
+        // Production only: attest that requests come from the real app. Must run
+        // before any auth/firestore/functions call, so it lives here in init.
+        try {
+            firebase.appCheck().activate(APP_CHECK_SITE_KEY, true);
+            console.info('[Firebase] App Check activated.');
+        } catch (e) {
+            console.warn('[Firebase] App Check activation failed:', e.message);
         }
     }
 
