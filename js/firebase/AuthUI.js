@@ -220,33 +220,49 @@ function usernameError(e) {
 
 async function updateNavbarUser() {
     const signedIn = _auth && _auth.isSignedIn();
-    const localName = signedIn ? (_auth.getDisplayName() || (_auth.getUser() && _auth.getUser().displayName) || 'Account') : 'Sign In';
-
     const el = document.getElementById('navbarUser');
+    const mobileRow = document.getElementById('mobileAccountRow');
+    const mobileName = document.getElementById('mobileAccountName');
+
+    // Best name we can show synchronously, without waiting on the network. Prefer
+    // the locally-cached username, then the provider profile name, then the email
+    // local-part — anything real before an anonymous "Account" placeholder.
+    let name = 'Sign In';
+    if (signedIn) {
+        const u = _auth.getUser();
+        name = _auth.getDisplayName()
+            || (u && u.displayName)
+            || (u && u.email && u.email.split('@')[0])
+            || 'Account';
+    }
+
+    const setName = (n) => {
+        if (el) el.textContent = n;
+        if (mobileName) mobileName.textContent = signedIn ? n : 'Sign in';
+    };
+    setName(name);
     if (el) {
-        el.textContent = localName;
         el.onclick = () => window.openAuthModal();
         el.style.cursor = 'pointer';
         el.title = signedIn ? 'Account' : 'Sign in to save scores';
     }
-    const mobileRow = document.getElementById('mobileAccountRow');
-    const mobileName = document.getElementById('mobileAccountName');
-    if (mobileRow && mobileName) {
-        mobileName.textContent = signedIn ? localName : 'Sign in';
+    if (mobileRow) {
         mobileRow.classList.toggle('signed-in', !!signedIn);
         mobileRow.onclick = () => { if (window.closeMobileMenu) window.closeMobileMenu(); window.openAuthModal(); };
     }
 
-    // Upgrade to the authoritative server username (works across devices/contexts).
+    // Upgrade to the authoritative server username and cache it locally, so every
+    // page/load shows the same name instantly even if a later read is rate-limited
+    // or blocked by an App Check token that hasn't arrived yet.
     if (signedIn) {
         try {
             const snap = await getFirestore().collection('users').doc(_auth.getUID()).get();
             const uname = snap.exists && snap.data().username;
             if (uname) {
-                if (el) el.textContent = uname;
-                if (mobileName) mobileName.textContent = uname;
+                _auth.setDisplayName(uname);
+                setName(uname);
             }
-        } catch (e) { /* keep local name */ }
+        } catch (e) { /* keep the best local name */ }
     }
 }
 
