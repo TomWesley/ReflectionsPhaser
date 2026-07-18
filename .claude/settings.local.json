@@ -131,7 +131,19 @@
       "Bash(gcloud auth *)",
       "Bash(curl -s -H 'Authorization: Bearer __CMDSUB_OUTPUT__' https://recaptchaenterprise.googleapis.com/v1/projects/singularity-c216f/keys)",
       "Bash(python3 -m json.tool)",
-      "Bash(curl -s -H 'Authorization: Bearer __CMDSUB_OUTPUT__' https://firebaseappcheck.googleapis.com/v1/projects/877374644269/apps/__TRACKED_VAR__/recaptchaEnterpriseConfig)"
+      "Bash(curl -s -H 'Authorization: Bearer __CMDSUB_OUTPUT__' https://firebaseappcheck.googleapis.com/v1/projects/877374644269/apps/__TRACKED_VAR__/recaptchaEnterpriseConfig)",
+      "Bash(node check-enforce.mjs)",
+      "Bash(rm -f check-enforce.mjs)",
+      "Bash(firebase login:list)",
+      "Bash(firebase --version)",
+      "Bash(firebase functions:list)",
+      "Bash(gcloud functions *)",
+      "Bash(node ck.mjs)",
+      "Bash(curl -s -o /dev/null -w '%{http_code}' https://wesleyarcade.com/reflections/js/firebase/GameService.js)",
+      "Bash(echo \"GameService \\(subpath\\): $\\(curl -s -o /dev/null -w '%{http_code}' https://wesleyarcade.com/reflections/js/firebase/GameService.js\\)\")",
+      "Bash(curl -s -o /dev/null -w '%{http_code}' https://wesleyarcade.com/reflections/data/performance-ratings.json)",
+      "Bash(echo \"perf-ratings \\(subpath\\): $\\(curl -s -o /dev/null -w '%{http_code}' https://wesleyarcade.com/reflections/data/performance-ratings.json\\)\")",
+      "Bash(curl -s -o /dev/null -w '%{http_code}' https://wesleyarcade.com/data/performance-ratings.json)"
     ],
     "deny": [],
     "ask": []

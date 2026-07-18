@@ -7,7 +7,9 @@ export class PerformanceRating {
     static async loadRatings() {
         if (!this.ratings) {
             try {
-                const response = await fetch('/data/performance-ratings.json');
+                // Resolve relative to THIS module's URL, not the page root — the app
+                // is served under /reflections/ in production but at / on localhost.
+                const response = await fetch(new URL('../../data/performance-ratings.json', import.meta.url));
                 const data = await response.json();
                 this.ratings = data.performanceRatings;
             } catch (error) {

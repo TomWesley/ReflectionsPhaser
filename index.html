@@ -882,7 +882,10 @@
                 rankSpan.className = 'leaderboard-rank';
                 rankSpan.appendChild(document.createTextNode(safeRank ? `${safeRank} on the ` : 'on the '));
                 const lbLink = document.createElement('a');
-                lbLink.href = '/leaderboard';
+                // Reuse the navbar Leaderboard link's href — the deploy rewrites that one
+                // to /reflections/leaderboard on prod (and it stays /leaderboard on localhost).
+                const navLbLink = document.querySelector('a[title="Leaderboard"]');
+                lbLink.href = navLbLink ? navLbLink.getAttribute('href') : '/leaderboard';
                 lbLink.textContent = 'leaderboard';
                 lbLink.style.cssText = 'color: inherit; text-decoration: underline; cursor: pointer;';
                 rankSpan.appendChild(lbLink);
