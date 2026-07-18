@@ -48,9 +48,14 @@ export function initFirebase() {
     } else if (APP_CHECK_SITE_KEY && firebase.appCheck) {
         // Production only: attest that requests come from the real app. Must run
         // before any auth/firestore/functions call, so it lives here in init.
+        // The key is a reCAPTCHA Enterprise key, so use the Enterprise provider
+        // (falls back to the plain site key form if that provider isn't present).
         try {
-            firebase.appCheck().activate(APP_CHECK_SITE_KEY, true);
-            console.info('[Firebase] App Check activated.');
+            const provider = (firebase.appCheck.ReCaptchaEnterpriseProvider)
+                ? new firebase.appCheck.ReCaptchaEnterpriseProvider(APP_CHECK_SITE_KEY)
+                : APP_CHECK_SITE_KEY;
+            firebase.appCheck().activate(provider, true);
+            console.info('[Firebase] App Check activated (reCAPTCHA Enterprise).');
         } catch (e) {
             console.warn('[Firebase] App Check activation failed:', e.message);
         }

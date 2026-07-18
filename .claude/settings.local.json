@@ -123,7 +123,10 @@
       "Bash(timeout 90 node verify-prod.mjs)",
       "Bash(rm -f verify-prod.mjs)",
       "Bash(cd *)",
-      "Bash(node --check js/firebase/FirebaseConfig.js)"
+      "Bash(node --check js/firebase/FirebaseConfig.js)",
+      "Bash(curl -s \"https://wesleyarcade.com/reflections/\")",
+      "Bash(curl -s \"https://wesleyarcade.com/reflections/leaderboard\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" \"https://wesleyarcade.com/reflections/seed-scores.html\")"
     ],
     "deny": [],
     "ask": []
