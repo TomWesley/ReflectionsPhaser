@@ -126,7 +126,12 @@
       "Bash(node --check js/firebase/FirebaseConfig.js)",
       "Bash(curl -s \"https://wesleyarcade.com/reflections/\")",
       "Bash(curl -s \"https://wesleyarcade.com/reflections/leaderboard\")",
-      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" \"https://wesleyarcade.com/reflections/seed-scores.html\")"
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" \"https://wesleyarcade.com/reflections/seed-scores.html\")",
+      "Bash(gcloud --version)",
+      "Bash(gcloud auth *)",
+      "Bash(curl -s -H 'Authorization: Bearer __CMDSUB_OUTPUT__' https://recaptchaenterprise.googleapis.com/v1/projects/singularity-c216f/keys)",
+      "Bash(python3 -m json.tool)",
+      "Bash(curl -s -H 'Authorization: Bearer __CMDSUB_OUTPUT__' https://firebaseappcheck.googleapis.com/v1/projects/877374644269/apps/__TRACKED_VAR__/recaptchaEnterpriseConfig)"
     ],
     "deny": [],
     "ask": []

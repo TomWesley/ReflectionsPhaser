@@ -21,6 +21,9 @@ import { verifyGame } from './js/core/GameVerifier.js';
 initializeApp();
 const db = getFirestore();
 
+// Require a valid App Check token on every callable — only the real app can call these.
+const CALLABLE_OPTS = { enforceAppCheck: true };
+
 function formatScore(seconds) {
     const m = Math.floor(seconds / 60);
     const s = Math.floor(seconds % 60);
@@ -43,7 +46,7 @@ function sanitizeName(name) {
  * Input:  { mode: 'main' }
  * Output: { sessionId, puzzle: { mode, mirrors, mirrorInventory, spawners } }
  */
-export const startGame = onCall(async (request) => {
+export const startGame = onCall(CALLABLE_OPTS, async (request) => {
     const uid = request.auth?.uid;
     if (!uid) throw new HttpsError('unauthenticated', 'Sign in to play a ranked game.');
 
@@ -85,7 +88,7 @@ export const startGame = onCall(async (request) => {
  * Input:  { sessionId, placements: [{x,y,rotation}], displayName }
  * Output: { verified, score, scoreFormatted, isNewBest }
  */
-export const submitGame = onCall(async (request) => {
+export const submitGame = onCall(CALLABLE_OPTS, async (request) => {
     const uid = request.auth?.uid;
     if (!uid) throw new HttpsError('unauthenticated', 'Sign in to submit a score.');
 
@@ -163,7 +166,7 @@ export const submitGame = onCall(async (request) => {
  * the video is uploaded to Storage client-side, then this function stamps the path.
  * Input: { docId, videoPath }
  */
-export const setReplayVideoPath = onCall(async (request) => {
+export const setReplayVideoPath = onCall(CALLABLE_OPTS, async (request) => {
     const uid = request.auth?.uid;
     if (!uid) throw new HttpsError('unauthenticated', 'Sign in required.');
 
@@ -200,7 +203,7 @@ const USERNAME_RE = /^[a-zA-Z0-9_-]{3,16}$/;
  * Called during sign-up BEFORE the email account is created, so a taken name
  * blocks the whole flow.
  */
-export const reserveUsername = onCall(async (request) => {
+export const reserveUsername = onCall(CALLABLE_OPTS, async (request) => {
     const uid = request.auth?.uid;
     if (!uid) throw new HttpsError('unauthenticated', 'Sign in required.');
 
