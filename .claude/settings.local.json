@@ -143,7 +143,11 @@
       "Bash(echo \"GameService \\(subpath\\): $\\(curl -s -o /dev/null -w '%{http_code}' https://wesleyarcade.com/reflections/js/firebase/GameService.js\\)\")",
       "Bash(curl -s -o /dev/null -w '%{http_code}' https://wesleyarcade.com/reflections/data/performance-ratings.json)",
       "Bash(echo \"perf-ratings \\(subpath\\): $\\(curl -s -o /dev/null -w '%{http_code}' https://wesleyarcade.com/reflections/data/performance-ratings.json\\)\")",
-      "Bash(curl -s -o /dev/null -w '%{http_code}' https://wesleyarcade.com/data/performance-ratings.json)"
+      "Bash(curl -s -o /dev/null -w '%{http_code}' https://wesleyarcade.com/data/performance-ratings.json)",
+      "Bash(awk '/<div id=\"authModal\"/,/^    <\\\\/div>$/' index.html)",
+      "Bash(cp leaderboard.html /tmp/lb.bak)",
+      "Bash(sed -i '' -e '880,916d' -e '1010,1164d' leaderboard.html)",
+      "Bash(node --check js/firebase/AuthUI.js)"
     ],
     "deny": [],
     "ask": []

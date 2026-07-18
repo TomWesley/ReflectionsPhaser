@@ -877,43 +877,6 @@
 
     <div class="leaderboard-container">
         <!-- Auth Modal (leaderboard page) -->
-        <div class="auth-overlay hidden" id="lbAuthOverlay">
-            <div class="auth-panel">
-                <div class="auth-panel-header">
-                    <span class="auth-panel-title">Sign In</span>
-                    <button class="auth-panel-close" onclick="window.closeLbAuth()"><i class="iconoir-xmark"></i></button>
-                </div>
-                <div class="auth-panel-body">
-                    <div class="auth-tabs" id="lbAuthTabs">
-                        <button class="auth-tab active" data-tab="signin">Sign In</button>
-                        <button class="auth-tab" data-tab="signup">Create Account</button>
-                    </div>
-                    <div id="lbSignInForm" class="auth-form">
-                        <input type="email" id="lbEmail" class="auth-input" placeholder="Email" autocomplete="email">
-                        <input type="password" id="lbPassword" class="auth-input" placeholder="Password" autocomplete="current-password">
-                        <button class="auth-btn-primary" onclick="window.doLbEmailSignIn()">Sign In</button>
-                        <button class="auth-btn-link" onclick="window.doLbPasswordReset()">Forgot password?</button>
-                    </div>
-                    <div id="lbSignUpForm" class="auth-form" style="display:none;">
-                        <input type="text" id="lbSignUpName" class="auth-input" placeholder="Display name" maxlength="16" autocomplete="username">
-                        <input type="email" id="lbSignUpEmail" class="auth-input" placeholder="Email" autocomplete="email">
-                        <input type="password" id="lbSignUpPassword" class="auth-input" placeholder="Password (6+ characters)" autocomplete="new-password">
-                        <button class="auth-btn-primary" onclick="window.doLbEmailSignUp()">Create Account</button>
-                    </div>
-                    <div class="auth-divider"><span>or</span></div>
-                    <button class="auth-btn-google" onclick="window.doLbGoogleSignIn()">
-                        <svg viewBox="0 0 24 24" width="18" height="18"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-                        Continue with Google
-                    </button>
-                    <div id="lbSignedInView" style="display:none; flex-direction:column; align-items:center; gap:14px; text-align:center; padding:8px 0 4px;">
-                        <div style="font-size:2.4rem; color:var(--arc); line-height:1;"><i class="iconoir-user"></i></div>
-                        <div style="font-family:'Space Grotesk',sans-serif;">Signed in as <strong id="lbSignedInName"></strong></div>
-                        <button class="auth-btn-primary" onclick="window.doLbSignOut()"><i class="iconoir-log-out"></i> Sign Out</button>
-                    </div>
-                    <div id="lbAuthError" class="auth-error"></div>
-                </div>
-            </div>
-        </div>
 
         <!-- Player Stats -->
         <div class="stats-panel" id="statsPanel">
@@ -981,6 +944,7 @@
     <script type="module">
         import { FirebaseAuth } from './js/firebase/FirebaseAuth.js';
         import { LeaderboardService } from './js/firebase/LeaderboardService.js';
+        import { initAuthUI } from './js/firebase/AuthUI.js';
 
         // State
         let currentMode = 'main';
@@ -994,173 +958,15 @@
             await auth.ensureAuth();
             service = new LeaderboardService(auth);
 
-            // Update navbar user display
-            updateNavbarUser();
-            auth.onAuthChange(() => {
-                updateNavbarUser();
-                loadLeaderboard();
-                loadStats();
-            });
+            // Shared account UI — the same module the game page uses (auth modal,
+            // sign-in/up/out, unique-username enforcement, navbar). It injects the
+            // modal into this page, so there's no duplicate auth code anymore.
+            initAuthUI({ auth, onChange: () => { loadLeaderboard(); loadStats(); } });
 
             setupTabs();
             await loadLeaderboard();
             loadStats();
         }
-
-        async function updateNavbarUser() {
-            const el = document.getElementById('navbarUser');
-            if (!el) return;
-            if (auth.isSignedIn()) {
-                el.onclick = () => window.openLbAccount();
-                el.style.cursor = 'pointer';
-                el.title = 'Account';
-                // Show a local name immediately, then upgrade to the authoritative
-                // server username (works across devices, never shows the "User" fallback).
-                el.textContent = auth.getDisplayName() || (auth.getUser() && auth.getUser().displayName) || 'Account';
-                try {
-                    const { getFirestore } = await import('./js/firebase/FirebaseConfig.js');
-                    const snap = await getFirestore().collection('users').doc(auth.getUID()).get();
-                    if (snap.exists && snap.data().username) el.textContent = snap.data().username;
-                } catch (e) { /* keep the local name */ }
-            } else {
-                el.textContent = 'Sign In';
-                el.onclick = () => window.openLbAuth();
-                el.style.cursor = 'pointer';
-                el.title = 'Sign in';
-            }
-        }
-
-        // Leaderboard auth modal handlers
-        function setLbAuthView(view) {
-            const account = view === 'account';
-            document.getElementById('lbAuthTabs').style.display = account ? 'none' : 'flex';
-            document.getElementById('lbSignInForm').style.display = account ? 'none' : 'flex';
-            document.getElementById('lbSignUpForm').style.display = 'none';
-            document.querySelectorAll('#lbAuthOverlay .auth-divider, #lbAuthOverlay .auth-btn-google')
-                .forEach(e => { e.style.display = account ? 'none' : ''; });
-            document.getElementById('lbSignedInView').style.display = account ? 'flex' : 'none';
-            document.querySelector('#lbAuthOverlay .auth-panel-title').textContent = account ? 'Account' : 'Sign In';
-        }
-
-        window.openLbAuth = function() {
-            setLbAuthView('signin');
-            document.getElementById('lbAuthOverlay').classList.remove('hidden');
-            document.getElementById('lbAuthError').textContent = '';
-        };
-
-        window.openLbAccount = function() {
-            document.getElementById('lbSignedInName').textContent = document.getElementById('navbarUser').textContent;
-            setLbAuthView('account');
-            document.getElementById('lbAuthOverlay').classList.remove('hidden');
-            document.getElementById('lbAuthError').textContent = '';
-        };
-
-        window.closeLbAuth = function() {
-            document.getElementById('lbAuthOverlay').classList.add('hidden');
-        };
-
-        window.doLbSignOut = async function() {
-            try { await auth.signOut(); } catch (e) { console.warn('Sign out error:', e.message); }
-            window.closeLbAuth();
-            updateNavbarUser();
-            loadLeaderboard();
-            loadStats();
-        };
-
-        // Tab switching
-        document.querySelectorAll('#lbAuthTabs .auth-tab').forEach(tab => {
-            tab.addEventListener('click', () => {
-                document.querySelectorAll('#lbAuthTabs .auth-tab').forEach(t => t.classList.remove('active'));
-                tab.classList.add('active');
-                document.getElementById('lbAuthError').textContent = '';
-                if (tab.dataset.tab === 'signup') {
-                    document.getElementById('lbSignInForm').style.display = 'none';
-                    document.getElementById('lbSignUpForm').style.display = 'flex';
-                } else {
-                    document.getElementById('lbSignInForm').style.display = 'flex';
-                    document.getElementById('lbSignUpForm').style.display = 'none';
-                }
-            });
-        });
-
-        // Close on backdrop
-        document.getElementById('lbAuthOverlay').addEventListener('click', (e) => {
-            if (e.target === e.currentTarget) window.closeLbAuth();
-        });
-
-        window.doLbEmailSignIn = async function() {
-            const email = document.getElementById('lbEmail').value.trim();
-            const password = document.getElementById('lbPassword').value;
-            const errorEl = document.getElementById('lbAuthError');
-            if (!email || !password) { errorEl.textContent = 'Please enter email and password.'; return; }
-            errorEl.textContent = '';
-            const result = await auth.signInWithEmail(email, password);
-            if (result.success) { window.closeLbAuth(); }
-            else { errorEl.textContent = result.error || 'Sign in failed.'; }
-        };
-
-        window.doLbEmailSignUp = async function() {
-            const name = document.getElementById('lbSignUpName').value.trim();
-            const email = document.getElementById('lbSignUpEmail').value.trim();
-            const password = document.getElementById('lbSignUpPassword').value;
-            const errorEl = document.getElementById('lbAuthError');
-            if (!email || !password) { errorEl.textContent = 'Please enter email and password.'; return; }
-            errorEl.textContent = '';
-            const result = await auth.signUpWithEmail(email, password, name);
-            if (result.success) { window.closeLbAuth(); }
-            else { errorEl.textContent = result.error || 'Sign up failed.'; }
-        };
-
-        window.doLbGoogleSignIn = async function() {
-            const errorEl = document.getElementById('lbAuthError');
-            errorEl.textContent = '';
-            const result = await auth.signInWithGoogle();
-            if (result.success) {
-                if (!auth.getDisplayName()) {
-                    // Show name picker inline
-                    const body = document.querySelector('#lbAuthOverlay .auth-panel-body');
-                    const title = document.querySelector('#lbAuthOverlay .auth-panel-title');
-                    title.textContent = 'Choose Display Name';
-                    const suggested = (result.user.displayName || '').slice(0, 16).replace(/"/g, '&quot;');
-                    body.innerHTML = `
-                        <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 12px;">
-                            This is how you'll appear on the leaderboard.
-                        </p>
-                        <div class="auth-form">
-                            <input type="text" id="lbNameInput" class="auth-input" placeholder="Display name" maxlength="16" value="${suggested}">
-                            <button class="auth-btn-primary" id="lbNameConfirm">Confirm</button>
-                        </div>
-                    `;
-                    document.getElementById('lbNameInput').focus();
-                    document.getElementById('lbNameInput').select();
-                    document.getElementById('lbNameConfirm').addEventListener('click', () => {
-                        const name = document.getElementById('lbNameInput').value.trim();
-                        if (!name) return;
-                        auth.setDisplayName(name);
-                        window.location.reload();
-                    });
-                } else {
-                    window.closeLbAuth();
-                }
-            }
-            else if (result.error) { errorEl.textContent = result.error; }
-        };
-
-        window.doLbPasswordReset = async function() {
-            const email = document.getElementById('lbEmail').value.trim();
-            const errorEl = document.getElementById('lbAuthError');
-            if (!email) { errorEl.textContent = 'Enter your email above, then click forgot password.'; return; }
-            const result = await auth.sendPasswordReset(email);
-            if (result.success) {
-                errorEl.style.color = '#32FFB4';
-                errorEl.textContent = 'Password reset email sent!';
-                setTimeout(() => { errorEl.style.color = ''; }, 3000);
-            } else { errorEl.textContent = result.error; }
-        };
-
-        window.doSignOut = async function() {
-            await auth.signOut();
-        };
 
         function setupTabs() {
             // Mode tabs
