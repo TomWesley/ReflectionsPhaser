@@ -147,7 +147,8 @@
       "Bash(awk '/<div id=\"authModal\"/,/^    <\\\\/div>$/' index.html)",
       "Bash(cp leaderboard.html /tmp/lb.bak)",
       "Bash(sed -i '' -e '880,916d' -e '1010,1164d' leaderboard.html)",
-      "Bash(node --check js/firebase/AuthUI.js)"
+      "Bash(node --check js/firebase/AuthUI.js)",
+      "Bash(bash \"/private/tmp/claude-501/-Users-tomwesley-LocalGithubFiles-ReflectionsPhaser/80043efe-c66d-48d6-8fac-5a957da50bb4/scratchpad/assemble-reflections.sh\")"
     ],
     "deny": [],
     "ask": []

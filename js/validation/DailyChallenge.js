@@ -402,20 +402,23 @@ export class DailyChallenge {
 
     /**
      * Generate spawner positions and angles deterministically.
-     * "one-wall" theme forces all spawners from one edge.
-     * "scatter-shot" gets more spawners (8-10).
-     * Default is 6-8 spawners from all edges.
+     * Daily laser counts stay in the 2-8 range: the main game's 5 lasers is
+     * already very hard, so dailies span from an easier 2 up to a tougher-than-
+     * main 8 (never the 10 we used to throw at players).
+     * "one-wall" forces all spawners from one edge, so it runs lighter (2-5).
+     * "scatter-shot" is the busy theme and tops the range (6-8).
+     * Every other theme is 3-6.
      */
     static generateDailySpawners(rng, themeName) {
         let count, forcedEdge;
         if (themeName === 'one-wall') {
-            count = rng.nextInt(6, 8);
+            count = rng.nextInt(2, 5);
             forcedEdge = rng.choice(['left', 'right', 'top', 'bottom']);
         } else if (themeName === 'scatter-shot') {
-            count = rng.nextInt(8, 10);
+            count = rng.nextInt(6, 8);
             forcedEdge = null;
         } else {
-            count = rng.nextInt(6, 8);
+            count = rng.nextInt(3, 6);
             forcedEdge = null;
         }
 

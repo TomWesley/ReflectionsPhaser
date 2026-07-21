@@ -12,7 +12,7 @@
 
 ### Game Modes
 1. **Main Game**: Random mirror configurations with exactly 84 surface area units (uniform for fair scoring)
-2. **Daily Challenge**: Date-based seeded puzzles with NO surface area limit (3-12 mirrors, any sizes), more spawners (6-10), unique mint green visual theme
+2. **Daily Challenge**: Date-based seeded puzzles with NO surface area limit (3-12 mirrors, any sizes), 2-8 lasers (main game is a fixed 5), unique mint green visual theme
 
 ---
 
