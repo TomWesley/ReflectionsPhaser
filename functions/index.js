@@ -24,6 +24,12 @@ const db = getFirestore();
 // Require a valid App Check token on every callable — only the real app can call these.
 const CALLABLE_OPTS = { enforceAppCheck: true };
 
+// startGame is the only callable on the page-load render path: the grid stays
+// hidden until it returns. Keep one instance warm so a session's first board
+// never waits on a cold start (the "slow after idle" load). The other callables
+// (submit/reserve/replay) aren't latency-critical and stay scale-to-zero.
+const WARM_CALLABLE_OPTS = { ...CALLABLE_OPTS, minInstances: 1 };
+
 function formatScore(seconds) {
     const m = Math.floor(seconds / 60);
     const s = Math.floor(seconds % 60);
@@ -46,7 +52,7 @@ function sanitizeName(name) {
  * Input:  { mode: 'main' }
  * Output: { sessionId, puzzle: { mode, mirrors, mirrorInventory, spawners } }
  */
-export const startGame = onCall(CALLABLE_OPTS, async (request) => {
+export const startGame = onCall(WARM_CALLABLE_OPTS, async (request) => {
     const uid = request.auth?.uid;
     if (!uid) throw new HttpsError('unauthenticated', 'Sign in to play a ranked game.');
 
