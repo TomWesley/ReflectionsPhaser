@@ -12,8 +12,11 @@
  * browser runs, copied into functions/js by copy-shared.js.
  */
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
+import { onDocumentCreated } from 'firebase-functions/v2/firestore';
+import { defineSecret } from 'firebase-functions/params';
 import { initializeApp } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import nodemailer from 'nodemailer';
 
 import { generateMainPuzzle, generateDailyPuzzle } from './js/core/PuzzleGenerator.js';
 import { verifyGame } from './js/core/GameVerifier.js';
@@ -240,3 +243,51 @@ export const reserveUsername = onCall(CALLABLE_OPTS, async (request) => {
 
     return { ok: true, username };
 });
+
+// Gmail app password, stored in Secret Manager (never in code). Set it with:
+//   firebase functions:secrets:set GMAIL_APP_PASSWORD
+const GMAIL_APP_PASSWORD = defineSecret('GMAIL_APP_PASSWORD');
+const NOTIFY_EMAIL = 'tomjwesley@gmail.com';
+
+/**
+ * onFeedbackCreated - email a notification whenever the in-game feedback form
+ * writes a new doc to the `feedback` collection (default database). Previously
+ * feedback silently piled up in Firestore with nothing surfacing it.
+ *
+ * Sends via Gmail SMTP (nodemailer) from/to NOTIFY_EMAIL using an app password
+ * held in Secret Manager. Region pinned to us-central1 to match the other
+ * functions and the nam5 database.
+ */
+export const onFeedbackCreated = onDocumentCreated(
+    { document: 'feedback/{docId}', region: 'us-central1', secrets: [GMAIL_APP_PASSWORD] },
+    async (event) => {
+        const fb = event.data?.data();
+        if (!fb) return;
+
+        const who = fb.displayName || 'Anonymous';
+        const replyTo = fb.email || null;
+
+        const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: { user: NOTIFY_EMAIL, pass: GMAIL_APP_PASSWORD.value() },
+        });
+
+        const body = [
+            fb.message || '(empty message)',
+            '',
+            '--------------------',
+            `From: ${who} <${replyTo || 'no email provided'}>`,
+            `UID: ${fb.uid || 'n/a'}`,
+            `User agent: ${fb.userAgent || 'n/a'}`,
+            `Doc: feedback/${event.params.docId}`,
+        ].join('\n');
+
+        await transporter.sendMail({
+            from: `REFLECTIONS Feedback <${NOTIFY_EMAIL}>`,
+            to: NOTIFY_EMAIL,
+            replyTo: replyTo || undefined,
+            subject: `New REFLECTIONS feedback from ${who}`,
+            text: body,
+        });
+    }
+);
