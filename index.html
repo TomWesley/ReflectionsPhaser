@@ -55,7 +55,7 @@
                 <span>Daily</span>
             </button>
             <button id="snapToggle" class="navbar-btn-snap" title="Toggle Mirror Snapping">
-                <i class="iconoir-align-horizontal-centers"></i>
+                <canvas class="btn-eng-icon" data-eng-icon="snap" data-eng-color="168,174,189" width="36" height="36"></canvas>
                 <span>Snap</span>
             </button>
             <button id="launchBtn" class="navbar-btn-primary">
@@ -926,6 +926,11 @@
                 if (snapToggle) snapToggle.classList.toggle('snap-active', active);
                 if (mobileSnapToggle) mobileSnapToggle.classList.toggle('snap-active', active);
                 if (mobileSnapBtn) mobileSnapBtn.classList.toggle('snap-active', active);
+                // Recolour the engine-drawn snap icon to match state: amber on, gray off.
+                if (window.renderEngIcon) {
+                    const col = active ? [255, 176, 32] : [168, 174, 189];
+                    document.querySelectorAll('canvas[data-eng-icon="snap"]').forEach(cv => window.renderEngIcon(cv, 'snap', col));
+                }
             }
 
             if (snapToggle) {
