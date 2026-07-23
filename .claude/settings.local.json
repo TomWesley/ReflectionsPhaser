@@ -149,7 +149,14 @@
       "Bash(sed -i '' -e '880,916d' -e '1010,1164d' leaderboard.html)",
       "Bash(node --check js/firebase/AuthUI.js)",
       "Bash(bash \"/private/tmp/claude-501/-Users-tomwesley-LocalGithubFiles-ReflectionsPhaser/80043efe-c66d-48d6-8fac-5a957da50bb4/scratchpad/assemble-reflections.sh\")",
-      "Bash(firebase functions:list --project singularity-c216f)"
+      "Bash(firebase functions:list --project singularity-c216f)",
+      "Bash(npm ls *)",
+      "Bash(npm view *)",
+      "Bash(node -e 'let d=\"\";process.stdin.on\\(\"data\",c=>d+=c\\).on\\(\"end\",\\(\\)=>{const v=JSON.parse\\(d\\).filter\\(x=>/^7\\\\.\\\\d+\\\\.\\\\d+$/.test\\(x\\)\\);console.log\\(v.slice\\(-3\\).join\\(\", \"\\)||\"\\(none stable\\)\"\\)}\\)')",
+      "Bash(cat)",
+      "Bash(node /tmp/apicheck.mjs)",
+      "Bash(echo \"exit: $?\")",
+      "Bash(node _apicheck.mjs)"
     ],
     "deny": [],
     "ask": []
