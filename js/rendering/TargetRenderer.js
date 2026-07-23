@@ -42,7 +42,7 @@ export class TargetRenderer {
         const isBreach = breachProgress > 0;
         const flare = isBreach ? Math.min(1, breachProgress * 4) : 0;
         const t = Date.now();
-        const b1 = 0.5 + 0.5 * Math.sin(t / 1500); // slow breathe
+        const b1 = 0.5 + 0.5 * Math.sin(t / 2600); // slow, hypnotic breathe
         const TAU = Math.PI * 2;
 
         const P = PALETTE.secondary;
@@ -83,7 +83,7 @@ export class TargetRenderer {
             ctx.fillStyle = amber(0.8);
             ctx.beginPath(); ctx.arc(nx, ny, 2.2, 0, TAU); ctx.fill();
             // travelling power pulse (core -> ring), staggered per conduit
-            const p = ((t / 1100) + i * 0.13) % 1;
+            const p = ((t / 2800) + i * 0.13) % 1;
             ctx.shadowColor = amber(0.9); ctx.shadowBlur = 6;
             ctx.fillStyle = amber(0.95);
             ctx.beginPath();
