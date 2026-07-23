@@ -89,14 +89,14 @@ body {
 
 .navbar-user {
     font-family: 'Rajdhani', sans-serif;
-    font-size: 0.75rem;
+    font-size: 0.95rem;
     font-weight: 600;
     color: var(--text-secondary);
     letter-spacing: 0.5px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 120px;
+    max-width: 160px;
     transition: color 0.2s ease;
 }
 
@@ -162,7 +162,9 @@ body {
 }
 
 .navbar-btn-secondary:hover {
-    background: rgba(150, 156, 172, 0.26);
+    background: rgba(150, 156, 172, 0.2);
+    border-color: rgba(255, 176, 32, 0.5);
+    box-shadow: 0 0 14px rgba(255, 176, 32, 0.28);
     transform: translateY(-2px);
 }
 
@@ -191,6 +193,7 @@ body {
 
 .navbar-btn-daily:hover {
     background: rgba(50, 255, 180, 0.3);
+    box-shadow: 0 0 14px rgba(50, 255, 180, 0.3);
     transform: translateY(-2px);
 }
 
@@ -228,7 +231,9 @@ body {
 }
 
 .navbar-btn-snap:hover {
-    background: rgba(160, 168, 185, 0.2);
+    background: rgba(160, 168, 185, 0.18);
+    border-color: rgba(255, 176, 32, 0.5);
+    box-shadow: 0 0 14px rgba(255, 176, 32, 0.28);
     transform: translateY(-2px);
 }
 

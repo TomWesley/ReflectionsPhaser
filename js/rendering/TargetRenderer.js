@@ -25,9 +25,10 @@ export class TargetRenderer {
     }
 
     /**
-     * The core: a black disc with a breathing amber boundary ring + inner ring,
-     * light-gray cardinal ticks, and a slowly-pulsing amber glowing ball. Only
-     * amber / black / light-gray; no rotating parts. Breach/game-over flare red.
+     * The power core: a faceted amber orb feeding energy out through radial
+     * conduits ("cords") to a segmented containment ring at the exact hit
+     * boundary, with pulses flowing outward. Geometric, slowly breathing;
+     * amber / black / light-gray only. Breach & game-over flare red.
      */
     static drawCore(ctx, centerX, centerY, radius, gameOver, breachProgress = 0) {
         // Breach shake
@@ -40,53 +41,84 @@ export class TargetRenderer {
         const cx = centerX + ox, cy = centerY + oy;
         const isBreach = breachProgress > 0;
         const flare = isBreach ? Math.min(1, breachProgress * 4) : 0;
-
-        // Two slow, offset breathing phases so it feels alive (no rotation).
         const t = Date.now();
-        const b1 = 0.5 + 0.5 * Math.sin(t / 1500);
-        const b2 = 0.5 + 0.5 * Math.sin(t / 1500 + 2.0);
+        const b1 = 0.5 + 0.5 * Math.sin(t / 1500); // slow breathe
+        const TAU = Math.PI * 2;
 
         const P = PALETTE.secondary;
         const amber = (a) => isBreach ? `rgba(232, 78, 106, ${a})` : `rgba(${P[0]}, ${P[1]}, ${P[2]}, ${a})`;
         const gray = (a) => `rgba(190, 196, 210, ${a})`;
 
+        const N = 8;
+        const orbR = radius * 0.3 * (0.92 + 0.12 * b1);
+        const nodeR = radius * 0.9;
+
         // 1. Black disc — masks the grid/zone beneath the core.
         ctx.fillStyle = gameOver ? '#1a0608' : '#050403';
-        ctx.beginPath(); ctx.arc(cx, cy, radius, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(cx, cy, radius, 0, TAU); ctx.fill();
 
-        // 2. Boundary ring at exactly TARGET_RADIUS (the hit edge) — breathing amber.
-        ctx.strokeStyle = amber(0.55 + 0.4 * b1);
-        ctx.lineWidth = 1.5;
+        // 2. Segmented containment ring at exactly TARGET_RADIUS (the honest hit edge).
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = amber(0.55 + 0.35 * b1);
+        ctx.lineWidth = 2;
         ctx.shadowColor = amber(0.6);
         ctx.shadowBlur = 6 + flare * 20;
-        ctx.beginPath(); ctx.arc(cx, cy, radius, 0, Math.PI * 2); ctx.stroke();
-        ctx.shadowBlur = 0;
-
-        // 3. Inner ring — breathing on the offset phase.
-        ctx.strokeStyle = amber(0.3 + 0.35 * b2);
-        ctx.lineWidth = 1;
-        ctx.beginPath(); ctx.arc(cx, cy, radius * 0.62, 0, Math.PI * 2); ctx.stroke();
-
-        // 4. Light-gray cardinal ticks — static structure (the only gray here).
-        ctx.strokeStyle = gray(0.5);
-        ctx.lineWidth = 1.2;
-        for (let i = 0; i < 4; i++) {
-            const a = i * Math.PI / 2;
+        const gapA = 0.1;
+        for (let i = 0; i < N; i++) {
             ctx.beginPath();
-            ctx.moveTo(cx + Math.cos(a) * radius * 0.82, cy + Math.sin(a) * radius * 0.82);
-            ctx.lineTo(cx + Math.cos(a) * radius * 0.96, cy + Math.sin(a) * radius * 0.96);
+            ctx.arc(cx, cy, radius, (i / N) * TAU + gapA / 2, ((i + 1) / N) * TAU - gapA / 2);
             ctx.stroke();
         }
+        ctx.shadowBlur = 0;
 
-        // 5. Central slowly-pulsing amber glowing ball.
-        const ballR = radius * 0.26 * (0.9 + 0.18 * b1) * (1 + flare * 0.5);
+        // 3. Radial energy conduits (the "cords") with a pulse flowing outward.
+        for (let i = 0; i < N; i++) {
+            const ang = (i / N) * TAU;
+            const ix = cx + Math.cos(ang) * orbR, iy = cy + Math.sin(ang) * orbR;
+            const nx = cx + Math.cos(ang) * nodeR, ny = cy + Math.sin(ang) * nodeR;
+            ctx.strokeStyle = amber(0.28);
+            ctx.lineWidth = 1.5;
+            ctx.beginPath(); ctx.moveTo(ix, iy); ctx.lineTo(nx, ny); ctx.stroke();
+            // node "plug" where the conduit meets the ring
+            ctx.fillStyle = amber(0.8);
+            ctx.beginPath(); ctx.arc(nx, ny, 2.2, 0, TAU); ctx.fill();
+            // travelling power pulse (core -> ring), staggered per conduit
+            const p = ((t / 1100) + i * 0.13) % 1;
+            ctx.shadowColor = amber(0.9); ctx.shadowBlur = 6;
+            ctx.fillStyle = amber(0.95);
+            ctx.beginPath();
+            ctx.arc(ix + (nx - ix) * p, iy + (ny - iy) * p, 1.8, 0, TAU);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+        }
+
+        // 4. Central faceted power orb (octagon) — glowing, breathing.
+        const octagon = () => {
+            ctx.beginPath();
+            for (let i = 0; i < 8; i++) {
+                const a = (i / 8) * TAU + TAU / 16;
+                const x = cx + Math.cos(a) * orbR, y = cy + Math.sin(a) * orbR;
+                if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+        };
+        const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, orbR);
+        if (isBreach) {
+            grad.addColorStop(0, '#FFD0D8'); grad.addColorStop(0.5, '#FF6080'); grad.addColorStop(1, 'rgba(232, 78, 106, 0.5)');
+        } else {
+            grad.addColorStop(0, '#FFE6B0'); grad.addColorStop(0.5, amber(1)); grad.addColorStop(1, amber(0.35));
+        }
         ctx.shadowColor = isBreach ? '#E84E6A' : amber(1);
-        ctx.shadowBlur = ballR * (1.4 + flare * 4);
-        ctx.fillStyle = gameOver ? '#E84E6A' : (flare > 0.5 ? '#FF6080' : amber(1));
-        ctx.globalAlpha = 0.85 + 0.15 * b1;
-        ctx.beginPath(); ctx.arc(cx, cy, ballR, 0, Math.PI * 2); ctx.fill();
+        ctx.shadowBlur = orbR * (1.4 + flare * 4);
+        ctx.fillStyle = grad;
+        ctx.globalAlpha = 0.9 + 0.1 * b1;
+        octagon(); ctx.fill();
         ctx.globalAlpha = 1;
         ctx.shadowBlur = 0;
+        // gray facet edges
+        ctx.strokeStyle = gray(0.4);
+        ctx.lineWidth = 0.8;
+        octagon(); ctx.stroke();
     }
 
     static drawBreachEffects(ctx, centerX, centerY, radius, progress) {
