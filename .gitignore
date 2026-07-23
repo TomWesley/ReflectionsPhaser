@@ -1,0 +1,14 @@
+# Dependencies
+node_modules/
+
+# Firebase local artifacts
+firebase-debug.log*
+firestore-debug.log*
+database-debug.log*
+ui-debug.log*
+.firebase/
+.runtimeconfig.json
+
+# OS / editor cruft
+.DS_Store
+*.swp
