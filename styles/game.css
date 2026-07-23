@@ -44,7 +44,7 @@ body {
     padding: 0;
     background: var(--void);
     background-attachment: fixed;
-    font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-family: 'Rajdhani', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     color: var(--text-primary);
     display: flex;
     flex-direction: column;
@@ -88,7 +88,7 @@ body {
 }
 
 .navbar-user {
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Rajdhani', sans-serif;
     font-size: 0.75rem;
     font-weight: 600;
     color: var(--text-secondary);
@@ -126,7 +126,7 @@ body {
     min-width: 100px;
     border: none;
     border-radius: 4px;
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Rajdhani', sans-serif;
     font-size: 0.85rem;
     font-weight: 600;
     cursor: pointer;
@@ -176,7 +176,7 @@ body {
     min-width: 100px;
     border: none;
     border-radius: 4px;
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Rajdhani', sans-serif;
     font-size: 0.85rem;
     font-weight: 600;
     cursor: pointer;
@@ -214,7 +214,7 @@ body {
     min-width: 100px;
     border: none;
     border-radius: 4px;
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Rajdhani', sans-serif;
     font-size: 0.85rem;
     font-weight: 600;
     cursor: pointer;
@@ -345,7 +345,7 @@ h1 {
 }
 
 .instruction-header {
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Rajdhani', sans-serif;
     font-size: 1.5rem;
     font-weight: 700;
     text-align: center;
@@ -400,7 +400,7 @@ h1 {
 }
 
 .timer-label {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Share Tech Mono', monospace;
     font-size: 0.9rem;
     font-weight: 600;
     color: var(--text-secondary);
@@ -409,7 +409,7 @@ h1 {
 }
 
 .timer-value {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Share Tech Mono', monospace;
     font-size: 1.8rem;
     font-weight: 700;
     color: var(--arc);
@@ -501,7 +501,7 @@ h1 {
 }
 
 .timer-label {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Share Tech Mono', monospace;
     font-size: 0.7rem;
     font-weight: 600;
     color: var(--text-secondary);
@@ -510,7 +510,7 @@ h1 {
 }
 
 .timer-value {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Share Tech Mono', monospace;
     font-size: 1.5rem;
     font-weight: 700;
     color: var(--arc);
@@ -520,7 +520,7 @@ h1 {
 
 /* Status Display */
 .status-display {
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Rajdhani', sans-serif;
     font-size: 1rem;
     font-weight: 600;
     padding: 12px 24px;
@@ -586,7 +586,7 @@ h1 {
 }
 
 .rotation-control-label {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Share Tech Mono', monospace;
     font-size: 0.6rem;
     font-weight: 700;
     color: rgba(78, 120, 232, 0.5);
@@ -658,7 +658,7 @@ h1 {
 /* Legacy UI Controls - now integrated into game header */
 
 .status-modern {
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Rajdhani', sans-serif;
     font-size: 1.1rem;
     font-weight: 600;
     padding: 12px 25px;
@@ -679,7 +679,7 @@ h1 {
 
 /* Modern Button Styles */
 .btn-primary, .btn-secondary, .btn-debug, .btn-info {
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Rajdhani', sans-serif;
     font-size: 1rem;
     font-weight: 600;
     padding: 10px 20px;
@@ -834,7 +834,7 @@ h1 {
 }
 
 .glitch-text {
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Rajdhani', sans-serif;
     font-size: 2.5rem;
     font-weight: 700;
     color: var(--danger-red);
@@ -867,7 +867,7 @@ h1 {
 }
 
 .stat-label {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Share Tech Mono', monospace;
     font-size: 0.9rem;
     font-weight: 600;
     color: var(--text-secondary);
@@ -876,7 +876,7 @@ h1 {
 }
 
 .stat-value {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Share Tech Mono', monospace;
     font-size: 1.8rem;
     font-weight: 700;
     color: var(--pink);
@@ -980,7 +980,7 @@ h1 {
     border: 1px solid rgba(78, 120, 232, 0.4);
     border-radius: 8px;
     color: var(--text-primary);
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Rajdhani', sans-serif;
     font-size: 0.85rem;
     padding: 8px 12px;
     width: 160px;
@@ -1038,11 +1038,12 @@ h1 {
 }
 
 .auth-modal-title {
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Orbitron', 'Rajdhani', sans-serif;
     font-weight: 700;
     font-size: 1.1rem;
     color: var(--text-primary);
     letter-spacing: 1px;
+    text-transform: uppercase;
     text-transform: uppercase;
 }
 
@@ -1078,7 +1079,7 @@ h1 {
     line-height: 1;
 }
 .auth-signedin-label {
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Rajdhani', sans-serif;
     color: var(--text-primary);
 }
 .auth-modal-body.signed-in .auth-tabs,
@@ -1107,7 +1108,7 @@ h1 {
     background: transparent;
     border: none;
     color: var(--text-secondary);
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Rajdhani', sans-serif;
     font-size: 0.8rem;
     font-weight: 600;
     cursor: pointer;
@@ -1134,7 +1135,7 @@ h1 {
     border: 1px solid rgba(78, 120, 232, 0.3);
     border-radius: 8px;
     color: var(--text-primary);
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Rajdhani', sans-serif;
     font-size: 0.85rem;
     padding: 10px 14px;
     outline: none;
@@ -1156,7 +1157,7 @@ h1 {
     border: none;
     border-radius: 8px;
     color: white;
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Rajdhani', sans-serif;
     font-size: 0.85rem;
     font-weight: 600;
     padding: 10px;
@@ -1180,7 +1181,7 @@ h1 {
     background: none;
     border: none;
     color: var(--text-secondary);
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Rajdhani', sans-serif;
     font-size: 0.7rem;
     cursor: pointer;
     padding: 0;
@@ -1199,7 +1200,7 @@ h1 {
     gap: 12px;
     margin: 16px 0;
     color: var(--text-secondary);
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Rajdhani', sans-serif;
     font-size: 0.7rem;
     opacity: 0.6;
 }
@@ -1222,7 +1223,7 @@ h1 {
     border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 8px;
     color: var(--text-primary);
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Rajdhani', sans-serif;
     font-size: 0.85rem;
     font-weight: 500;
     padding: 10px;
@@ -1236,7 +1237,7 @@ h1 {
 }
 
 .auth-error {
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Rajdhani', sans-serif;
     font-size: 0.75rem;
     color: #E84E6A;
     text-align: center;
@@ -1245,7 +1246,7 @@ h1 {
 }
 
 .player-identity {
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Rajdhani', sans-serif;
     font-size: 0.8rem;
     font-weight: 600;
     color: var(--text-secondary);
@@ -1255,7 +1256,7 @@ h1 {
 }
 
 .score-submit-status {
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Rajdhani', sans-serif;
     font-size: 0.75rem;
     margin-top: 6px;
     min-height: 18px;
@@ -1343,7 +1344,7 @@ h1 {
 }
 
 .score-label {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Share Tech Mono', monospace;
     font-size: 0.9em;
     color: var(--text-secondary);
     margin-bottom: 10px;
@@ -1351,7 +1352,7 @@ h1 {
 }
 
 .score-value {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Share Tech Mono', monospace;
     font-size: 2.5em;
     font-weight: 700;
     color: var(--arc);
@@ -1375,7 +1376,7 @@ h1 {
 }
 
 .score-item {
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Rajdhani', sans-serif;
     font-size: 1.1em;
     margin: 10px 0;
     color: var(--text-secondary);
@@ -1392,7 +1393,7 @@ h1 {
 }
 
 .compact-score .performance-rating {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Share Tech Mono', monospace;
     font-size: 1rem;
     font-weight: 600;
     color: var(--text-secondary);
@@ -1426,7 +1427,7 @@ h1 {
     flex: 1 !important;
     max-width: 100px !important;
     padding: 9px 8px !important;
-    font-family: 'Space Grotesk', sans-serif !important;
+    font-family: 'Rajdhani', sans-serif !important;
     font-size: 0.7rem !important;
     font-weight: 600 !important;
     border-radius: 6px !important;
@@ -1504,7 +1505,7 @@ h1 {
         border: 2px solid var(--border-glow);
         z-index: 1000;
         text-align: center;
-        font-family: 'Space Grotesk', sans-serif;
+        font-family: 'Rajdhani', sans-serif;
         font-weight: 600;
         font-size: 14px;
         max-width: 300px;
@@ -1534,7 +1535,7 @@ h1 {
     background: var(--card-bg);
     color: var(--arc);
     border: 2px solid var(--border-glow);
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Rajdhani', sans-serif;
     font-size: 18px;
     font-weight: bold;
     cursor: pointer;
@@ -1576,7 +1577,7 @@ h1 {
     line-height: 1.5;
     color: var(--text-primary);
     position: relative;
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Rajdhani', sans-serif;
 }
 
 .close-button {
@@ -1957,7 +1958,7 @@ h1 {
     }
 
     .mobile-menu-title {
-        font-family: 'Space Grotesk', sans-serif;
+        font-family: 'Rajdhani', sans-serif;
         font-size: 1.2rem;
         font-weight: 700;
         margin: 0;
@@ -1993,7 +1994,7 @@ h1 {
     }
 
     .mobile-menu-label {
-        font-family: 'JetBrains Mono', monospace;
+        font-family: 'Share Tech Mono', monospace;
         font-size: 0.7rem;
         font-weight: 600;
         color: var(--text-secondary);
@@ -2020,7 +2021,7 @@ h1 {
         border: 1px solid rgba(78, 120, 232, 0.15);
         border-radius: 10px;
         color: var(--text-primary);
-        font-family: 'Space Grotesk', sans-serif;
+        font-family: 'Rajdhani', sans-serif;
         font-size: 1rem;
         font-weight: 500;
         cursor: pointer;
@@ -2048,7 +2049,7 @@ h1 {
         display: flex;
         align-items: center;
         gap: 10px;
-        font-family: 'Space Grotesk', sans-serif;
+        font-family: 'Rajdhani', sans-serif;
         font-size: 0.8rem;
         color: var(--text-secondary);
         cursor: pointer;
@@ -2250,7 +2251,7 @@ h1 {
     padding: 8px 16px;
     border: none;
     border-radius: 6px;
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Rajdhani', sans-serif;
     font-size: 0.75rem;
     font-weight: 600;
     letter-spacing: 0.5px;
@@ -2330,7 +2331,7 @@ h1 {
 }
 
 .replay-title {
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Rajdhani', sans-serif;
     font-size: 1rem;
     font-weight: 600;
     color: var(--arc);

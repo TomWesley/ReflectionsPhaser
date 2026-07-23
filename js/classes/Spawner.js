@@ -130,7 +130,7 @@ export class Spawner {
         let ty = arrowTipY + Math.sin(this.angle) * tooltipDist;
 
         // Measure text for pill background
-        ctx.font = '700 15px "JetBrains Mono", "SF Mono", monospace';
+        ctx.font = '700 15px "Share Tech Mono", "SF Mono", monospace';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         const textWidth = ctx.measureText(angleStr).width;

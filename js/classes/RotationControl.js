@@ -161,7 +161,7 @@ export class RotationControl {
         }
 
         // Cardinal labels
-        ctx.font = '600 8px "JetBrains Mono", monospace';
+        ctx.font = '600 8px "Share Tech Mono", monospace';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillStyle = 'rgba(78, 120, 232, 0.4)';
@@ -240,7 +240,7 @@ export class RotationControl {
         ctx.fill();
 
         // Digital angle readout
-        ctx.font = '700 14px "JetBrains Mono", monospace';
+        ctx.font = '700 14px "Share Tech Mono", monospace';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillStyle = '#FFFFFF';

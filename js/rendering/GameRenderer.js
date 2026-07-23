@@ -290,7 +290,7 @@ export class GameRenderer {
             const yOffset = -20 - progress * 25;
 
             ctx.save();
-            ctx.font = '500 11px "Space Grotesk", sans-serif';
+            ctx.font = '500 11px "Rajdhani", sans-serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'bottom';
 
@@ -332,7 +332,7 @@ export class GameRenderer {
 
         // "COMPLETED" banner
         const bannerY = H / 2 - 20;
-        ctx.font = '700 28px "JetBrains Mono", monospace';
+        ctx.font = '700 28px "Share Tech Mono", monospace';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillStyle = '#32FFB4';
@@ -342,7 +342,7 @@ export class GameRenderer {
 
         // Score line
         ctx.shadowBlur = 0;
-        ctx.font = '500 14px "Space Grotesk", sans-serif';
+        ctx.font = '500 14px "Rajdhani", sans-serif';
         ctx.fillStyle = 'rgba(212, 212, 232, 0.8)';
         ctx.fillText('Come back tomorrow for a new challenge', W / 2, bannerY + 36);
 
@@ -356,7 +356,7 @@ export class GameRenderer {
         const ctx = this.ctx;
         ctx.save();
 
-        ctx.font = '600 10px "JetBrains Mono", monospace';
+        ctx.font = '600 10px "Share Tech Mono", monospace';
         ctx.textAlign = 'right';
         ctx.textBaseline = 'bottom';
         ctx.fillStyle = 'rgba(50, 255, 180, 0.4)';
@@ -623,17 +623,17 @@ export class GameRenderer {
 
         if (isDailyCompleted) {
             // Large, bright mint green with strong glow
-            ctx.font = '700 28px "JetBrains Mono", "SF Mono", monospace';
+            ctx.font = '700 28px "Share Tech Mono", "SF Mono", monospace';
             ctx.shadowColor = '#32FFB4';
             ctx.shadowBlur = 20;
             ctx.fillStyle = '#32FFB4';
         } else if (isBreach) {
-            ctx.font = '700 22px "JetBrains Mono", "SF Mono", monospace';
+            ctx.font = '700 22px "Share Tech Mono", "SF Mono", monospace';
             ctx.shadowColor = '#E84E6A';
             ctx.shadowBlur = 14;
             ctx.fillStyle = '#E84E6A';
         } else {
-            ctx.font = '700 22px "JetBrains Mono", "SF Mono", monospace';
+            ctx.font = '700 22px "Share Tech Mono", "SF Mono", monospace';
             ctx.shadowColor = 'rgba(78, 120, 232, 0.5)';
             ctx.shadowBlur = 6;
             ctx.fillStyle = '#D4D4E8';
