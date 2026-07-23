@@ -151,7 +151,7 @@ export class Spawner {
         const finalPy = ty - pillH / 2;
 
         // Background pill
-        ctx.fillStyle = 'rgba(10, 10, 18, 0.85)';
+        ctx.fillStyle = 'rgba(12, 10, 6, 0.85)';
         ctx.beginPath();
         if (ctx.roundRect) {
             ctx.roundRect(finalPx, finalPy, pillW, pillH, 5);

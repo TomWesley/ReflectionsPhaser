@@ -584,7 +584,7 @@ export class GameRenderer {
         const py = y - pillHeight / 2;
 
         // Background pill
-        ctx.fillStyle = isDailyCompleted ? 'rgba(6, 6, 14, 0.9)' : 'rgba(6, 6, 14, 0.8)';
+        ctx.fillStyle = isDailyCompleted ? 'rgba(8, 7, 4, 0.9)' : 'rgba(8, 7, 4, 0.8)';
         ctx.beginPath();
         if (ctx.roundRect) {
             ctx.roundRect(px, py, pillWidth, pillHeight, pillRadius);

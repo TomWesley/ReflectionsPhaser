@@ -160,7 +160,17 @@
       "Bash(gcloud firestore *)",
       "Bash(node -e \"console.log\\('nodemailer', require\\('./node_modules/nodemailer/package.json'\\).version\\)\")",
       "Bash(node _chk.mjs)",
-      "Bash(curl -s \"https://cdn.jsdelivr.net/gh/iconoir-icons/iconoir@main/css/iconoir.css\" -o iconoir.css)"
+      "Bash(curl -s \"https://cdn.jsdelivr.net/gh/iconoir-icons/iconoir@main/css/iconoir.css\" -o iconoir.css)",
+      "Bash(rsync -a --include='*/' --include='*.js' --include='*.js.map' --exclude='*' /Users/tomwesley/LocalGithubFiles/ArcadeGraphicsEngineAndLibrary/dist/ js/vendor/arcade-graphics-engine/)",
+      "Bash(node --check js/rendering/TargetRenderer.js)",
+      "Bash(awk 'NR>=376 && NR<=560' js/rendering/GameRenderer.js)",
+      "Bash(node --check js/rendering/GameRenderer.js)",
+      "Bash(node --check js/theme/EngineIcons.js)",
+      "Bash(node -e \"const c=require\\('fs'\\).readFileSync\\('styles/game.css','utf8'\\); const o=\\(c.match\\(/{/g\\)||[]\\).length, cl=\\(c.match\\(/}/g\\)||[]\\).length; console.log\\(o===cl?'balanced':'MISMATCH', o,cl\\);\")",
+      "Bash(node --check js/classes/Spawner.js)",
+      "Bash(node -e \"const c=require\\('fs'\\).readFileSync\\('styles/game.css','utf8'\\);const o=\\(c.match\\(/{/g\\)||[]\\).length,l=\\(c.match\\(/}/g\\)||[]\\).length;console.log\\(o===l?'css balanced':'CSS MISMATCH',o,l\\)\")",
+      "Bash(sed -i '' 's/rgba\\(10, 10, 18, 0.85\\)/rgba\\(12, 10, 6, 0.85\\)/' js/classes/Spawner.js)",
+      "Bash(sed -i '' 's/rgba\\(6, 6, 14, 0.95\\)/rgba\\(8, 7, 4, 0.95\\)/' styles/game.css)"
     ],
     "deny": [],
     "ask": []
