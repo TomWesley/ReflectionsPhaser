@@ -18,15 +18,75 @@ export class TargetRenderer {
             this.drawBreachEffects(ctx, centerX, centerY, radius, breachProgress);
         }
 
-        // Instrument housing: range ring + bearing ticks framing the core
-        const chipSize = radius * 0.9;
-        this.drawReactorRing(ctx, centerX, centerY, radius, gameOver, breachProgress);
-
-        // Core: amber-outlined hexagon, black interior, amber glowing ball centre.
-        this.drawChipBody(ctx, centerX, centerY, chipSize, gameOver, breachProgress);
-        this.drawCentralIndicator(ctx, centerX, centerY, chipSize, gameOver, breachProgress);
+        this.drawCore(ctx, centerX, centerY, radius, gameOver, breachProgress);
+        this.drawCentralIndicator(ctx, centerX, centerY, radius, gameOver, breachProgress);
 
         ctx.restore();
+    }
+
+    /**
+     * The core: a black disc with a breathing amber boundary ring + inner ring,
+     * light-gray cardinal ticks, and a slowly-pulsing amber glowing ball. Only
+     * amber / black / light-gray; no rotating parts. Breach/game-over flare red.
+     */
+    static drawCore(ctx, centerX, centerY, radius, gameOver, breachProgress = 0) {
+        // Breach shake
+        let ox = 0, oy = 0;
+        if (breachProgress > 0 && breachProgress < 0.7) {
+            const s = Math.min(breachProgress * 12, 5) * (1 - breachProgress / 0.7);
+            ox = Math.sin(breachProgress * 120) * s;
+            oy = Math.cos(breachProgress * 130) * s;
+        }
+        const cx = centerX + ox, cy = centerY + oy;
+        const isBreach = breachProgress > 0;
+        const flare = isBreach ? Math.min(1, breachProgress * 4) : 0;
+
+        // Two slow, offset breathing phases so it feels alive (no rotation).
+        const t = Date.now();
+        const b1 = 0.5 + 0.5 * Math.sin(t / 1500);
+        const b2 = 0.5 + 0.5 * Math.sin(t / 1500 + 2.0);
+
+        const P = PALETTE.secondary;
+        const amber = (a) => isBreach ? `rgba(232, 78, 106, ${a})` : `rgba(${P[0]}, ${P[1]}, ${P[2]}, ${a})`;
+        const gray = (a) => `rgba(190, 196, 210, ${a})`;
+
+        // 1. Black disc — masks the grid/zone beneath the core.
+        ctx.fillStyle = gameOver ? '#1a0608' : '#050403';
+        ctx.beginPath(); ctx.arc(cx, cy, radius, 0, Math.PI * 2); ctx.fill();
+
+        // 2. Boundary ring at exactly TARGET_RADIUS (the hit edge) — breathing amber.
+        ctx.strokeStyle = amber(0.55 + 0.4 * b1);
+        ctx.lineWidth = 1.5;
+        ctx.shadowColor = amber(0.6);
+        ctx.shadowBlur = 6 + flare * 20;
+        ctx.beginPath(); ctx.arc(cx, cy, radius, 0, Math.PI * 2); ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        // 3. Inner ring — breathing on the offset phase.
+        ctx.strokeStyle = amber(0.3 + 0.35 * b2);
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.arc(cx, cy, radius * 0.62, 0, Math.PI * 2); ctx.stroke();
+
+        // 4. Light-gray cardinal ticks — static structure (the only gray here).
+        ctx.strokeStyle = gray(0.5);
+        ctx.lineWidth = 1.2;
+        for (let i = 0; i < 4; i++) {
+            const a = i * Math.PI / 2;
+            ctx.beginPath();
+            ctx.moveTo(cx + Math.cos(a) * radius * 0.82, cy + Math.sin(a) * radius * 0.82);
+            ctx.lineTo(cx + Math.cos(a) * radius * 0.96, cy + Math.sin(a) * radius * 0.96);
+            ctx.stroke();
+        }
+
+        // 5. Central slowly-pulsing amber glowing ball.
+        const ballR = radius * 0.26 * (0.9 + 0.18 * b1) * (1 + flare * 0.5);
+        ctx.shadowColor = isBreach ? '#E84E6A' : amber(1);
+        ctx.shadowBlur = ballR * (1.4 + flare * 4);
+        ctx.fillStyle = gameOver ? '#E84E6A' : (flare > 0.5 ? '#FF6080' : amber(1));
+        ctx.globalAlpha = 0.85 + 0.15 * b1;
+        ctx.beginPath(); ctx.arc(cx, cy, ballR, 0, Math.PI * 2); ctx.fill();
+        ctx.globalAlpha = 1;
+        ctx.shadowBlur = 0;
     }
 
     static drawBreachEffects(ctx, centerX, centerY, radius, progress) {

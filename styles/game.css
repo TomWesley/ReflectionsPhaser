@@ -242,9 +242,9 @@ body {
 
 /* Icon-only nav buttons: larger + a subtle glow so they read clearly. */
 .nav-icon-btn .btn-eng-icon {
-    width: 24px;
-    height: 24px;
-    filter: drop-shadow(0 0 5px rgba(255, 176, 32, 0.65));
+    width: 28px;
+    height: 28px;
+    filter: drop-shadow(0 0 7px rgba(255, 176, 32, 0.8));
 }
 
 .navbar-btn-snap.snap-active {
