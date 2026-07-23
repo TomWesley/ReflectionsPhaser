@@ -48,7 +48,7 @@ export class TargetRenderer {
                 centerX, centerY, flashRadius
             );
             gradient.addColorStop(0, '#FFFFFF');
-            gradient.addColorStop(0.15, '#FFE0E8');
+            gradient.addColorStop(0.15, '#FFECC0');
             gradient.addColorStop(0.35, '#E84E6A');
             gradient.addColorStop(0.6, 'rgba(232, 78, 106, 0.4)');
             gradient.addColorStop(1, 'rgba(232, 78, 106, 0)');
@@ -104,7 +104,7 @@ export class TargetRenderer {
                     const py = centerY + Math.sin(angle) * dist;
 
                     ctx.globalAlpha = alpha;
-                    const colors = ['#E84E6A', '#FFFFFF', '#E87ADC', '#FF8FA3', '#FFD4DD', '#FF3366'];
+                    const colors = ['#E84E6A', '#FFFFFF', '#FFB020', '#FFD07A', '#FF6080', '#FF3366'];
                     ctx.fillStyle = colors[i % colors.length];
                     ctx.shadowColor = ctx.fillStyle;
                     ctx.shadowBlur = 12 * alpha;
@@ -147,7 +147,7 @@ export class TargetRenderer {
                 const segments = 5 + (i % 3);
 
                 // Alternate colors between hot white, red, and pink
-                const tColors = ['rgba(255,255,255,0.9)', 'rgba(232,78,106,0.8)', 'rgba(232,122,220,0.7)'];
+                const tColors = ['rgba(255,255,255,0.9)', 'rgba(232,78,106,0.8)', 'rgba(255,176,32,0.7)'];
                 ctx.strokeStyle = tColors[i % tColors.length];
                 ctx.lineWidth = (2.5 - tendrilProgress * 1.5) * (i < 6 ? 1 : 0.6);
                 ctx.shadowColor = '#E84E6A';
@@ -229,7 +229,7 @@ export class TargetRenderer {
             );
             warnGradient.addColorStop(0, 'rgba(232, 78, 106, 0.6)');
             warnGradient.addColorStop(0.3, 'rgba(232, 78, 106, 0.25)');
-            warnGradient.addColorStop(0.6, 'rgba(232, 122, 220, 0.1)');
+            warnGradient.addColorStop(0.6, 'rgba(255, 176, 32, 0.12)');
             warnGradient.addColorStop(1, 'rgba(232, 78, 106, 0)');
             ctx.fillStyle = warnGradient;
             ctx.beginPath();
@@ -359,7 +359,7 @@ export class TargetRenderer {
 
     static drawCircuitPattern(ctx, centerX, centerY, chipSize, gameOver, breachProgress = 0) {
         ctx.shadowBlur = 0;
-        ctx.strokeStyle = gameOver ? '#E87ADC' : rgba(PALETTE.primary, 0.7);
+        ctx.strokeStyle = gameOver ? '#E84E6A' : rgba(PALETTE.primary, 0.7);
         ctx.lineWidth = 2;
         ctx.lineCap = 'round';
 
@@ -395,7 +395,7 @@ export class TargetRenderer {
 
     static drawChipPins(ctx, centerX, centerY, chipSize, gameOver, breachProgress = 0) {
         ctx.shadowBlur = 0;
-        ctx.fillStyle = gameOver ? '#E87ADC' : rgba(PALETTE.primary, 0.85);
+        ctx.fillStyle = gameOver ? '#E84E6A' : rgba(PALETTE.primary, 0.85);
 
         if (breachProgress > 0.2) {
             ctx.globalAlpha = Math.sin(breachProgress * 60) > 0 ? 1 : 0.1;

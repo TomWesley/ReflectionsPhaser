@@ -501,7 +501,7 @@ export class GameRenderer {
                 const outerR = 80 + burstProgress * Math.max(W, H) * 0.6;
                 const width = 1 + ((i * 7) % 3);
 
-                ctx.strokeStyle = i % 3 === 0 ? '#E84E6A' : (i % 3 === 1 ? '#FF8FA3' : '#FFFFFF');
+                ctx.strokeStyle = i % 3 === 0 ? '#E84E6A' : (i % 3 === 1 ? '#FFB020' : '#FFFFFF');
                 ctx.lineWidth = width * (1 - burstProgress * 0.7);
                 ctx.shadowColor = ctx.strokeStyle;
                 ctx.shadowBlur = 6;
