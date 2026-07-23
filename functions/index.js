@@ -267,9 +267,12 @@ export const onFeedbackCreated = onDocumentCreated(
         const who = fb.displayName || 'Anonymous';
         const replyTo = fb.email || null;
 
+        // Google shows app passwords as "xxxx xxxx xxxx xxxx"; strip any spaces the
+        // secret may have been set with, or Gmail rejects the login (BadCredentials).
+        const appPassword = GMAIL_APP_PASSWORD.value().replace(/\s+/g, '');
         const transporter = nodemailer.createTransport({
             service: 'gmail',
-            auth: { user: NOTIFY_EMAIL, pass: GMAIL_APP_PASSWORD.value() },
+            auth: { user: NOTIFY_EMAIL, pass: appPassword },
         });
 
         const body = [

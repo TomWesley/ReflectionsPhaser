@@ -156,7 +156,10 @@
       "Bash(cat)",
       "Bash(node /tmp/apicheck.mjs)",
       "Bash(echo \"exit: $?\")",
-      "Bash(node _apicheck.mjs)"
+      "Bash(node _apicheck.mjs)",
+      "Bash(gcloud firestore *)",
+      "Bash(node -e \"console.log\\('nodemailer', require\\('./node_modules/nodemailer/package.json'\\).version\\)\")",
+      "Bash(node _chk.mjs)"
     ],
     "deny": [],
     "ask": []
