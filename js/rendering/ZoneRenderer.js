@@ -10,8 +10,10 @@ export class ZoneRenderer {
         const centerRadius = CONFIG.TARGET_RADIUS + 40; // Matches validation logic
         const edgeMargin = CONFIG.EDGE_MARGIN;
 
-        // Solid red forbidden zones (the original look — no dashed perimeter).
-        ctx.fillStyle = 'rgba(232, 78, 106, 0.3)';
+        // Solid red forbidden zones (no dashed perimeter). Higher opacity so the
+        // fill reads as the same bright red (#E84E6A) used for Start/breach, not a
+        // dark maroon — safe since mirrors can never be placed inside these zones.
+        ctx.fillStyle = 'rgba(232, 78, 106, 0.5)';
 
         // Center forbidden zone
         ctx.beginPath();
