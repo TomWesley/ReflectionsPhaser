@@ -12,7 +12,7 @@ export class Spawner {
 
         // Arc-blue ring with an amber energy core (main) / mint (daily) — the core
         // colour matches the beam this spawner fires.
-        const outerColor = '#4E78E8';  // Arc blue ring
+        const outerColor = '#FFB020';  // Arc blue ring
         const innerColor = this.isDailyChallenge ? '#32FFB4' : hex(PALETTE.secondary);
 
         // Draw glowing spawner body
@@ -72,7 +72,7 @@ export class Spawner {
             const endY = this.y + Math.sin(this.angle) * pathLength;
 
             // Arc blue for preview path
-            const pathOuterColor = 'rgba(78, 120, 232, 0.4)';
+            const pathOuterColor = 'rgba(255, 176, 32, 0.4)';
 
             // Outer glow for path
             ctx.shadowColor = outerColor;
@@ -161,7 +161,7 @@ export class Spawner {
         ctx.fill();
 
         // Border
-        ctx.strokeStyle = 'rgba(78, 120, 232, 0.5)';
+        ctx.strokeStyle = 'rgba(255, 176, 32, 0.5)';
         ctx.lineWidth = 1;
         ctx.beginPath();
         if (ctx.roundRect) {
@@ -172,8 +172,8 @@ export class Spawner {
         ctx.stroke();
 
         // Text
-        ctx.fillStyle = '#4E78E8';
-        ctx.shadowColor = '#4E78E8';
+        ctx.fillStyle = '#FFB020';
+        ctx.shadowColor = '#FFB020';
         ctx.shadowBlur = 4;
         ctx.fillText(angleStr, tx, ty);
 

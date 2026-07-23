@@ -11,10 +11,10 @@ export class ZoneRenderer {
         const edgeMargin = CONFIG.EDGE_MARGIN;
 
         ctx.save();
-        // Amber "restricted zone" — fill + a dashed hazard perimeter. Replaces the
-        // old red so it reads as a caution zone in the blue/amber cockpit scheme.
-        ctx.fillStyle = 'rgba(255, 176, 32, 0.10)';
-        ctx.strokeStyle = 'rgba(255, 176, 32, 0.45)';
+        // Red "forbidden zone" — fill + a dashed hazard perimeter. Red is the
+        // danger colour in the amber/red/black/gray scheme.
+        ctx.fillStyle = 'rgba(232, 78, 106, 0.22)';
+        ctx.strokeStyle = 'rgba(232, 78, 106, 0.6)';
         ctx.lineWidth = 1;
         ctx.setLineDash([6, 5]);
 

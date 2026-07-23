@@ -18,10 +18,9 @@ import {
     FONT_DISPLAY,
 } from '../vendor/arcade-graphics-engine/index.js';
 
-// Hues chosen to match palette.js: electric-blue primary (~222°), amber
-// secondary (~38°), cool-cyan tertiary for highlights/particles (~195°), and a
-// flare-red danger (~348°) for the breach state.
-export const provider = ThemeProvider.custom('REFLECTIONS', 222, 38, 195, 348);
+// Hues for the amber/red/black/gray scheme: amber primary (~38°), amber
+// secondary/tertiary (energy), and red danger (~348°) for zones/breach/Start.
+export const provider = ThemeProvider.custom('REFLECTIONS', 38, 40, 45, 348);
 export const palette = provider.palette;
 export const theme = provider.theme;
 

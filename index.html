@@ -41,7 +41,7 @@
     <nav class="navbar">
         <div class="navbar-left">
             <button class="nav-icon-btn" onclick="openRules()" title="How to Play">
-                <canvas class="btn-eng-icon" data-eng-icon="info" data-eng-color="210,224,255" width="36" height="36"></canvas>
+                <canvas class="btn-eng-icon" data-eng-icon="info" data-eng-color="224,224,232" width="36" height="36"></canvas>
             </button>
             <span id="navbarUser" class="navbar-user" onclick="openAuthModal()" title="Account"></span>
         </div>
@@ -67,13 +67,13 @@
                 <span>Shuffle</span>
             </button>
             <a href="/leaderboard" class="nav-icon-btn" title="Leaderboard">
-                <canvas class="btn-eng-icon" data-eng-icon="leaderboard" data-eng-color="210,224,255" width="36" height="36"></canvas>
+                <canvas class="btn-eng-icon" data-eng-icon="leaderboard" data-eng-color="224,224,232" width="36" height="36"></canvas>
             </a>
             <a href="/about" class="nav-icon-btn" title="About">
-                <canvas class="btn-eng-icon" data-eng-icon="about" data-eng-color="210,224,255" width="36" height="36"></canvas>
+                <canvas class="btn-eng-icon" data-eng-icon="about" data-eng-color="224,224,232" width="36" height="36"></canvas>
             </a>
             <button class="nav-icon-btn" title="Feedback" onclick="openFeedbackModal()">
-                <canvas class="btn-eng-icon" data-eng-icon="comms" data-eng-color="210,224,255" width="36" height="36"></canvas>
+                <canvas class="btn-eng-icon" data-eng-icon="comms" data-eng-color="224,224,232" width="36" height="36"></canvas>
             </button>
         </div>
     </nav>
@@ -340,7 +340,7 @@
             }
             const toast = document.createElement('div');
             toast.textContent = message;
-            toast.style.cssText = 'background:rgba(27,27,47,0.95);color:#D4D4E8;padding:10px 20px;border-radius:8px;border:1px solid rgba(78,120,232,0.5);font-family:"Rajdhani",sans-serif;font-size:13px;backdrop-filter:blur(8px);box-shadow:0 4px 16px rgba(0,0,0,0.4);opacity:0;transition:opacity 0.25s ease;pointer-events:auto;text-align:center;max-width:320px;';
+            toast.style.cssText = 'background:rgba(27,27,47,0.95);color:#D4D4E8;padding:10px 20px;border-radius:8px;border:1px solid rgba(255,176,32,0.5);font-family:"Rajdhani",sans-serif;font-size:13px;backdrop-filter:blur(8px);box-shadow:0 4px 16px rgba(0,0,0,0.4);opacity:0;transition:opacity 0.25s ease;pointer-events:auto;text-align:center;max-width:320px;';
             container.appendChild(toast);
             requestAnimationFrame(() => { toast.style.opacity = '1'; });
             setTimeout(() => {
@@ -359,7 +359,7 @@
                 el = document.createElement('div');
                 el.id = 'replayPreparing';
                 el.setAttribute('role', 'status');
-                el.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:10001;background:rgba(27,27,47,0.95);color:#D4D4E8;padding:10px 18px;border-radius:8px;border:1px solid rgba(78,120,232,0.5);font-family:"Rajdhani",sans-serif;font-size:13px;backdrop-filter:blur(8px);box-shadow:0 4px 16px rgba(0,0,0,0.4);display:flex;align-items:center;gap:10px;opacity:0;transition:opacity 0.25s ease;pointer-events:none;';
+                el.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:10001;background:rgba(27,27,47,0.95);color:#D4D4E8;padding:10px 18px;border-radius:8px;border:1px solid rgba(255,176,32,0.5);font-family:"Rajdhani",sans-serif;font-size:13px;backdrop-filter:blur(8px);box-shadow:0 4px 16px rgba(0,0,0,0.4);display:flex;align-items:center;gap:10px;opacity:0;transition:opacity 0.25s ease;pointer-events:none;';
                 el.innerHTML = '<i class="iconoir-refresh" style="display:inline-block;animation:loader-spin 0.8s linear infinite;"></i><span>Preparing your replay…</span>';
                 document.body.appendChild(el);
                 requestAnimationFrame(() => { el.style.opacity = '1'; });

@@ -173,7 +173,7 @@ export class BaseMirror {
             if (this.isDailyChallenge) {
                 ctx.shadowColor = 'rgba(50, 255, 180, ' + pulse + ')';
             } else {
-                ctx.shadowColor = 'rgba(78, 120, 232, ' + pulse + ')';
+                ctx.shadowColor = 'rgba(255, 176, 32, ' + pulse + ')';
             }
             ctx.shadowBlur = 12;
         } else if (this.isDragging) {
@@ -230,9 +230,9 @@ export class BaseMirror {
         } else if (isPlacementPhase) {
             ctx.shadowColor = this.isDailyChallenge
                 ? 'rgba(50, 255, 180, 0.5)'
-                : 'rgba(78, 120, 232, 0.5)';
+                : 'rgba(255, 176, 32, 0.5)';
             ctx.shadowBlur = 8;
-            ctx.strokeStyle = '#b8cbf0';
+            ctx.strokeStyle = '#c8ccd6';
             ctx.lineWidth = 2;
         } else {
             // Clean blue-steel border after launch

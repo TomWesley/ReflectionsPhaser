@@ -116,14 +116,14 @@ export class RotationControl {
         ctx.fill();
 
         // Outer ring
-        ctx.strokeStyle = 'rgba(78, 120, 232, 0.35)';
+        ctx.strokeStyle = 'rgba(255, 176, 32, 0.35)';
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.arc(cx, cy, r, 0, Math.PI * 2);
         ctx.stroke();
 
         // Inner concentric rings (targeting reticle feel)
-        ctx.strokeStyle = 'rgba(78, 120, 232, 0.1)';
+        ctx.strokeStyle = 'rgba(255, 176, 32, 0.1)';
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.arc(cx, cy, r * 0.65, 0, Math.PI * 2);
@@ -133,7 +133,7 @@ export class RotationControl {
         ctx.stroke();
 
         // Crosshair lines (subtle)
-        ctx.strokeStyle = 'rgba(78, 120, 232, 0.08)';
+        ctx.strokeStyle = 'rgba(255, 176, 32, 0.08)';
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.moveTo(cx, cy - r);
@@ -150,8 +150,8 @@ export class RotationControl {
             const innerR = isMajor ? r - 10 : (isMid ? r - 7 : r - 4);
 
             ctx.strokeStyle = isMajor
-                ? 'rgba(78, 120, 232, 0.5)'
-                : (isMid ? 'rgba(78, 120, 232, 0.25)' : 'rgba(78, 120, 232, 0.12)');
+                ? 'rgba(255, 176, 32, 0.5)'
+                : (isMid ? 'rgba(255, 176, 32, 0.25)' : 'rgba(255, 176, 32, 0.12)');
             ctx.lineWidth = isMajor ? 2 : 1;
 
             ctx.beginPath();
@@ -164,7 +164,7 @@ export class RotationControl {
         ctx.font = '600 8px "Share Tech Mono", monospace';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillStyle = 'rgba(78, 120, 232, 0.4)';
+        ctx.fillStyle = 'rgba(255, 176, 32, 0.4)';
         const labelR = r - 16;
         const labels = [
             { deg: 0, text: '0' },
@@ -182,7 +182,7 @@ export class RotationControl {
         const endRad = (this.currentAngle - 90) * Math.PI / 180;
         if (this.currentAngle > 0) {
             ctx.globalAlpha = 0.12;
-            ctx.fillStyle = '#4E78E8';
+            ctx.fillStyle = '#FFB020';
             ctx.beginPath();
             ctx.moveTo(cx, cy);
             ctx.arc(cx, cy, r * 0.65, startRad, endRad, false);
@@ -234,7 +234,7 @@ export class RotationControl {
         ctx.shadowBlur = 0;
 
         // Center dot
-        ctx.fillStyle = 'rgba(78, 120, 232, 0.6)';
+        ctx.fillStyle = 'rgba(255, 176, 32, 0.6)';
         ctx.beginPath();
         ctx.arc(cx, cy, 3, 0, Math.PI * 2);
         ctx.fill();

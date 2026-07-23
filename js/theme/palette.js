@@ -5,15 +5,17 @@
 // (fonts, CSS classes, DOM vars) lives in ArcadeTheme.js, which drives the DOM
 // off these same hues via the Arcade Graphics Engine's ThemeProvider.
 //
-// Blue + amber "cockpit HUD" identity:
-//   primary   = electric blue  — UI: grid, borders, mirror glow, spawner rings, timer
-//   secondary = amber          — energy/threat: lasers, spawner cores
-//   danger    = flare red      — breach / failure (a semantic state, not the accent)
-//   daily     = mint           — kept distinct for the Daily Challenge
+// Strict "amber / red / black / light-gray" identity:
+//   primary   = amber      — the hero colour: UI accents, spawners, timer, core, glows
+//   secondary = amber      — energy: lasers (same family; amber-dominant scheme)
+//   danger    = red        — forbidden zones, breach, the Start (engage) action
+//   gray      = light gray — utility only (gridlines, neutral chrome); not thematic
+//   daily     = mint       — kept distinct for the Daily Challenge
 export const PALETTE = {
-    primary:   [78, 120, 232],   // #4E78E8 electric blue
+    primary:   [255, 176, 32],   // #FFB020 amber
     secondary: [255, 176, 32],   // #FFB020 amber
-    danger:    [232, 78, 106],   // #E84E6A flare red
+    danger:    [232, 78, 106],   // #E84E6A red
+    gray:      [150, 156, 172],  // #969CAC utility neutral
     daily:     [50, 255, 180],   // #32FFB4 mint
     ghost:     [212, 212, 232],  // #D4D4E8 readouts / text
 };

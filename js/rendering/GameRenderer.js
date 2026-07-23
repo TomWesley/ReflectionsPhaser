@@ -26,9 +26,9 @@ export class GameRenderer {
         // gradient (subtle depth toward the core), never flat black.
         ctx.clearRect(0, 0, W, H);
         const bgGrad = ctx.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, Math.max(W, H) * 0.72);
-        bgGrad.addColorStop(0, '#0E1626');
-        bgGrad.addColorStop(0.6, '#0A0F1A');
-        bgGrad.addColorStop(1, '#06070E');
+        bgGrad.addColorStop(0, '#14110A');
+        bgGrad.addColorStop(0.6, '#0B0A06');
+        bgGrad.addColorStop(1, '#050403');
         ctx.fillStyle = bgGrad;
         ctx.fillRect(0, 0, W, H);
 
@@ -463,7 +463,7 @@ export class GameRenderer {
                         ctx.putImageData(imgData, Math.floor(shiftX), Math.floor(blockY));
                     } catch (e) {
                         // Fallback: draw colored glitch blocks
-                        const gColors = ['rgba(232,78,106,0.3)', 'rgba(78,120,232,0.2)', 'rgba(255,255,255,0.2)'];
+                        const gColors = ['rgba(232,78,106,0.3)', 'rgba(255,176,32,0.2)', 'rgba(255,255,255,0.2)'];
                         ctx.fillStyle = gColors[i % gColors.length];
                         ctx.fillRect(shiftX > 0 ? 0 : W + shiftX, blockY, Math.abs(shiftX), blockH);
                     }
@@ -605,9 +605,9 @@ export class GameRenderer {
             ctx.shadowBlur = 16;
         } else {
             const borderColor = isBreach ? 'rgba(232, 78, 106, 0.6)'
-                : (isDaily ? 'rgba(50, 255, 180, 0.4)' : 'rgba(78, 120, 232, 0.4)');
+                : (isDaily ? 'rgba(50, 255, 180, 0.4)' : 'rgba(255, 176, 32, 0.4)');
             const borderGlow = isBreach ? '#E84E6A'
-                : (isDaily ? 'rgba(50, 255, 180, 0.3)' : 'rgba(78, 120, 232, 0.3)');
+                : (isDaily ? 'rgba(50, 255, 180, 0.3)' : 'rgba(255, 176, 32, 0.3)');
             ctx.strokeStyle = borderColor;
             ctx.lineWidth = 1.5;
             ctx.shadowColor = borderGlow;
@@ -640,7 +640,7 @@ export class GameRenderer {
             ctx.fillStyle = '#E84E6A';
         } else {
             ctx.font = '700 22px "Share Tech Mono", "SF Mono", monospace';
-            ctx.shadowColor = 'rgba(78, 120, 232, 0.5)';
+            ctx.shadowColor = 'rgba(255, 176, 32, 0.5)';
             ctx.shadowBlur = 6;
             ctx.fillStyle = '#D4D4E8';
         }
@@ -693,9 +693,9 @@ export class GameRenderer {
         this.ctx.save();
 
         // Use arc blue glow for hover
-        this.ctx.shadowColor = 'rgba(78, 120, 232, 0.6)';
+        this.ctx.shadowColor = 'rgba(255, 176, 32, 0.6)';
         this.ctx.shadowBlur = 15;
-        this.ctx.strokeStyle = 'rgba(78, 120, 232, 0.4)';
+        this.ctx.strokeStyle = 'rgba(255, 176, 32, 0.4)';
         this.ctx.lineWidth = 3;
 
         // Draw outline based on shape
