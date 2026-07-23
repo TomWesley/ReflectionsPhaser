@@ -22,9 +22,14 @@ export class GameRenderer {
         const W = CONFIG.CANVAS_WIDTH;
         const H = CONFIG.CANVAS_HEIGHT;
 
-        // Clear canvas and fill with void background
+        // Clear canvas and fill with an instrument-panel background: a radial
+        // gradient (subtle depth toward the core), never flat black.
         ctx.clearRect(0, 0, W, H);
-        ctx.fillStyle = '#0A0A12';
+        const bgGrad = ctx.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, Math.max(W, H) * 0.72);
+        bgGrad.addColorStop(0, '#0E1626');
+        bgGrad.addColorStop(0.6, '#0A0F1A');
+        bgGrad.addColorStop(1, '#06070E');
+        ctx.fillStyle = bgGrad;
         ctx.fillRect(0, 0, W, H);
 
         // Subtle green tint for daily challenge

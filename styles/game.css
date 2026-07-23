@@ -240,6 +240,13 @@ body {
     vertical-align: middle;
 }
 
+/* Icon-only nav buttons: larger + a subtle glow so they read clearly. */
+.nav-icon-btn .btn-eng-icon {
+    width: 24px;
+    height: 24px;
+    filter: drop-shadow(0 0 4px rgba(120, 150, 240, 0.6));
+}
+
 .navbar-btn-snap.snap-active {
     background: rgba(255, 176, 32, 0.2);
     color: #FFC860;

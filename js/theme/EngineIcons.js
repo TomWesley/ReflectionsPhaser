@@ -137,7 +137,41 @@ function drawManual(ctx, cx, cy, size, [r, g, b]) {
     ctx.restore();
 }
 
-const CUSTOM = { snap: drawSnap, launch: drawLaunch, shuffle: drawShuffle, daily: drawDaily, about: drawManual };
+// leaderboard: podium ranking bars, the winner lit.
+function drawLeaderboard(ctx, cx, cy, size, [r, g, b]) {
+    const u = (n) => (n * size) / 100;
+    ctx.save();
+    ctx.lineJoin = 'round';
+    const base = cy + u(26);
+    const bw = u(15);
+    const bars = [
+        { c: cx - u(20), h: u(30), win: false }, // 2nd
+        { c: cx,          h: u(46), win: true },  // 1st (centre, tallest)
+        { c: cx + u(20), h: u(20), win: false }, // 3rd
+    ];
+    for (const bar of bars) {
+        const x = bar.c - bw / 2, y = base - bar.h;
+        ctx.fillStyle = `rgba(${r},${g},${b},${bar.win ? 0.28 : 0.16})`;
+        ctx.strokeStyle = `rgba(${r},${g},${b},0.85)`;
+        ctx.lineWidth = u(2.2);
+        ctx.beginPath(); ctx.rect(x, y, bw, bar.h); ctx.fill(); ctx.stroke();
+        if (bar.win) {
+            // lit winner cap (semantic highlight)
+            ctx.shadowColor = `rgba(${r},${g},${b},0.6)`;
+            ctx.shadowBlur = u(6);
+            ctx.strokeStyle = `rgba(${r},${g},${b},0.98)`;
+            ctx.lineWidth = u(3);
+            ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + bw, y); ctx.stroke();
+            ctx.shadowBlur = 0;
+        }
+    }
+    ctx.restore();
+}
+
+const CUSTOM = {
+    snap: drawSnap, launch: drawLaunch, shuffle: drawShuffle,
+    daily: drawDaily, about: drawManual, leaderboard: drawLeaderboard,
+};
 
 /** Draw any game icon (custom, or an engine built-in) at (cx,cy) sized `size`. */
 export function drawGameIcon(ctx, name, cx, cy, size, rgb) {
