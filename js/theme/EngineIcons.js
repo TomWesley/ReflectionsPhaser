@@ -39,7 +39,83 @@ function drawSnap(ctx, cx, cy, size, [r, g, b]) {
     ctx.restore();
 }
 
-const CUSTOM = { snap: drawSnap };
+// launch: upward thrust chevron firing (the "engage" action).
+function drawLaunch(ctx, cx, cy, size, [r, g, b]) {
+    const u = (n) => (n * size) / 100;
+    ctx.save();
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.fillStyle = `rgba(${r},${g},${b},0.85)`;
+    ctx.shadowColor = `rgba(${r},${g},${b},0.5)`;
+    ctx.shadowBlur = u(6);
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - u(30));
+    ctx.lineTo(cx + u(22), cy + u(4));
+    ctx.lineTo(cx + u(9), cy + u(4));
+    ctx.lineTo(cx + u(9), cy + u(16));
+    ctx.lineTo(cx - u(9), cy + u(16));
+    ctx.lineTo(cx - u(9), cy + u(4));
+    ctx.lineTo(cx - u(22), cy + u(4));
+    ctx.closePath();
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    // thrust lines (semantic: firing)
+    ctx.strokeStyle = `rgba(${r},${g},${b},0.6)`;
+    ctx.lineWidth = u(2.2);
+    for (const dx of [-6, 0, 6]) {
+        ctx.beginPath();
+        ctx.moveTo(cx + u(dx), cy + u(22));
+        ctx.lineTo(cx + u(dx), cy + u(30));
+        ctx.stroke();
+    }
+    ctx.restore();
+}
+
+// shuffle: two crossing arrows (swap for a new board).
+function drawShuffle(ctx, cx, cy, size, [r, g, b]) {
+    const u = (n) => (n * size) / 100;
+    ctx.save();
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = `rgba(${r},${g},${b},0.85)`;
+    ctx.lineWidth = u(3);
+    ctx.shadowColor = `rgba(${r},${g},${b},0.4)`;
+    ctx.shadowBlur = u(4);
+    ctx.beginPath(); ctx.moveTo(cx - u(26), cy - u(18)); ctx.lineTo(cx + u(26), cy + u(18)); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx - u(26), cy + u(18)); ctx.lineTo(cx + u(26), cy - u(18)); ctx.stroke();
+    ctx.shadowBlur = 0;
+    const head = (x, y, dir) => {
+        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - u(9), y + dir * u(2));
+        ctx.moveTo(x, y); ctx.lineTo(x - u(2), y + dir * u(9)); ctx.stroke();
+    };
+    head(cx + u(26), cy - u(18), 1);
+    head(cx + u(26), cy + u(18), -1);
+    ctx.restore();
+}
+
+// daily: a calendar with today's cell lit (the day's challenge).
+function drawDaily(ctx, cx, cy, size, [r, g, b]) {
+    const u = (n) => (n * size) / 100;
+    ctx.save();
+    ctx.lineJoin = 'round';
+    ctx.fillStyle = `rgba(${r},${g},${b},0.14)`;
+    ctx.strokeStyle = `rgba(${r},${g},${b},0.85)`;
+    ctx.lineWidth = u(2.4);
+    ctx.beginPath(); ctx.rect(cx - u(26), cy - u(22), u(52), u(46)); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = `rgba(${r},${g},${b},0.6)`;
+    ctx.lineWidth = u(1.6);
+    ctx.beginPath(); ctx.moveTo(cx - u(26), cy - u(10)); ctx.lineTo(cx + u(26), cy - u(10)); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx - u(14), cy - u(28)); ctx.lineTo(cx - u(14), cy - u(18)); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx + u(14), cy - u(28)); ctx.lineTo(cx + u(14), cy - u(18)); ctx.stroke();
+    // today's lit cell (semantic highlight)
+    ctx.shadowColor = `rgba(${r},${g},${b},0.6)`;
+    ctx.shadowBlur = u(6);
+    ctx.fillStyle = `rgba(${r},${g},${b},0.9)`;
+    ctx.fillRect(cx - u(4), cy + u(2), u(12), u(12));
+    ctx.restore();
+}
+
+const CUSTOM = { snap: drawSnap, launch: drawLaunch, shuffle: drawShuffle, daily: drawDaily };
 
 /** Draw any game icon (custom, or an engine built-in) at (cx,cy) sized `size`. */
 export function drawGameIcon(ctx, name, cx, cy, size, rgb) {
