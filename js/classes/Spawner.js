@@ -1,3 +1,5 @@
+import { PALETTE, hex } from '../theme/palette.js';
+
 export class Spawner {
     constructor(x, y, angle) {
         this.x = x;
@@ -8,9 +10,10 @@ export class Spawner {
     draw(ctx, showPreview = true) {
         ctx.save();
 
-        // Colors: arc blue outer, pink/mint inner based on mode
-        const outerColor = '#4E78E8';  // Arc blue
-        const innerColor = this.isDailyChallenge ? '#32FFB4' : '#E87ADC';
+        // Arc-blue ring with an amber energy core (main) / mint (daily) — the core
+        // colour matches the beam this spawner fires.
+        const outerColor = '#4E78E8';  // Arc blue ring
+        const innerColor = this.isDailyChallenge ? '#32FFB4' : hex(PALETTE.secondary);
 
         // Draw glowing spawner body
         ctx.shadowColor = outerColor;

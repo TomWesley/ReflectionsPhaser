@@ -1,4 +1,6 @@
 import { CONFIG } from '../config.js';
+import { drawIcon } from '../vendor/arcade-graphics-engine/index.js';
+import { PALETTE, rgba } from '../theme/palette.js';
 
 /**
  * TargetRenderer - Handles drawing the center target chip and breach animation
@@ -16,8 +18,11 @@ export class TargetRenderer {
             this.drawBreachEffects(ctx, centerX, centerY, radius, breachProgress);
         }
 
-        // Main computer chip body
+        // Instrument housing: range ring + bearing ticks framing the core
         const chipSize = radius * 0.9;
+        this.drawReactorRing(ctx, centerX, centerY, radius, gameOver, breachProgress);
+
+        // Reactor housing (hexagonal chip body)
         this.drawChipBody(ctx, centerX, centerY, chipSize, gameOver, breachProgress);
 
         // Circuit details
@@ -236,6 +241,64 @@ export class TargetRenderer {
         ctx.restore();
     }
 
+    /**
+     * Instrument range-ring framing the core: a thin bearing dial with cardinal
+     * ticks and a slow amber sweep marker — makes the core read as a live
+     * defense instrument rather than a bare shape. Pure visual.
+     */
+    static drawReactorRing(ctx, centerX, centerY, radius, gameOver, breachProgress = 0) {
+        const isBreach = breachProgress > 0;
+        const primary = isBreach ? '#E84E6A' : rgba(PALETTE.primary, 0.7);
+        const accent = isBreach ? '#FF6080' : rgba(PALETTE.secondary, 0.9);
+        // INVARIANT: ringR is EXACTLY TARGET_RADIUS — the core's collision boundary.
+        // checkLaserTargetCollision() triggers a loss when a laser's centre is within
+        // TARGET_RADIUS of centre, so this crisp ring is the honest hit edge and every
+        // other core element (hexagon, ticks, sweep, reticle) stays inside it. Do not
+        // scale ringR past `radius` or the target will look larger than it plays.
+        const ringR = radius;
+
+        ctx.save();
+
+        // Hull boundary ring — the honest hit edge, at exactly TARGET_RADIUS
+        ctx.strokeStyle = primary;
+        ctx.lineWidth = 1.5;
+        ctx.shadowColor = isBreach ? '#E84E6A' : rgba(PALETTE.primary, 0.5);
+        ctx.shadowBlur = isBreach ? 8 * Math.min(1, breachProgress * 3) : 4;
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, ringR, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        // Bearing ticks (12), longer + amber at the cardinals
+        for (let i = 0; i < 12; i++) {
+            const a = (i * Math.PI * 2) / 12;
+            const cardinal = i % 3 === 0;
+            const tickLen = cardinal ? 6 : 3;
+            ctx.strokeStyle = cardinal ? accent : primary;
+            ctx.lineWidth = cardinal ? 1.4 : 1;
+            ctx.beginPath();
+            ctx.moveTo(centerX + Math.cos(a) * (ringR - tickLen), centerY + Math.sin(a) * (ringR - tickLen));
+            ctx.lineTo(centerX + Math.cos(a) * ringR, centerY + Math.sin(a) * ringR);
+            ctx.stroke();
+        }
+
+        // Slow amber sweep marker — an active instrument, not a static ring
+        if (!isBreach) {
+            const sweep = (Date.now() / 2600) % (Math.PI * 2);
+            ctx.strokeStyle = rgba(PALETTE.secondary, 0.8);
+            ctx.lineWidth = 1.6;
+            ctx.shadowColor = rgba(PALETTE.secondary, 0.6);
+            ctx.shadowBlur = 6;
+            ctx.beginPath();
+            ctx.moveTo(centerX + Math.cos(sweep) * (ringR - 8), centerY + Math.sin(sweep) * (ringR - 8));
+            ctx.lineTo(centerX + Math.cos(sweep) * ringR, centerY + Math.sin(sweep) * ringR);
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+        }
+
+        ctx.restore();
+    }
+
     static drawChipBody(ctx, centerX, centerY, chipSize, gameOver, breachProgress = 0) {
         // Shake effect during breach - more intense
         let offsetX = 0, offsetY = 0;
@@ -248,12 +311,13 @@ export class TargetRenderer {
         const cx = centerX + offsetX;
         const cy = centerY + offsetY;
 
-        // Dark base - deep color (#1B1B2F)
-        ctx.fillStyle = gameOver ? '#2a1020' : '#1B1B2F';
-        // Ghost outline (#D4D4E8), flare when game over (#E84E6A)
-        ctx.strokeStyle = gameOver ? '#E84E6A' : '#D4D4E8';
+        // Dark blue-black base
+        ctx.fillStyle = gameOver ? '#2a1020' : '#0E1626';
+        // Blue-steel outline with bloom (breach / game-over flares red)
+        ctx.strokeStyle = gameOver ? '#E84E6A' : rgba(PALETTE.primary, 0.9);
         ctx.lineWidth = 3;
-        ctx.shadowBlur = 0;
+        ctx.shadowColor = rgba(PALETTE.primary, 0.5);
+        ctx.shadowBlur = gameOver ? 0 : 8;
 
         // During breach, chip outline glows hot
         if (breachProgress > 0) {
@@ -282,9 +346,9 @@ export class TargetRenderer {
         // During breach, the core flares massively bright
         const breachFlare = breachProgress > 0 ? Math.min(1, breachProgress * 4) : 0;
 
-        ctx.shadowColor = '#E84E6A';
+        ctx.shadowColor = breachProgress > 0 ? '#E84E6A' : rgba(PALETTE.secondary, 1);
         ctx.shadowBlur = coreRadius * (0.5 + breachFlare * 4);
-        ctx.fillStyle = gameOver ? '#E84E6A' : (breachFlare > 0.5 ? '#FF6080' : '#c43a54');
+        ctx.fillStyle = gameOver ? '#E84E6A' : (breachFlare > 0.5 ? '#FF6080' : rgba(PALETTE.secondary, 0.85));
         ctx.globalAlpha = Math.min(1, pulseIntensity + breachFlare * 0.6);
         ctx.beginPath();
         ctx.arc(cx, cy, coreRadius * (1 + breachFlare * 0.4), 0, Math.PI * 2);
@@ -295,7 +359,7 @@ export class TargetRenderer {
 
     static drawCircuitPattern(ctx, centerX, centerY, chipSize, gameOver, breachProgress = 0) {
         ctx.shadowBlur = 0;
-        ctx.strokeStyle = gameOver ? '#E87ADC' : '#D4D4E8';
+        ctx.strokeStyle = gameOver ? '#E87ADC' : rgba(PALETTE.primary, 0.7);
         ctx.lineWidth = 2;
         ctx.lineCap = 'round';
 
@@ -331,7 +395,7 @@ export class TargetRenderer {
 
     static drawChipPins(ctx, centerX, centerY, chipSize, gameOver, breachProgress = 0) {
         ctx.shadowBlur = 0;
-        ctx.fillStyle = gameOver ? '#E87ADC' : '#E84E6A';
+        ctx.fillStyle = gameOver ? '#E87ADC' : rgba(PALETTE.primary, 0.85);
 
         if (breachProgress > 0.2) {
             ctx.globalAlpha = Math.sin(breachProgress * 60) > 0 ? 1 : 0.1;
@@ -353,11 +417,8 @@ export class TargetRenderer {
     }
 
     static drawCentralIndicator(ctx, centerX, centerY, chipSize, gameOver, breachProgress = 0) {
-        ctx.shadowBlur = 4;
-        ctx.shadowColor = '#ffffff';
-        ctx.fillStyle = '#ffffff';
-
         if (breachProgress > 0) {
+            // Breach: hot pulsing core dot (unchanged behaviour).
             const intensity = Math.min(1, breachProgress * 5);
             ctx.shadowBlur = 20 + intensity * 30;
             ctx.shadowColor = breachProgress > 0.3 ? '#FF3366' : '#FFFFFF';
@@ -366,15 +427,29 @@ export class TargetRenderer {
             ctx.beginPath();
             ctx.arc(centerX, centerY, 3 + intensity * 5, 0, Math.PI * 2);
             ctx.fill();
+            ctx.shadowBlur = 0;
+            ctx.globalAlpha = 1;
         } else {
-            const centralPulse = 0.5 + 0.5 * Math.sin(Date.now() / 150);
-            ctx.globalAlpha = centralPulse;
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, 3, 0, Math.PI * 2);
-            ctx.fill();
+            // Normal: the engine's targeting reticle IS the live core — amber,
+            // gently pulsing. The thing the lasers are trying to hit reads as a
+            // targeting instrument.
+            const pulse = 0.75 + 0.25 * Math.sin(Date.now() / 400);
+            ctx.save();
+            ctx.globalAlpha = pulse;
+            try {
+                drawIcon(ctx, 'target', centerX, centerY, chipSize * 1.3,
+                    [PALETTE.secondary[0], PALETTE.secondary[1], PALETTE.secondary[2], 1]);
+            } catch (e) {
+                // Never let an engine hiccup break the per-frame render loop —
+                // fall back to a simple amber core dot.
+                ctx.shadowColor = rgba(PALETTE.secondary, 1);
+                ctx.shadowBlur = 8;
+                ctx.fillStyle = rgba(PALETTE.secondary, 0.9);
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, 4, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.restore();
         }
-
-        ctx.shadowBlur = 0;
-        ctx.globalAlpha = 1;
     }
 }
