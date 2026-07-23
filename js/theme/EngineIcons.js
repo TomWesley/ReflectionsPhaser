@@ -115,7 +115,29 @@ function drawDaily(ctx, cx, cy, size, [r, g, b]) {
     ctx.restore();
 }
 
-const CUSTOM = { snap: drawSnap, launch: drawLaunch, shuffle: drawShuffle, daily: drawDaily };
+// about: a manual/briefing document with a clipped corner and text lines.
+function drawManual(ctx, cx, cy, size, [r, g, b]) {
+    const u = (n) => (n * size) / 100;
+    ctx.save();
+    ctx.lineJoin = 'round';
+    ctx.fillStyle = `rgba(${r},${g},${b},0.14)`;
+    ctx.strokeStyle = `rgba(${r},${g},${b},0.85)`;
+    ctx.lineWidth = u(2.4);
+    const L = cx - u(20), R = cx + u(20), T = cy - u(26), B = cy + u(26), c = u(10);
+    ctx.beginPath();
+    ctx.moveTo(L, T); ctx.lineTo(R - c, T); ctx.lineTo(R, T + c); ctx.lineTo(R, B); ctx.lineTo(L, B); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = `rgba(${r},${g},${b},0.6)`;
+    ctx.lineWidth = u(1.6);
+    ctx.beginPath(); ctx.moveTo(R - c, T); ctx.lineTo(R - c, T + c); ctx.lineTo(R, T + c); ctx.stroke();
+    ctx.lineWidth = u(2);
+    for (const dy of [-6, 2, 10]) {
+        ctx.beginPath(); ctx.moveTo(L + u(7), cy + u(dy)); ctx.lineTo(R - u(7), cy + u(dy)); ctx.stroke();
+    }
+    ctx.restore();
+}
+
+const CUSTOM = { snap: drawSnap, launch: drawLaunch, shuffle: drawShuffle, daily: drawDaily, about: drawManual };
 
 /** Draw any game icon (custom, or an engine built-in) at (cx,cy) sized `size`. */
 export function drawGameIcon(ctx, name, cx, cy, size, rgb) {
