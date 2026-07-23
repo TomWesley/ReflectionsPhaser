@@ -915,8 +915,8 @@ h1 {
 
 .rules-content {
     background: var(--card-bg);
-    border: 2px solid var(--border-glow);
-    border-radius: 15px;
+    border: 1px solid var(--border-glow);
+    border-radius: 6px;
     padding: 30px;
     max-width: 600px;
     width: 90%;
