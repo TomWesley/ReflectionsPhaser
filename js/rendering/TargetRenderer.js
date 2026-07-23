@@ -22,12 +22,8 @@ export class TargetRenderer {
         const chipSize = radius * 0.9;
         this.drawReactorRing(ctx, centerX, centerY, radius, gameOver, breachProgress);
 
-        // Reactor housing (hexagonal chip body)
+        // Core: amber-outlined hexagon, black interior, amber glowing ball centre.
         this.drawChipBody(ctx, centerX, centerY, chipSize, gameOver, breachProgress);
-
-        // Circuit details
-        this.drawCircuitPattern(ctx, centerX, centerY, chipSize, gameOver, breachProgress);
-        this.drawChipPins(ctx, centerX, centerY, chipSize, gameOver, breachProgress);
         this.drawCentralIndicator(ctx, centerX, centerY, chipSize, gameOver, breachProgress);
 
         ctx.restore();
@@ -311,10 +307,10 @@ export class TargetRenderer {
         const cx = centerX + offsetX;
         const cy = centerY + offsetY;
 
-        // Dark blue-black base
-        ctx.fillStyle = gameOver ? '#2a1020' : '#0E1626';
-        // Blue-steel outline with bloom (breach / game-over flares red)
-        ctx.strokeStyle = gameOver ? '#E84E6A' : rgba(PALETTE.primary, 0.9);
+        // Black interior
+        ctx.fillStyle = gameOver ? '#1a0608' : '#050403';
+        // Amber outline with bloom (breach / game-over flares red)
+        ctx.strokeStyle = gameOver ? '#E84E6A' : rgba(PALETTE.primary, 0.95);
         ctx.lineWidth = 3;
         ctx.shadowColor = rgba(PALETTE.primary, 0.5);
         ctx.shadowBlur = gameOver ? 0 : 8;
@@ -339,7 +335,7 @@ export class TargetRenderer {
         ctx.fill();
         ctx.stroke();
 
-        // Inner chip core - flare color (#E84E6A) with contained glow
+        // Amber glowing core ball
         const pulseIntensity = 0.7 + 0.3 * Math.sin(Date.now() / 300);
         const coreRadius = chipSize * 0.4;
 
@@ -347,8 +343,8 @@ export class TargetRenderer {
         const breachFlare = breachProgress > 0 ? Math.min(1, breachProgress * 4) : 0;
 
         ctx.shadowColor = breachProgress > 0 ? '#E84E6A' : rgba(PALETTE.secondary, 1);
-        ctx.shadowBlur = coreRadius * (0.5 + breachFlare * 4);
-        ctx.fillStyle = gameOver ? '#E84E6A' : (breachFlare > 0.5 ? '#FF6080' : rgba(PALETTE.secondary, 0.85));
+        ctx.shadowBlur = coreRadius * (0.9 + breachFlare * 4);
+        ctx.fillStyle = gameOver ? '#E84E6A' : (breachFlare > 0.5 ? '#FF6080' : rgba(PALETTE.secondary, 1));
         ctx.globalAlpha = Math.min(1, pulseIntensity + breachFlare * 0.6);
         ctx.beginPath();
         ctx.arc(cx, cy, coreRadius * (1 + breachFlare * 0.4), 0, Math.PI * 2);
@@ -429,27 +425,8 @@ export class TargetRenderer {
             ctx.fill();
             ctx.shadowBlur = 0;
             ctx.globalAlpha = 1;
-        } else {
-            // Normal: the engine's targeting reticle IS the live core — amber,
-            // gently pulsing. The thing the lasers are trying to hit reads as a
-            // targeting instrument.
-            const pulse = 0.75 + 0.25 * Math.sin(Date.now() / 400);
-            ctx.save();
-            ctx.globalAlpha = pulse;
-            try {
-                drawIcon(ctx, 'target', centerX, centerY, chipSize * 1.3,
-                    [PALETTE.secondary[0], PALETTE.secondary[1], PALETTE.secondary[2], 1]);
-            } catch (e) {
-                // Never let an engine hiccup break the per-frame render loop —
-                // fall back to a simple amber core dot.
-                ctx.shadowColor = rgba(PALETTE.secondary, 1);
-                ctx.shadowBlur = 8;
-                ctx.fillStyle = rgba(PALETTE.secondary, 0.9);
-                ctx.beginPath();
-                ctx.arc(centerX, centerY, 4, 0, Math.PI * 2);
-                ctx.fill();
-            }
-            ctx.restore();
         }
+        // Normal core needs no central mark — the amber glowing ball drawn by
+        // drawChipBody is the centre.
     }
 }

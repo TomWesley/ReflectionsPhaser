@@ -46,6 +46,12 @@ export class GameRenderer {
         // Draw grid
         GridRenderer.drawGrid(ctx);
 
+        // Forbidden zones as a background layer — UNDER the core, so the core keeps
+        // its classic look on top even during the placement phase.
+        if (!this.game.isPlaying && !this.game.dailyCompleted) {
+            ZoneRenderer.drawForbiddenZones(ctx);
+        }
+
         // Draw center target with breach animation progress
         const breachProgress = this.game.breachProgress || 0;
         TargetRenderer.drawTarget(ctx, this.game.gameOver, breachProgress);
@@ -83,7 +89,6 @@ export class GameRenderer {
 
         // Draw zones and validation when not playing (but not on completed daily view)
         if (!this.game.isPlaying && !this.game.dailyCompleted) {
-            ZoneRenderer.drawForbiddenZones(ctx);
             ValidationRenderer.drawValidationViolations(ctx, this.game.mirrors, this.game.isPlaying);
 
             // Draw spawner angle tooltip on top of everything
