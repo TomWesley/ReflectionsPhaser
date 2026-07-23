@@ -188,13 +188,13 @@ export class BaseMirror {
         const gradient = ctx.createLinearGradient(minX, minY, maxX, maxY);
 
         // Silver/chrome color stops with shimmer
-        gradient.addColorStop(0, '#606875');
-        gradient.addColorStop(0.2 + shimmerOffset, '#8a939e');
-        gradient.addColorStop(0.4, '#b8c0c8');  // Bright silver highlight
-        gradient.addColorStop(0.5, '#d4dce4');  // Peak brightness
-        gradient.addColorStop(0.6, '#b8c0c8');
-        gradient.addColorStop(0.8 - shimmerOffset, '#8a939e');
-        gradient.addColorStop(1, '#606875');
+        gradient.addColorStop(0, '#3d4a63');
+        gradient.addColorStop(0.2 + shimmerOffset, '#657391');
+        gradient.addColorStop(0.4, '#97a6c2');  // Bright blue-steel highlight
+        gradient.addColorStop(0.5, '#d0dcf0');  // Peak brightness (cool white)
+        gradient.addColorStop(0.6, '#97a6c2');
+        gradient.addColorStop(0.8 - shimmerOffset, '#657391');
+        gradient.addColorStop(1, '#3d4a63');
 
         ctx.fillStyle = gradient;
         ctx.beginPath();
@@ -232,11 +232,11 @@ export class BaseMirror {
                 ? 'rgba(50, 255, 180, 0.5)'
                 : 'rgba(78, 120, 232, 0.5)';
             ctx.shadowBlur = 8;
-            ctx.strokeStyle = '#c0c8d0';
+            ctx.strokeStyle = '#b8cbf0';
             ctx.lineWidth = 2;
         } else {
-            // Clean silver border after launch
-            ctx.strokeStyle = '#9aa0a8';
+            // Clean blue-steel border after launch
+            ctx.strokeStyle = '#7d8bb0';
             ctx.lineWidth = 1.5;
         }
 

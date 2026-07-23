@@ -195,7 +195,8 @@ export class GameRenderer {
 
             // Draw all segments as dashed lines
             const isDaily = spawner.isDailyChallenge;
-            const baseColor = isDaily ? '50, 255, 180' : '78, 120, 232';
+            // Amber to match the beams the preview is tracing (mint for daily).
+            const baseColor = isDaily ? '50, 255, 180' : '255, 176, 32';
             const pulse = 0.65 + 0.15 * Math.sin(Date.now() / 600);
 
             // Glow layer
