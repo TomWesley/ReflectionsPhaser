@@ -61,6 +61,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     const today = new Date().toISOString().slice(0, 10);
     const cacheBust = `?v=${today}`;
 
+    // Install the Arcade Graphics Engine theme (fonts + CSS) as early as possible,
+    // non-blocking. Purely visual — no effect on game logic.
+    import(`./theme/ArcadeTheme.js${cacheBust}`).then(m => m.initArcadeTheme()).catch(() => {});
+
+    // Render engine-drawn canvas icons in the DOM (e.g. the custom Snap icon).
+    import(`./theme/EngineIcons.js${cacheBust}`).then(m => m.hydrateIcons()).catch(() => {});
+
     // Loading is indicated by the #canvasLoader overlay, removed once the game renders.
 
     try {

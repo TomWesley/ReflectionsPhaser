@@ -1,3 +1,5 @@
+import { PALETTE, hex } from '../theme/palette.js';
+
 export class Spawner {
     constructor(x, y, angle) {
         this.x = x;
@@ -8,9 +10,10 @@ export class Spawner {
     draw(ctx, showPreview = true) {
         ctx.save();
 
-        // Colors: arc blue outer, pink/mint inner based on mode
-        const outerColor = '#4E78E8';  // Arc blue
-        const innerColor = this.isDailyChallenge ? '#32FFB4' : '#E87ADC';
+        // Arc-blue ring with an amber energy core (main) / mint (daily) — the core
+        // colour matches the beam this spawner fires.
+        const outerColor = '#FFB020';  // Arc blue ring
+        const innerColor = this.isDailyChallenge ? '#32FFB4' : hex(PALETTE.secondary);
 
         // Draw glowing spawner body
         ctx.shadowColor = outerColor;
@@ -69,7 +72,7 @@ export class Spawner {
             const endY = this.y + Math.sin(this.angle) * pathLength;
 
             // Arc blue for preview path
-            const pathOuterColor = 'rgba(78, 120, 232, 0.4)';
+            const pathOuterColor = 'rgba(255, 176, 32, 0.4)';
 
             // Outer glow for path
             ctx.shadowColor = outerColor;
@@ -127,7 +130,7 @@ export class Spawner {
         let ty = arrowTipY + Math.sin(this.angle) * tooltipDist;
 
         // Measure text for pill background
-        ctx.font = '700 15px "JetBrains Mono", "SF Mono", monospace';
+        ctx.font = '700 15px "Share Tech Mono", "SF Mono", monospace';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         const textWidth = ctx.measureText(angleStr).width;
@@ -148,7 +151,7 @@ export class Spawner {
         const finalPy = ty - pillH / 2;
 
         // Background pill
-        ctx.fillStyle = 'rgba(10, 10, 18, 0.85)';
+        ctx.fillStyle = 'rgba(12, 10, 6, 0.85)';
         ctx.beginPath();
         if (ctx.roundRect) {
             ctx.roundRect(finalPx, finalPy, pillW, pillH, 5);
@@ -158,7 +161,7 @@ export class Spawner {
         ctx.fill();
 
         // Border
-        ctx.strokeStyle = 'rgba(78, 120, 232, 0.5)';
+        ctx.strokeStyle = 'rgba(255, 176, 32, 0.5)';
         ctx.lineWidth = 1;
         ctx.beginPath();
         if (ctx.roundRect) {
@@ -169,8 +172,8 @@ export class Spawner {
         ctx.stroke();
 
         // Text
-        ctx.fillStyle = '#4E78E8';
-        ctx.shadowColor = '#4E78E8';
+        ctx.fillStyle = '#FFB020';
+        ctx.shadowColor = '#FFB020';
         ctx.shadowBlur = 4;
         ctx.fillText(angleStr, tx, ty);
 

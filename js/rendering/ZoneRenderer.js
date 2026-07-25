@@ -5,32 +5,25 @@ import { CONFIG } from '../config.js';
  */
 export class ZoneRenderer {
     static drawForbiddenZones(ctx) {
-        // Use flare color (#E84E6A) with transparency for forbidden zones
-        ctx.fillStyle = 'rgba(232, 78, 106, 0.3)';
-
-        // Center forbidden zone - circle matching validation
-        const centerX = CONFIG.CANVAS_WIDTH / 2;
-        const centerY = CONFIG.CANVAS_HEIGHT / 2;
+        const W = CONFIG.CANVAS_WIDTH, H = CONFIG.CANVAS_HEIGHT;
+        const centerX = W / 2, centerY = H / 2;
         const centerRadius = CONFIG.TARGET_RADIUS + 40; // Matches validation logic
+        const edgeMargin = CONFIG.EDGE_MARGIN;
 
+        // Solid red forbidden zones (no dashed perimeter). Higher opacity so the
+        // fill reads as the same bright red (#E84E6A) used for Start/breach, not a
+        // dark maroon — safe since mirrors can never be placed inside these zones.
+        ctx.fillStyle = 'rgba(232, 78, 106, 0.5)';
+
+        // Center forbidden zone
         ctx.beginPath();
         ctx.arc(centerX, centerY, centerRadius, 0, Math.PI * 2);
         ctx.fill();
 
-        // Edge forbidden zones - rectangles matching validation
-        // Horizontals go full width, verticals are shortened to avoid corner overlap
-        const edgeMargin = CONFIG.EDGE_MARGIN;
-
-        // Top edge (full width)
-        ctx.fillRect(0, 0, CONFIG.CANVAS_WIDTH, edgeMargin);
-
-        // Bottom edge (full width)
-        ctx.fillRect(0, CONFIG.CANVAS_HEIGHT - edgeMargin, CONFIG.CANVAS_WIDTH, edgeMargin);
-
-        // Left edge (shortened to avoid corners)
-        ctx.fillRect(0, edgeMargin, edgeMargin, CONFIG.CANVAS_HEIGHT - edgeMargin * 2);
-
-        // Right edge (shortened to avoid corners)
-        ctx.fillRect(CONFIG.CANVAS_WIDTH - edgeMargin, edgeMargin, edgeMargin, CONFIG.CANVAS_HEIGHT - edgeMargin * 2);
+        // Edge forbidden zones (horizontals full width, verticals shortened)
+        ctx.fillRect(0, 0, W, edgeMargin);
+        ctx.fillRect(0, H - edgeMargin, W, edgeMargin);
+        ctx.fillRect(0, edgeMargin, edgeMargin, H - edgeMargin * 2);
+        ctx.fillRect(W - edgeMargin, edgeMargin, edgeMargin, H - edgeMargin * 2);
     }
 }

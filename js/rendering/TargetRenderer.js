@@ -1,4 +1,6 @@
 import { CONFIG } from '../config.js';
+import { drawIcon } from '../vendor/arcade-graphics-engine/index.js';
+import { PALETTE, rgba } from '../theme/palette.js';
 
 /**
  * TargetRenderer - Handles drawing the center target chip and breach animation
@@ -16,16 +18,148 @@ export class TargetRenderer {
             this.drawBreachEffects(ctx, centerX, centerY, radius, breachProgress);
         }
 
-        // Main computer chip body
-        const chipSize = radius * 0.9;
-        this.drawChipBody(ctx, centerX, centerY, chipSize, gameOver, breachProgress);
-
-        // Circuit details
-        this.drawCircuitPattern(ctx, centerX, centerY, chipSize, gameOver, breachProgress);
-        this.drawChipPins(ctx, centerX, centerY, chipSize, gameOver, breachProgress);
-        this.drawCentralIndicator(ctx, centerX, centerY, chipSize, gameOver, breachProgress);
+        this.drawCore(ctx, centerX, centerY, radius, gameOver, breachProgress);
+        this.drawCentralIndicator(ctx, centerX, centerY, radius, gameOver, breachProgress);
 
         ctx.restore();
+    }
+
+    /**
+     * The core: a reactor-chip — a hexagonal die with spokes running out to the
+     * boundary ring, a graduated amber bezel at the exact hit radius, an inner
+     * circuit ring, and a glowing amber power core. Computer-chip + nuclear + power;
+     * amber / black / light-gray. Breach & game-over flare red.
+     */
+    static drawCore(ctx, centerX, centerY, radius, gameOver, breachProgress = 0) {
+        // Breach shake
+        let ox = 0, oy = 0;
+        if (breachProgress > 0 && breachProgress < 0.7) {
+            const s = Math.min(breachProgress * 12, 5) * (1 - breachProgress / 0.7);
+            ox = Math.sin(breachProgress * 120) * s;
+            oy = Math.cos(breachProgress * 130) * s;
+        }
+        const cx = centerX + ox, cy = centerY + oy;
+        const isBreach = breachProgress > 0;
+        const flare = isBreach ? Math.min(1, breachProgress * 4) : 0;
+        const t = Date.now();
+        const b1 = 0.5 + 0.5 * Math.sin(t / 2600); // slow, hypnotic breathe
+        const TAU = Math.PI * 2;
+
+        const P = PALETTE.secondary;
+        const R = radius;
+        const amber = (a) => isBreach ? `rgba(232, 78, 106, ${a})` : `rgba(${P[0]}, ${P[1]}, ${P[2]}, ${a})`;
+        const gray = (a) => `rgba(212, 208, 200, ${a})`;
+        const arc = (rr, a0, ext, color, w, blur) => {
+            ctx.strokeStyle = color; ctx.lineWidth = w;
+            ctx.shadowColor = blur ? color : 'transparent';
+            ctx.shadowBlur = blur || 0;
+            ctx.beginPath(); ctx.arc(cx, cy, rr, a0, a0 + ext); ctx.stroke();
+            ctx.shadowBlur = 0;
+        };
+
+        // STATIONARY reactor-chip core: a hexagonal die with pin traces + contact
+        // pads, a graduated bezel, an inner circuit ring, and a glowing power core.
+        // Computer chip + nuclear + power. Amber / black / light-gray.
+        const hexRot = -Math.PI / 2;      // point-up hexagons
+        const dieR = R * 0.6, hubR = R * 0.3;
+        const poly = (rr, sides, rot) => {
+            ctx.beginPath();
+            for (let i = 0; i < sides; i++) {
+                const ang = rot + (i / sides) * TAU;
+                const x = cx + Math.cos(ang) * rr, y = cy + Math.sin(ang) * rr;
+                if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+        };
+
+        // Core fill — the mirrors' blue-steel palette, but the shimmer travels
+        // RADIALLY: a bright band emanating in and out along the radial axis, as one
+        // continuous circular sheet (the hub samples the same field, so it stays part
+        // of the sheet rather than shimmering on its own diagonal).
+        const hp = 0.52 + 0.26 * Math.sin(t / 900); // highlight radius, breathes in/out — reaches a bit farther at the outer end
+        const steel = ctx.createRadialGradient(cx, cy, 0, cx, cy, R);
+        steel.addColorStop(0, '#485571');
+        steel.addColorStop(hp - 0.20, '#3d4a63');
+        steel.addColorStop(hp - 0.07, '#97a6c2');
+        steel.addColorStop(hp, '#d0dcf0');
+        steel.addColorStop(hp + 0.07, '#97a6c2');
+        steel.addColorStop(hp + 0.20, '#3d4a63');
+        steel.addColorStop(1, '#485571');
+        ctx.fillStyle = steel;
+        ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU); ctx.fill();
+
+        // Soft amber glow.
+        const glowGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, R);
+        glowGrad.addColorStop(0, amber(0.42));
+        glowGrad.addColorStop(0.5, amber(0.14));
+        glowGrad.addColorStop(1, amber(0));
+        ctx.fillStyle = glowGrad;
+        ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU); ctx.fill();
+
+        // Boundary at exactly TARGET_RADIUS — the LOSE line. Soft wide halo here; a
+        // crisp bright rim is drawn last (below), on top of everything.
+        arc(R, 0, TAU, amber(0.5), 3.5, 24);
+
+        // Spokes: amber lines from each die vertex out to the boundary ring, as
+        // thick and glowing as the hex's outer wall.
+        ctx.strokeStyle = amber(0.75); ctx.lineWidth = 1.6;
+        ctx.shadowColor = amber(0.5); ctx.shadowBlur = 6;
+        for (let i = 0; i < 6; i++) {
+            const ang = hexRot + (i / 6) * TAU;
+            ctx.beginPath();
+            ctx.moveTo(cx + Math.cos(ang) * dieR, cy + Math.sin(ang) * dieR);
+            ctx.lineTo(cx + Math.cos(ang) * R, cy + Math.sin(ang) * R);
+            ctx.stroke();
+        }
+        ctx.shadowBlur = 0;
+
+        // Hexagonal chip die — outer amber frame (glow) + inner gray frame.
+        ctx.shadowColor = amber(0.5); ctx.shadowBlur = 6;
+        ctx.strokeStyle = amber(0.75); ctx.lineWidth = 1.6;
+        poly(dieR, 6, hexRot); ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = gray(0.35); ctx.lineWidth = 1;
+        poly(dieR * 0.82, 6, hexRot); ctx.stroke();
+
+        // Inner circuit spokes with pad nodes.
+        for (let i = 0; i < 6; i++) {
+            const ang = hexRot + (i / 6) * TAU + TAU / 12;
+            const ex = cx + Math.cos(ang) * dieR * 0.82, ey = cy + Math.sin(ang) * dieR * 0.82;
+            ctx.strokeStyle = amber(0.4); ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(cx + Math.cos(ang) * hubR, cy + Math.sin(ang) * hubR);
+            ctx.lineTo(ex, ey);
+            ctx.stroke();
+            ctx.fillStyle = amber(0.6);
+            ctx.beginPath(); ctx.arc(ex, ey, 1.4, 0, TAU); ctx.fill();
+        }
+
+        // Inner hub hexagon — same steel sheet + amber outline.
+        ctx.fillStyle = steel;
+        poly(hubR, 6, hexRot); ctx.fill();
+        ctx.shadowColor = amber(0.5); ctx.shadowBlur = 6;
+        ctx.strokeStyle = amber(0.75); ctx.lineWidth = 1.3;
+        poly(hubR, 6, hexRot); ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        // Central power core — glowing amber radial gradient (stationary).
+        const coreR = hubR * 0.7;
+        const coreColor = gameOver ? '#E84E6A' : (flare > 0.5 ? '#FF6080' : amber(1));
+        const coreGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, coreR);
+        coreGrad.addColorStop(0, isBreach ? '#FFD0D8' : '#FFE6B0');
+        coreGrad.addColorStop(0.55, coreColor);
+        coreGrad.addColorStop(1, isBreach ? 'rgba(232, 78, 106, 0.25)' : amber(0.25));
+        ctx.shadowColor = isBreach ? '#E84E6A' : amber(1);
+        ctx.shadowBlur = 20 + flare * 30;
+        ctx.fillStyle = coreGrad;
+        ctx.beginPath(); ctx.arc(cx, cy, coreR, 0, TAU); ctx.fill();
+        ctx.shadowBlur = 0;
+
+        // Prominent hit-boundary rim, drawn last on top of everything — the exact
+        // line at which a laser reaching it loses the game. Bright, pulsing glow.
+        const rimPulse = 0.85 + 0.15 * b1;
+        arc(R, 0, TAU, amber(rimPulse), 2.4, 14);
+        arc(R, 0, TAU, amber(1), 1.2, 4);
     }
 
     static drawBreachEffects(ctx, centerX, centerY, radius, progress) {
@@ -43,7 +177,7 @@ export class TargetRenderer {
                 centerX, centerY, flashRadius
             );
             gradient.addColorStop(0, '#FFFFFF');
-            gradient.addColorStop(0.15, '#FFE0E8');
+            gradient.addColorStop(0.15, '#FFECC0');
             gradient.addColorStop(0.35, '#E84E6A');
             gradient.addColorStop(0.6, 'rgba(232, 78, 106, 0.4)');
             gradient.addColorStop(1, 'rgba(232, 78, 106, 0)');
@@ -99,7 +233,7 @@ export class TargetRenderer {
                     const py = centerY + Math.sin(angle) * dist;
 
                     ctx.globalAlpha = alpha;
-                    const colors = ['#E84E6A', '#FFFFFF', '#E87ADC', '#FF8FA3', '#FFD4DD', '#FF3366'];
+                    const colors = ['#E84E6A', '#FFFFFF', '#FFB020', '#FFD07A', '#FF6080', '#FF3366'];
                     ctx.fillStyle = colors[i % colors.length];
                     ctx.shadowColor = ctx.fillStyle;
                     ctx.shadowBlur = 12 * alpha;
@@ -142,7 +276,7 @@ export class TargetRenderer {
                 const segments = 5 + (i % 3);
 
                 // Alternate colors between hot white, red, and pink
-                const tColors = ['rgba(255,255,255,0.9)', 'rgba(232,78,106,0.8)', 'rgba(232,122,220,0.7)'];
+                const tColors = ['rgba(255,255,255,0.9)', 'rgba(232,78,106,0.8)', 'rgba(255,176,32,0.7)'];
                 ctx.strokeStyle = tColors[i % tColors.length];
                 ctx.lineWidth = (2.5 - tendrilProgress * 1.5) * (i < 6 ? 1 : 0.6);
                 ctx.shadowColor = '#E84E6A';
@@ -224,13 +358,71 @@ export class TargetRenderer {
             );
             warnGradient.addColorStop(0, 'rgba(232, 78, 106, 0.6)');
             warnGradient.addColorStop(0.3, 'rgba(232, 78, 106, 0.25)');
-            warnGradient.addColorStop(0.6, 'rgba(232, 122, 220, 0.1)');
+            warnGradient.addColorStop(0.6, 'rgba(255, 176, 32, 0.12)');
             warnGradient.addColorStop(1, 'rgba(232, 78, 106, 0)');
             ctx.fillStyle = warnGradient;
             ctx.beginPath();
             ctx.arc(centerX, centerY, glowRadius, 0, Math.PI * 2);
             ctx.fill();
             ctx.globalAlpha = 1;
+        }
+
+        ctx.restore();
+    }
+
+    /**
+     * Instrument range-ring framing the core: a thin bearing dial with cardinal
+     * ticks and a slow amber sweep marker — makes the core read as a live
+     * defense instrument rather than a bare shape. Pure visual.
+     */
+    static drawReactorRing(ctx, centerX, centerY, radius, gameOver, breachProgress = 0) {
+        const isBreach = breachProgress > 0;
+        const primary = isBreach ? '#E84E6A' : rgba(PALETTE.primary, 0.7);
+        const accent = isBreach ? '#FF6080' : rgba(PALETTE.secondary, 0.9);
+        // INVARIANT: ringR is EXACTLY TARGET_RADIUS — the core's collision boundary.
+        // checkLaserTargetCollision() triggers a loss when a laser's centre is within
+        // TARGET_RADIUS of centre, so this crisp ring is the honest hit edge and every
+        // other core element (hexagon, ticks, sweep, reticle) stays inside it. Do not
+        // scale ringR past `radius` or the target will look larger than it plays.
+        const ringR = radius;
+
+        ctx.save();
+
+        // Hull boundary ring — the honest hit edge, at exactly TARGET_RADIUS
+        ctx.strokeStyle = primary;
+        ctx.lineWidth = 1.5;
+        ctx.shadowColor = isBreach ? '#E84E6A' : rgba(PALETTE.primary, 0.5);
+        ctx.shadowBlur = isBreach ? 8 * Math.min(1, breachProgress * 3) : 4;
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, ringR, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        // Bearing ticks (12), longer + amber at the cardinals
+        for (let i = 0; i < 12; i++) {
+            const a = (i * Math.PI * 2) / 12;
+            const cardinal = i % 3 === 0;
+            const tickLen = cardinal ? 6 : 3;
+            ctx.strokeStyle = cardinal ? accent : primary;
+            ctx.lineWidth = cardinal ? 1.4 : 1;
+            ctx.beginPath();
+            ctx.moveTo(centerX + Math.cos(a) * (ringR - tickLen), centerY + Math.sin(a) * (ringR - tickLen));
+            ctx.lineTo(centerX + Math.cos(a) * ringR, centerY + Math.sin(a) * ringR);
+            ctx.stroke();
+        }
+
+        // Slow amber sweep marker — an active instrument, not a static ring
+        if (!isBreach) {
+            const sweep = (Date.now() / 2600) % (Math.PI * 2);
+            ctx.strokeStyle = rgba(PALETTE.secondary, 0.8);
+            ctx.lineWidth = 1.6;
+            ctx.shadowColor = rgba(PALETTE.secondary, 0.6);
+            ctx.shadowBlur = 6;
+            ctx.beginPath();
+            ctx.moveTo(centerX + Math.cos(sweep) * (ringR - 8), centerY + Math.sin(sweep) * (ringR - 8));
+            ctx.lineTo(centerX + Math.cos(sweep) * ringR, centerY + Math.sin(sweep) * ringR);
+            ctx.stroke();
+            ctx.shadowBlur = 0;
         }
 
         ctx.restore();
@@ -248,12 +440,13 @@ export class TargetRenderer {
         const cx = centerX + offsetX;
         const cy = centerY + offsetY;
 
-        // Dark base - deep color (#1B1B2F)
-        ctx.fillStyle = gameOver ? '#2a1020' : '#1B1B2F';
-        // Ghost outline (#D4D4E8), flare when game over (#E84E6A)
-        ctx.strokeStyle = gameOver ? '#E84E6A' : '#D4D4E8';
+        // Black interior
+        ctx.fillStyle = gameOver ? '#1a0608' : '#050403';
+        // Amber outline with bloom (breach / game-over flares red)
+        ctx.strokeStyle = gameOver ? '#E84E6A' : rgba(PALETTE.primary, 0.95);
         ctx.lineWidth = 3;
-        ctx.shadowBlur = 0;
+        ctx.shadowColor = rgba(PALETTE.primary, 0.5);
+        ctx.shadowBlur = gameOver ? 0 : 8;
 
         // During breach, chip outline glows hot
         if (breachProgress > 0) {
@@ -275,16 +468,16 @@ export class TargetRenderer {
         ctx.fill();
         ctx.stroke();
 
-        // Inner chip core - flare color (#E84E6A) with contained glow
+        // Amber glowing core ball
         const pulseIntensity = 0.7 + 0.3 * Math.sin(Date.now() / 300);
         const coreRadius = chipSize * 0.4;
 
         // During breach, the core flares massively bright
         const breachFlare = breachProgress > 0 ? Math.min(1, breachProgress * 4) : 0;
 
-        ctx.shadowColor = '#E84E6A';
-        ctx.shadowBlur = coreRadius * (0.5 + breachFlare * 4);
-        ctx.fillStyle = gameOver ? '#E84E6A' : (breachFlare > 0.5 ? '#FF6080' : '#c43a54');
+        ctx.shadowColor = breachProgress > 0 ? '#E84E6A' : rgba(PALETTE.secondary, 1);
+        ctx.shadowBlur = coreRadius * (0.9 + breachFlare * 4);
+        ctx.fillStyle = gameOver ? '#E84E6A' : (breachFlare > 0.5 ? '#FF6080' : rgba(PALETTE.secondary, 1));
         ctx.globalAlpha = Math.min(1, pulseIntensity + breachFlare * 0.6);
         ctx.beginPath();
         ctx.arc(cx, cy, coreRadius * (1 + breachFlare * 0.4), 0, Math.PI * 2);
@@ -295,7 +488,7 @@ export class TargetRenderer {
 
     static drawCircuitPattern(ctx, centerX, centerY, chipSize, gameOver, breachProgress = 0) {
         ctx.shadowBlur = 0;
-        ctx.strokeStyle = gameOver ? '#E87ADC' : '#D4D4E8';
+        ctx.strokeStyle = gameOver ? '#E84E6A' : rgba(PALETTE.primary, 0.7);
         ctx.lineWidth = 2;
         ctx.lineCap = 'round';
 
@@ -331,7 +524,7 @@ export class TargetRenderer {
 
     static drawChipPins(ctx, centerX, centerY, chipSize, gameOver, breachProgress = 0) {
         ctx.shadowBlur = 0;
-        ctx.fillStyle = gameOver ? '#E87ADC' : '#E84E6A';
+        ctx.fillStyle = gameOver ? '#E84E6A' : rgba(PALETTE.primary, 0.85);
 
         if (breachProgress > 0.2) {
             ctx.globalAlpha = Math.sin(breachProgress * 60) > 0 ? 1 : 0.1;
@@ -353,11 +546,8 @@ export class TargetRenderer {
     }
 
     static drawCentralIndicator(ctx, centerX, centerY, chipSize, gameOver, breachProgress = 0) {
-        ctx.shadowBlur = 4;
-        ctx.shadowColor = '#ffffff';
-        ctx.fillStyle = '#ffffff';
-
         if (breachProgress > 0) {
+            // Breach: hot pulsing core dot (unchanged behaviour).
             const intensity = Math.min(1, breachProgress * 5);
             ctx.shadowBlur = 20 + intensity * 30;
             ctx.shadowColor = breachProgress > 0.3 ? '#FF3366' : '#FFFFFF';
@@ -366,15 +556,10 @@ export class TargetRenderer {
             ctx.beginPath();
             ctx.arc(centerX, centerY, 3 + intensity * 5, 0, Math.PI * 2);
             ctx.fill();
-        } else {
-            const centralPulse = 0.5 + 0.5 * Math.sin(Date.now() / 150);
-            ctx.globalAlpha = centralPulse;
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, 3, 0, Math.PI * 2);
-            ctx.fill();
+            ctx.shadowBlur = 0;
+            ctx.globalAlpha = 1;
         }
-
-        ctx.shadowBlur = 0;
-        ctx.globalAlpha = 1;
+        // Normal core needs no central mark — the amber glowing ball drawn by
+        // drawChipBody is the centre.
     }
 }

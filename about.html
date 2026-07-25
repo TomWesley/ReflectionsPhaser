@@ -24,7 +24,7 @@
     <meta name="description" content="A Geometric Game To Reflect On">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/iconoir-icons/iconoir@main/css/iconoir.css">
     <link rel="stylesheet" href="/styles/game.css">
     <style>
@@ -53,10 +53,10 @@
         }
 
         .hero-title {
-            font-family: 'Space Grotesk', sans-serif;
+            font-family: 'Orbitron', 'Rajdhani', sans-serif;
             font-size: 2.4rem;
             font-weight: 700;
-            background: linear-gradient(135deg, #4E78E8, #E87ADC);
+            background: linear-gradient(135deg, #FFB020, #E84E6A);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -66,7 +66,7 @@
         }
 
         .hero-tagline {
-            font-family: 'JetBrains Mono', monospace;
+            font-family: 'Share Tech Mono', monospace;
             font-size: 0.75rem;
             letter-spacing: 3px;
             color: var(--text-secondary);
@@ -83,11 +83,11 @@
             padding: 28px;
             margin-bottom: 16px;
             backdrop-filter: blur(10px);
-            box-shadow: 0 6px 24px rgba(78, 120, 232, 0.12);
+            box-shadow: 0 6px 24px rgba(255, 176, 32, 0.12);
         }
 
         .section h2 {
-            font-family: 'Space Grotesk', sans-serif;
+            font-family: 'Rajdhani', sans-serif;
             font-size: 1.3rem;
             font-weight: 700;
             color: var(--arc);
@@ -113,7 +113,7 @@
 
         .section p:last-child { margin-bottom: 0; }
 
-        .hl { color: #E87ADC; font-weight: 600; }
+        .hl { color: #FFB020; font-weight: 600; }
 
         .section ul {
             list-style: none;
@@ -154,17 +154,17 @@
             display: flex;
             gap: 14px;
             padding: 14px 0;
-            border-bottom: 1px solid rgba(78, 120, 232, 0.08);
+            border-bottom: 1px solid rgba(255, 176, 32, 0.08);
         }
 
         .step:last-child { border-bottom: none; }
 
         .step-num {
-            font-family: 'JetBrains Mono', monospace;
+            font-family: 'Share Tech Mono', monospace;
             font-size: 0.8rem;
             font-weight: 700;
             color: var(--arc);
-            background: rgba(78, 120, 232, 0.12);
+            background: rgba(255, 176, 32, 0.12);
             width: 28px;
             height: 28px;
             border-radius: 8px;
@@ -196,13 +196,13 @@
 
         .mode {
             background: rgba(0, 0, 0, 0.3);
-            border: 1px solid rgba(78, 120, 232, 0.15);
+            border: 1px solid rgba(255, 176, 32, 0.15);
             border-radius: 10px;
             padding: 18px;
         }
 
         .mode h3 {
-            font-family: 'Space Grotesk', sans-serif;
+            font-family: 'Rajdhani', sans-serif;
             font-size: 0.85rem;
             font-weight: 700;
             text-transform: uppercase;
@@ -234,14 +234,14 @@
         .stat-box {
             flex: 1;
             background: rgba(0, 0, 0, 0.3);
-            border: 1px solid rgba(78, 120, 232, 0.12);
+            border: 1px solid rgba(255, 176, 32, 0.12);
             border-radius: 8px;
             padding: 12px;
             text-align: center;
         }
 
         .stat-box .val {
-            font-family: 'JetBrains Mono', monospace;
+            font-family: 'Share Tech Mono', monospace;
             font-size: 1.4rem;
             font-weight: 700;
             color: var(--arc);
@@ -260,8 +260,8 @@
         .cta {
             text-align: center;
             padding: 32px 28px;
-            border: 1px solid rgba(232, 122, 220, 0.3);
-            background: linear-gradient(135deg, rgba(78, 120, 232, 0.06), rgba(232, 122, 220, 0.06));
+            border: 1px solid rgba(255, 176, 32, 0.3);
+            background: linear-gradient(135deg, rgba(255, 176, 32, 0.06), rgba(255, 176, 32, 0.06));
         }
 
         .cta h2 { justify-content: center; }
@@ -273,7 +273,7 @@
             color: white;
             text-decoration: none;
             border-radius: 10px;
-            font-family: 'Space Grotesk', sans-serif;
+            font-family: 'Rajdhani', sans-serif;
             font-size: 0.95rem;
             font-weight: 700;
             text-transform: uppercase;
@@ -289,7 +289,7 @@
         /* Privacy - compact */
         .privacy-section {
             background: rgba(0, 0, 0, 0.2);
-            border: 1px solid rgba(78, 120, 232, 0.08);
+            border: 1px solid rgba(255, 176, 32, 0.08);
             border-radius: 10px;
             padding: 20px 24px;
             margin-bottom: 16px;
@@ -328,14 +328,18 @@
 <body class="about-page">
     <nav class="navbar">
         <div class="navbar-left">
-            <a href="/" class="nav-icon-btn" title="Back to Game">
-                <i class="iconoir-arrow-left"></i>
-            </a>
+            <a href="/" class="navbar-brand">REFLECTIONS</a>
         </div>
         <div class="navbar-center"></div>
         <div class="navbar-right">
-            <a href="/" class="nav-icon-btn" title="Play Game">
-                <i class="iconoir-play"></i>
+            <a href="/" class="nav-link" title="Play Game">
+                <i class="iconoir-play"></i><span class="nav-link-label">Play</span>
+            </a>
+            <a href="/leaderboard" class="nav-link" title="Leaderboard">
+                <i class="iconoir-trophy"></i><span class="nav-link-label">Leaderboard</span>
+            </a>
+            <a href="/about" class="nav-link active" title="About" aria-current="page">
+                <i class="iconoir-book"></i><span class="nav-link-label">About</span>
             </a>
         </div>
     </nav>
@@ -382,7 +386,7 @@
                 <div class="step">
                     <div class="step-num">3</div>
                     <div class="step-content">
-                        <span class="step-label">Launch.</span>
+                        <span class="step-label">Start.</span>
                         Lasers fire. Your mirrors deflect them. The core survives -- or it doesn't.
                     </div>
                 </div>
@@ -400,7 +404,7 @@
         <div class="section">
             <h2><i class="iconoir-scale-frame-enlarge"></i> Fair by Design</h2>
             <p>
-                Every configuration is randomly generated, but the total <span class="hl">reflective surface area is always exactly 84 units</span>.
+                Every configuration is randomly generated, but the total <span class="hl">reflective surface area is always approximately 84 units</span>.
                 You might get many small mirrors or a few large ones -- the total is always the same.
                 Your score reflects placement skill, not luck.
             </p>
@@ -426,7 +430,7 @@
             <div class="modes">
                 <div class="mode main">
                     <h3><i class="iconoir-refresh-double"></i> Main Game</h3>
-                    <p>Random configurations with exactly 84 surface area. Unlimited retries. Practice, experiment, climb the leaderboard.</p>
+                    <p>Random configurations with approximately 84 surface area. Unlimited retries. Practice, experiment, climb the leaderboard.</p>
                 </div>
                 <div class="mode daily">
                     <h3><i class="iconoir-calendar"></i> Daily Challenge</h3>

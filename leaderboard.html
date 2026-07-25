@@ -26,7 +26,7 @@
     <meta name="description" content="A Geometric Game To Reflect On">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/iconoir-icons/iconoir@main/css/iconoir.css">
     <link rel="stylesheet" href="/styles/game.css">
     <style>
@@ -64,7 +64,7 @@
         }
 
         .game-brand {
-            font-family: 'Space Grotesk', sans-serif;
+            font-family: 'Rajdhani', sans-serif;
             font-size: 0.65rem;
             font-weight: 700;
             letter-spacing: 6px;
@@ -93,47 +93,49 @@
         }
 
         .title-glow-line.left {
-            background: linear-gradient(to right, transparent 0%, #4E78E8 50%, #8338EC 100%);
-            box-shadow: 0 0 12px rgba(78, 120, 232, 0.6), 0 0 4px rgba(131, 56, 236, 0.4);
+            background: linear-gradient(to right, transparent 0%, #FFB020 50%, #E84E6A 100%);
+            box-shadow: 0 0 12px rgba(255, 176, 32, 0.6), 0 0 4px rgba(232, 78, 106, 0.4);
             animation: pulseLineLeft 3s ease-in-out infinite;
         }
 
         .title-glow-line.right {
-            background: linear-gradient(to left, transparent 0%, #E87ADC 50%, #FF8FA3 100%);
-            box-shadow: 0 0 12px rgba(232, 122, 220, 0.6), 0 0 4px rgba(255, 143, 163, 0.4);
+            background: linear-gradient(to left, transparent 0%, #FFB020 50%, #FFD07A 100%);
+            box-shadow: 0 0 12px rgba(255, 176, 32, 0.6), 0 0 4px rgba(255, 199, 96, 0.4);
             animation: pulseLineRight 3s ease-in-out infinite;
         }
 
         @keyframes pulseLineLeft {
             0%, 100% {
                 opacity: 0.6;
-                box-shadow: 0 0 8px rgba(78, 120, 232, 0.4), 0 0 2px rgba(131, 56, 236, 0.3);
+                box-shadow: 0 0 8px rgba(255, 176, 32, 0.4), 0 0 2px rgba(232, 78, 106, 0.3);
             }
             50% {
                 opacity: 1;
-                box-shadow: 0 0 20px rgba(78, 120, 232, 0.8), 0 0 6px rgba(131, 56, 236, 0.5);
+                box-shadow: 0 0 20px rgba(255, 176, 32, 0.8), 0 0 6px rgba(232, 78, 106, 0.5);
             }
         }
 
         @keyframes pulseLineRight {
             0%, 100% {
                 opacity: 0.6;
-                box-shadow: 0 0 8px rgba(232, 122, 220, 0.4), 0 0 2px rgba(255, 143, 163, 0.3);
+                box-shadow: 0 0 8px rgba(255, 176, 32, 0.4), 0 0 2px rgba(255, 199, 96, 0.3);
             }
             50% {
                 opacity: 1;
-                box-shadow: 0 0 20px rgba(232, 122, 220, 0.8), 0 0 6px rgba(255, 143, 163, 0.5);
+                box-shadow: 0 0 20px rgba(255, 176, 32, 0.8), 0 0 6px rgba(255, 199, 96, 0.5);
             }
         }
 
         .page-title {
-            font-family: 'Space Grotesk', sans-serif;
+            font-family: 'Orbitron', 'Rajdhani', sans-serif;
             font-size: 2.2rem;
             font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
             text-align: center;
             margin: 0;
             padding: 0;
-            background: linear-gradient(135deg, #4E78E8, #E87ADC);
+            background: linear-gradient(135deg, #FFB020, #E84E6A);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -143,46 +145,52 @@
             flex-shrink: 0;
         }
 
-        /* Mode Tabs (in navbar) */
+        /* Mode Tabs (in navbar) - segmented toggle with a filled active segment */
         .mode-tabs {
-            display: flex;
-            border: 1px solid rgba(78, 120, 232, 0.3);
-            border-radius: 5px;
-            overflow: hidden;
+            display: inline-flex;
+            gap: 4px;
+            padding: 4px;
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px solid rgba(255, 176, 32, 0.2);
+            border-radius: 8px;
         }
 
         .mode-tab {
-            padding: 4px 10px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 16px;
             background: transparent;
             border: none;
-            border-right: 1px solid rgba(78, 120, 232, 0.2);
+            border-radius: 6px;
             color: var(--text-secondary);
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 0.65rem;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 0.8rem;
             font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            line-height: 1;
             cursor: pointer;
             transition: all 0.2s ease;
-            letter-spacing: 0.3px;
-            line-height: 1.2;
         }
 
-        .mode-tab:last-child {
-            border-right: none;
+        .mode-tab i {
+            font-size: 15px;
         }
 
         .mode-tab:hover {
-            background: rgba(78, 120, 232, 0.1);
+            background: rgba(255, 176, 32, 0.08);
             color: var(--text-primary);
         }
 
         .mode-tab.active {
-            background: rgba(78, 120, 232, 0.25);
-            color: var(--text-primary);
+            background: var(--arc);
+            color: #16130C;
         }
 
         .mode-tab.daily.active {
-            background: rgba(50, 255, 180, 0.15);
-            color: #7FFFD4;
+            background: #34C759;
+            color: #ffffff;
         }
 
 
@@ -194,7 +202,7 @@
             border-radius: 15px;
             overflow: hidden;
             backdrop-filter: blur(10px);
-            box-shadow: 0 8px 32px rgba(78, 120, 232, 0.2);
+            box-shadow: 0 8px 32px rgba(255, 176, 32, 0.2);
             animation: fadeIn 0.5s ease-out;
             min-height: 200px;
         }
@@ -210,8 +218,8 @@
             grid-template-columns: 60px 1fr 80px 100px;
             padding: 15px 20px;
             background: rgba(0, 0, 0, 0.4);
-            border-bottom: 1px solid rgba(78, 120, 232, 0.3);
-            font-family: 'JetBrains Mono', monospace;
+            border-bottom: 1px solid rgba(255, 176, 32, 0.3);
+            font-family: 'Share Tech Mono', monospace;
             font-size: 0.75rem;
             font-weight: 600;
             color: var(--text-secondary);
@@ -229,13 +237,13 @@
             display: grid;
             grid-template-columns: 60px 1fr 80px 100px;
             padding: 16px 20px;
-            border-bottom: 1px solid rgba(78, 120, 232, 0.1);
+            border-bottom: 1px solid rgba(255, 176, 32, 0.1);
             align-items: center;
             transition: all 0.2s ease;
         }
 
         .mirror-count {
-            font-family: 'JetBrains Mono', monospace;
+            font-family: 'Share Tech Mono', monospace;
             font-size: 0.9rem;
             color: var(--text-secondary);
             text-align: center;
@@ -246,16 +254,16 @@
         }
 
         .leaderboard-row.has-replay:hover {
-            background: rgba(78, 120, 232, 0.15);
+            background: rgba(255, 176, 32, 0.15);
         }
 
         .leaderboard-row:hover {
-            background: rgba(78, 120, 232, 0.08);
+            background: rgba(255, 176, 32, 0.08);
         }
 
         /* Rank Styles */
         .rank {
-            font-family: 'JetBrains Mono', monospace;
+            font-family: 'Share Tech Mono', monospace;
             font-size: 1.1rem;
             font-weight: 700;
             color: var(--text-secondary);
@@ -297,7 +305,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-family: 'Space Grotesk', sans-serif;
+            font-family: 'Rajdhani', sans-serif;
             font-weight: 700;
             font-size: 0.9rem;
             color: white;
@@ -305,7 +313,7 @@
         }
 
         .player-name {
-            font-family: 'Space Grotesk', sans-serif;
+            font-family: 'Rajdhani', sans-serif;
             font-size: 1rem;
             font-weight: 600;
             color: var(--text-primary);
@@ -317,12 +325,12 @@
 
         /* Score */
         .score {
-            font-family: 'JetBrains Mono', monospace;
+            font-family: 'Share Tech Mono', monospace;
             font-size: 1.1rem;
             font-weight: 700;
             color: var(--arc);
             text-align: right;
-            text-shadow: 0 0 10px rgba(78, 120, 232, 0.4);
+            text-shadow: 0 0 10px rgba(255, 176, 32, 0.4);
         }
 
         .rank-1 .score {
@@ -332,7 +340,7 @@
 
         /* Your Score Highlight */
         .leaderboard-row.you {
-            background: rgba(232, 122, 220, 0.15);
+            background: rgba(255, 176, 32, 0.15);
             border-left: 3px solid var(--pink);
         }
 
@@ -347,7 +355,7 @@
             text-align: center;
             padding: 40px 20px;
             color: var(--text-secondary);
-            font-family: 'Space Grotesk', sans-serif;
+            font-family: 'Rajdhani', sans-serif;
         }
 
         .loading-state i {
@@ -368,8 +376,8 @@
             height: 30px;
             margin: 0 auto 14px;
             border-radius: 50%;
-            border: 3px solid rgba(78, 120, 232, 0.18);
-            border-top-color: #4E78E8;
+            border: 3px solid rgba(255, 176, 32, 0.18);
+            border-top-color: #FFB020;
             animation: spin 0.8s linear infinite;
             box-sizing: border-box;
         }
@@ -400,7 +408,7 @@
             justify-content: space-between;
             align-items: baseline;
             padding: 8px 0;
-            border-bottom: 1px solid rgba(78, 120, 232, 0.1);
+            border-bottom: 1px solid rgba(255, 176, 32, 0.1);
         }
 
         .stat-row:last-child {
@@ -408,7 +416,7 @@
         }
 
         .stat-label {
-            font-family: 'JetBrains Mono', monospace;
+            font-family: 'Share Tech Mono', monospace;
             font-size: 0.55rem;
             font-weight: 600;
             color: var(--text-secondary);
@@ -417,11 +425,11 @@
         }
 
         .stat-value {
-            font-family: 'JetBrains Mono', monospace;
+            font-family: 'Share Tech Mono', monospace;
             font-size: 0.85rem;
             font-weight: 700;
             color: var(--arc);
-            text-shadow: 0 0 8px rgba(78, 120, 232, 0.3);
+            text-shadow: 0 0 8px rgba(255, 176, 32, 0.3);
         }
 
 
@@ -457,11 +465,11 @@
             justify-content: space-between;
             align-items: center;
             padding: 14px 18px;
-            border-bottom: 1px solid rgba(78, 120, 232, 0.2);
+            border-bottom: 1px solid rgba(255, 176, 32, 0.2);
         }
 
         .auth-panel-title {
-            font-family: 'Space Grotesk', sans-serif;
+            font-family: 'Rajdhani', sans-serif;
             font-weight: 700;
             font-size: 1.1rem;
             color: var(--text-primary);
@@ -492,7 +500,7 @@
             margin-bottom: 16px;
             border-radius: 8px;
             overflow: hidden;
-            border: 1px solid rgba(78, 120, 232, 0.3);
+            border: 1px solid rgba(255, 176, 32, 0.3);
         }
 
         .auth-tab {
@@ -501,7 +509,7 @@
             background: transparent;
             border: none;
             color: var(--text-secondary);
-            font-family: 'Space Grotesk', sans-serif;
+            font-family: 'Rajdhani', sans-serif;
             font-size: 0.8rem;
             font-weight: 600;
             cursor: pointer;
@@ -509,7 +517,7 @@
         }
 
         .auth-tab.active {
-            background: rgba(78, 120, 232, 0.2);
+            background: rgba(255, 176, 32, 0.2);
             color: var(--text-primary);
         }
 
@@ -521,10 +529,10 @@
 
         .auth-input {
             background: rgba(0, 0, 0, 0.4);
-            border: 1px solid rgba(78, 120, 232, 0.3);
+            border: 1px solid rgba(255, 176, 32, 0.3);
             border-radius: 8px;
             color: var(--text-primary);
-            font-family: 'Space Grotesk', sans-serif;
+            font-family: 'Rajdhani', sans-serif;
             font-size: 0.85rem;
             padding: 10px 14px;
             outline: none;
@@ -532,7 +540,7 @@
 
         .auth-input:focus {
             border-color: var(--arc);
-            box-shadow: 0 0 8px rgba(78, 120, 232, 0.3);
+            box-shadow: 0 0 8px rgba(255, 176, 32, 0.3);
         }
 
         .auth-input::placeholder {
@@ -545,7 +553,7 @@
             border: none;
             border-radius: 8px;
             color: white;
-            font-family: 'Space Grotesk', sans-serif;
+            font-family: 'Rajdhani', sans-serif;
             font-size: 0.85rem;
             font-weight: 600;
             padding: 10px;
@@ -554,14 +562,14 @@
         }
 
         .auth-btn-primary:hover {
-            box-shadow: 0 4px 12px rgba(78, 120, 232, 0.4);
+            box-shadow: 0 4px 12px rgba(255, 176, 32, 0.4);
         }
 
         .auth-btn-link {
             background: none;
             border: none;
             color: var(--text-secondary);
-            font-family: 'Space Grotesk', sans-serif;
+            font-family: 'Rajdhani', sans-serif;
             font-size: 0.7rem;
             cursor: pointer;
             padding: 0;
@@ -589,7 +597,7 @@
             content: '';
             flex: 1;
             height: 1px;
-            background: rgba(78, 120, 232, 0.2);
+            background: rgba(255, 176, 32, 0.2);
         }
 
         .auth-btn-google {
@@ -602,7 +610,7 @@
             border: 1px solid rgba(255, 255, 255, 0.15);
             border-radius: 8px;
             color: var(--text-primary);
-            font-family: 'Space Grotesk', sans-serif;
+            font-family: 'Rajdhani', sans-serif;
             font-size: 0.85rem;
             padding: 10px;
             cursor: pointer;
@@ -613,7 +621,7 @@
         }
 
         .auth-error {
-            font-family: 'Space Grotesk', sans-serif;
+            font-family: 'Rajdhani', sans-serif;
             font-size: 0.75rem;
             color: #E84E6A;
             text-align: center;
@@ -751,8 +759,8 @@
                 column-gap: 6px;
                 row-gap: 2px;
                 padding: 8px 10px;
-                border: 1px solid rgba(78, 120, 232, 0.18);
-                border-bottom: 1px solid rgba(78, 120, 232, 0.18);
+                border: 1px solid rgba(255, 176, 32, 0.18);
+                border-bottom: 1px solid rgba(255, 176, 32, 0.18);
                 border-radius: 8px;
                 background: rgba(13, 13, 26, 0.5);
                 align-items: center;
@@ -839,9 +847,7 @@
     <!-- Navigation Bar -->
     <nav class="navbar">
         <div class="navbar-left">
-            <a href="/" class="nav-icon-btn" title="Back to Game">
-                <i class="iconoir-arrow-left"></i>
-            </a>
+            <a href="/" class="navbar-brand">REFLECTIONS</a>
             <span id="navbarUser" class="navbar-user" onclick="openAuthModal()" title="Account"></span>
         </div>
 
@@ -857,11 +863,14 @@
         </div>
 
         <div class="navbar-right">
-            <a href="/" class="nav-icon-btn" title="Play Game">
-                <i class="iconoir-play"></i>
+            <a href="/" class="nav-link" title="Play Game">
+                <i class="iconoir-play"></i><span class="nav-link-label">Play</span>
             </a>
-            <a href="/about" class="nav-icon-btn" title="About">
-                <i class="iconoir-book"></i>
+            <a href="/leaderboard" class="nav-link active" title="Leaderboard" aria-current="page">
+                <i class="iconoir-trophy"></i><span class="nav-link-label">Leaderboard</span>
+            </a>
+            <a href="/about" class="nav-link" title="About">
+                <i class="iconoir-book"></i><span class="nav-link-label">About</span>
             </a>
         </div>
     </nav>
@@ -922,11 +931,11 @@
             </div>
             <div style="padding: 0;">
                 <video id="replayVideo" playsinline controls style="width: 100%; display: block; border-radius: 0 0 15px 15px; background: #000;"></video>
-                <div id="replayLoading" style="text-align: center; padding: 40px 20px; color: var(--text-secondary); font-family: 'Space Grotesk', sans-serif;">
+                <div id="replayLoading" style="text-align: center; padding: 40px 20px; color: var(--text-secondary); font-family: 'Rajdhani', sans-serif;">
                     <div class="lb-spinner"></div>
                     Loading replay...
                 </div>
-                <div id="replayError" style="text-align: center; padding: 30px 20px; color: var(--text-secondary); font-family: 'Space Grotesk', sans-serif; display: none;">
+                <div id="replayError" style="text-align: center; padding: 30px 20px; color: var(--text-secondary); font-family: 'Rajdhani', sans-serif; display: none;">
                     <i class="iconoir-video-camera-off" style="font-size: 1.5rem; display: block; margin-bottom: 8px; opacity: 0.5;"></i>
                     No replay available for this score
                 </div>

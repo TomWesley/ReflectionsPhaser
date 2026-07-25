@@ -4,10 +4,10 @@
 /* CSS Variables - Neon Crypt Palette */
 :root {
     /* Core Palette */
-    --void: #0A0A12;
-    --deep: #1B1B2F;
-    --arc: #4E78E8;
-    --pink: #E87ADC;
+    --void: #0A0906;
+    --deep: #16130C;
+    --arc: #FFB020;
+    --pink: #FFB020;  /* secondary accent — now amber (was sunset pink) */
     --flare: #E84E6A;
     --ghost: #D4D4E8;
 
@@ -21,8 +21,8 @@
     --text-secondary: rgba(212, 212, 232, 0.6);
 
     /* UI Elements */
-    --card-bg: rgba(27, 27, 47, 0.9);
-    --border-glow: rgba(78, 120, 232, 0.6);
+    --card-bg: rgba(22, 19, 13, 0.92);
+    --border-glow: rgba(255, 176, 32, 0.6);
     --danger-red: var(--flare);
     --success-color: var(--arc);
 }
@@ -44,7 +44,7 @@ body {
     padding: 0;
     background: var(--void);
     background-attachment: fixed;
-    font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-family: 'Rajdhani', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     color: var(--text-primary);
     display: flex;
     flex-direction: column;
@@ -62,8 +62,8 @@ body {
 .navbar {
     width: 100%;
     height: 60px;
-    background: var(--card-bg);
-    border-bottom: 1px solid var(--border-glow);
+    background: linear-gradient(180deg, rgba(18, 16, 11, 0.94), rgba(9, 8, 5, 0.96));
+    border-bottom: 1px solid rgba(255, 176, 32, 0.5);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -72,7 +72,7 @@ body {
     top: 0;
     z-index: 100;
     backdrop-filter: blur(10px);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.6), 0 1px 14px rgba(255, 176, 32, 0.22);
 }
 
 .navbar-left,
@@ -88,15 +88,15 @@ body {
 }
 
 .navbar-user {
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 0.75rem;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.95rem;
     font-weight: 600;
     color: var(--text-secondary);
     letter-spacing: 0.5px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 120px;
+    max-width: 160px;
     transition: color 0.2s ease;
 }
 
@@ -125,26 +125,28 @@ body {
     padding: 8px 16px;
     min-width: 100px;
     border: none;
-    border-radius: 8px;
-    font-family: 'Space Grotesk', sans-serif;
+    border-radius: 4px;
+    font-family: 'Rajdhani', sans-serif;
     font-size: 0.85rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 1px;
     white-space: nowrap;
 }
 
+/* Start = the primary "engage" action -> red in the amber/red/black/gray scheme. */
 .navbar-btn-primary {
-    background: linear-gradient(135deg, var(--flare), #c43a54);
+    background: linear-gradient(135deg, #E84E6A, #c43a54);
     color: #ffffff;
-    box-shadow: 0 3px 12px rgba(232, 78, 106, 0.4);
+    border: 1px solid #E84E6A;
+    box-shadow: 0 0 14px rgba(232, 78, 106, 0.45);
 }
 
 .navbar-btn-primary:hover {
     transform: translateY(-2px);
-    box-shadow: 0 5px 18px rgba(232, 78, 106, 0.6);
+    box-shadow: 0 0 22px rgba(232, 78, 106, 0.7);
 }
 
 .navbar-btn-primary:disabled {
@@ -154,13 +156,15 @@ body {
 }
 
 .navbar-btn-secondary {
-    background: rgba(78, 120, 232, 0.3);
+    background: rgba(150, 156, 172, 0.14);
     color: var(--text-primary);
-    border: 1px solid rgba(78, 120, 232, 0.5);
+    border: 1px solid rgba(150, 156, 172, 0.4);
 }
 
 .navbar-btn-secondary:hover {
-    background: rgba(78, 120, 232, 0.5);
+    background: rgba(150, 156, 172, 0.2);
+    border-color: rgba(150, 156, 172, 0.6);
+    box-shadow: 0 0 14px rgba(150, 156, 172, 0.25);
     transform: translateY(-2px);
 }
 
@@ -173,29 +177,31 @@ body {
     padding: 8px 16px;
     min-width: 100px;
     border: none;
-    border-radius: 8px;
-    font-family: 'Space Grotesk', sans-serif;
+    border-radius: 4px;
+    font-family: 'Rajdhani', sans-serif;
     font-size: 0.85rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 1px;
     white-space: nowrap;
-    background: rgba(50, 255, 180, 0.15);
-    color: #7FFFD4;
-    border: 1px solid rgba(50, 255, 180, 0.3);
+    /* Same treatment as the share button: solid green + white lettering. */
+    background: #34C759;
+    color: #ffffff;
+    border: 1px solid #34C759;
 }
 
 .navbar-btn-daily:hover {
-    background: rgba(50, 255, 180, 0.3);
+    background: #2FB350;
+    box-shadow: 0 0 14px rgba(52, 199, 89, 0.35);
     transform: translateY(-2px);
 }
 
 .navbar-btn-daily.daily-active {
-    background: rgba(50, 255, 180, 0.35);
-    border-color: rgba(50, 255, 180, 0.6);
-    box-shadow: 0 0 12px rgba(50, 255, 180, 0.3);
+    background: #34C759;
+    border-color: #5AC778;
+    box-shadow: 0 0 12px rgba(52, 199, 89, 0.45);
 }
 
 .navbar-btn-daily i {
@@ -211,34 +217,64 @@ body {
     padding: 8px 16px;
     min-width: 100px;
     border: none;
-    border-radius: 8px;
-    font-family: 'Space Grotesk', sans-serif;
+    border-radius: 4px;
+    font-family: 'Rajdhani', sans-serif;
     font-size: 0.85rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 1px;
     white-space: nowrap;
-    background: rgba(78, 120, 232, 0.15);
-    color: var(--text-secondary);
-    border: 1px solid rgba(78, 120, 232, 0.25);
+    /* Same treatment as the replay button: solid amber + white lettering.
+       Duller amber when snapping is off, full bright amber when on. */
+    background: #B5842A;
+    color: #ffffff;
+    border: 1px solid #B5842A;
 }
 
 .navbar-btn-snap:hover {
-    background: rgba(78, 120, 232, 0.3);
+    background: #C89530;
+    border-color: #C89530;
+    box-shadow: 0 0 14px rgba(255, 176, 32, 0.3);
     transform: translateY(-2px);
 }
 
+/* Engine-drawn canvas icons sit where an <i> glyph would (crisp at 2x buffer). */
+.btn-eng-icon {
+    width: 18px;
+    height: 18px;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+/* Icon-only nav buttons: larger + a subtle glow so they read clearly. */
+.nav-icon-btn .btn-eng-icon {
+    width: 28px;
+    height: 28px;
+    filter: drop-shadow(0 0 7px rgba(255, 176, 32, 0.8));
+}
+
 .navbar-btn-snap.snap-active {
-    background: rgba(232, 78, 106, 0.25);
-    color: #FF8FA3;
-    border-color: rgba(232, 78, 106, 0.5);
-    box-shadow: 0 0 12px rgba(232, 78, 106, 0.3);
+    background: #FFB020;
+    color: #ffffff;
+    border-color: #FFB020;
+    box-shadow: 0 0 12px rgba(255, 176, 32, 0.5);
 }
 
 .navbar-btn-snap i {
     font-size: 16px;
+}
+
+/* All four navbar action buttons share one fixed width so they're identically
+   sized regardless of label length (Daily / Snap / Start / Shuffle). */
+.navbar-btn-primary,
+.navbar-btn-secondary,
+.navbar-btn-daily,
+.navbar-btn-snap {
+    width: 122px;
+    min-width: 122px;
+    box-sizing: border-box;
 }
 
 .navbar-btn-primary i,
@@ -254,9 +290,9 @@ body {
 .nav-icon-btn {
     width: 42px;
     height: 42px;
-    border-radius: 10px;
+    border-radius: 4px;
     background: rgba(0, 0, 0, 0.3);
-    border: 1px solid rgba(78, 120, 232, 0.2);
+    border: 1px solid rgba(255, 176, 32, 0.2);
     color: var(--text-secondary);
     cursor: pointer;
     display: flex;
@@ -268,15 +304,78 @@ body {
 }
 
 .nav-icon-btn:hover {
-    background: rgba(78, 120, 232, 0.15);
+    background: rgba(255, 176, 32, 0.15);
     border-color: var(--arc);
     color: var(--arc);
-    box-shadow: 0 0 15px rgba(78, 120, 232, 0.3);
+    box-shadow: 0 0 15px rgba(255, 176, 32, 0.3);
     transform: translateY(-2px);
 }
 
 .nav-icon-btn:active {
     transform: translateY(0);
+}
+
+/* ---- Site header: wordmark + labeled nav links (about / leaderboard pages) ---- */
+.navbar-brand {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 800;
+    font-size: 1.1rem;
+    letter-spacing: 2px;
+    color: var(--arc);
+    text-decoration: none;
+    text-shadow: 0 0 14px rgba(255, 176, 32, 0.4);
+    transition: all 0.2s ease;
+}
+
+.navbar-brand:hover {
+    color: #FFC860;
+    text-shadow: 0 0 20px rgba(255, 176, 32, 0.7);
+}
+
+.nav-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 14px;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 176, 32, 0.2);
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+}
+
+.nav-link i {
+    font-size: 17px;
+}
+
+.nav-link:hover {
+    background: rgba(255, 176, 32, 0.15);
+    border-color: var(--arc);
+    color: var(--arc);
+    box-shadow: 0 0 15px rgba(255, 176, 32, 0.3);
+    transform: translateY(-2px);
+}
+
+/* Current page: highlighted and non-interactive. */
+.nav-link.active {
+    background: rgba(255, 176, 32, 0.18);
+    border-color: var(--arc);
+    color: var(--arc);
+    cursor: default;
+    pointer-events: none;
+}
+
+@media (max-width: 600px) {
+    .nav-link-label { display: none; }
+    .nav-link { padding: 8px 11px; }
+    .navbar-brand { font-size: 0.95rem; letter-spacing: 1px; }
 }
 
 /* Mode Selector - REMOVED (keeping for cleanup) */
@@ -293,8 +392,8 @@ body::before {
         0deg,
         transparent,
         transparent 3px,
-        rgba(78, 120, 232, 0.06) 3px,
-        rgba(78, 120, 232, 0.06) 4px
+        rgba(255, 176, 32, 0.06) 3px,
+        rgba(255, 176, 32, 0.06) 4px
     );
     z-index: -1;
     pointer-events: none;
@@ -311,11 +410,11 @@ h1 {
 
 @keyframes neon-glow {
     0%, 100% {
-        filter: drop-shadow(0 0 20px rgba(78, 120, 232, 0.5))
+        filter: drop-shadow(0 0 20px rgba(255, 176, 32, 0.5))
                 drop-shadow(0 0 40px rgba(232, 122, 220, 0.3));
     }
     50% {
-        filter: drop-shadow(0 0 30px rgba(78, 120, 232, 0.7))
+        filter: drop-shadow(0 0 30px rgba(255, 176, 32, 0.7))
                 drop-shadow(0 0 60px rgba(232, 122, 220, 0.5));
     }
 }
@@ -330,12 +429,12 @@ h1 {
     padding: 25px;
     backdrop-filter: blur(10px);
     box-shadow:
-        0 8px 32px rgba(78, 120, 232, 0.2),
+        0 8px 32px rgba(255, 176, 32, 0.2),
         inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .instruction-header {
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Rajdhani', sans-serif;
     font-size: 1.5rem;
     font-weight: 700;
     text-align: center;
@@ -356,7 +455,7 @@ h1 {
     font-size: 1rem;
     font-weight: 400;
     padding: 10px 0;
-    border-bottom: 1px solid rgba(78, 120, 232, 0.2);
+    border-bottom: 1px solid rgba(255, 176, 32, 0.2);
     transition: all 0.3s ease;
 }
 
@@ -386,11 +485,11 @@ h1 {
     margin: 20px 0;
     text-align: center;
     backdrop-filter: blur(10px);
-    box-shadow: 0 4px 20px rgba(78, 120, 232, 0.15);
+    box-shadow: 0 4px 20px rgba(255, 176, 32, 0.15);
 }
 
 .timer-label {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Share Tech Mono', monospace;
     font-size: 0.9rem;
     font-weight: 600;
     color: var(--text-secondary);
@@ -399,11 +498,11 @@ h1 {
 }
 
 .timer-value {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Share Tech Mono', monospace;
     font-size: 1.8rem;
     font-weight: 700;
     color: var(--arc);
-    text-shadow: 0 0 20px rgba(78, 120, 232, 0.6);
+    text-shadow: 0 0 20px rgba(255, 176, 32, 0.6);
 }
 
 /* Main Content Wrapper - Provides consistent spacing for all game elements */
@@ -444,7 +543,7 @@ h1 {
     border-radius: 12px;
     backdrop-filter: blur(10px);
     box-shadow:
-        0 8px 32px rgba(78, 120, 232, 0.2),
+        0 8px 32px rgba(255, 176, 32, 0.2),
         inset 0 1px 0 rgba(255, 255, 255, 0.05);
     margin: 5px 0;
     position: relative;
@@ -474,9 +573,9 @@ h1 {
     gap: 12px;
     padding: 12px 18px;
     background: rgba(0, 0, 0, 0.5);
-    border: 1px solid rgba(78, 120, 232, 0.4);
+    border: 1px solid rgba(255, 176, 32, 0.4);
     border-radius: 12px;
-    box-shadow: 0 4px 15px rgba(78, 120, 232, 0.15);
+    box-shadow: 0 4px 15px rgba(255, 176, 32, 0.15);
 }
 
 .timer-display i {
@@ -491,7 +590,7 @@ h1 {
 }
 
 .timer-label {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Share Tech Mono', monospace;
     font-size: 0.7rem;
     font-weight: 600;
     color: var(--text-secondary);
@@ -500,17 +599,17 @@ h1 {
 }
 
 .timer-value {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Share Tech Mono', monospace;
     font-size: 1.5rem;
     font-weight: 700;
     color: var(--arc);
-    text-shadow: 0 0 20px rgba(78, 120, 232, 0.6);
+    text-shadow: 0 0 20px rgba(255, 176, 32, 0.6);
     line-height: 1;
 }
 
 /* Status Display */
 .status-display {
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Rajdhani', sans-serif;
     font-size: 1rem;
     font-weight: 600;
     padding: 12px 24px;
@@ -576,10 +675,10 @@ h1 {
 }
 
 .rotation-control-label {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Share Tech Mono', monospace;
     font-size: 0.6rem;
     font-weight: 700;
-    color: rgba(78, 120, 232, 0.5);
+    color: rgba(255, 176, 32, 0.5);
     letter-spacing: 3px;
     text-transform: uppercase;
     margin-bottom: 2px;
@@ -620,7 +719,7 @@ h1 {
     border-right-color: rgba(232, 122, 220, 0.4);
     border-radius: 50%;
     animation: loader-spin 0.8s linear infinite;
-    box-shadow: 0 0 16px rgba(78, 120, 232, 0.3);
+    box-shadow: 0 0 16px rgba(255, 176, 32, 0.3);
 }
 
 @keyframes loader-spin {
@@ -632,8 +731,8 @@ h1 {
     border: 2px solid var(--arc);
     border-radius: 12px;
     box-shadow:
-        0 8px 32px rgba(78, 120, 232, 0.3),
-        0 0 40px rgba(78, 120, 232, 0.2);
+        0 8px 32px rgba(255, 176, 32, 0.3),
+        0 0 40px rgba(255, 176, 32, 0.2);
     cursor: crosshair;
     max-width: 100%;
     height: auto;
@@ -648,7 +747,7 @@ h1 {
 /* Legacy UI Controls - now integrated into game header */
 
 .status-modern {
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Rajdhani', sans-serif;
     font-size: 1.1rem;
     font-weight: 600;
     padding: 12px 25px;
@@ -658,7 +757,7 @@ h1 {
     color: var(--text-primary);
     text-align: center;
     backdrop-filter: blur(10px);
-    box-shadow: 0 4px 15px rgba(78, 120, 232, 0.15);
+    box-shadow: 0 4px 15px rgba(255, 176, 32, 0.15);
     min-height: 45px;
     display: flex;
     align-items: center;
@@ -669,7 +768,7 @@ h1 {
 
 /* Modern Button Styles */
 .btn-primary, .btn-secondary, .btn-debug, .btn-info {
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Rajdhani', sans-serif;
     font-size: 1rem;
     font-weight: 600;
     padding: 10px 20px;
@@ -705,15 +804,15 @@ h1 {
 }
 
 .btn-secondary {
-    background: linear-gradient(135deg, rgba(78, 120, 232, 0.8), rgba(232, 122, 220, 0.8));
+    background: linear-gradient(135deg, rgba(255, 176, 32, 0.8), rgba(232, 122, 220, 0.8));
     color: var(--text-primary);
     border: 1px solid var(--arc);
-    box-shadow: 0 4px 15px rgba(78, 120, 232, 0.3);
+    box-shadow: 0 4px 15px rgba(255, 176, 32, 0.3);
 }
 
 .btn-secondary:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(78, 120, 232, 0.5);
+    box-shadow: 0 6px 20px rgba(255, 176, 32, 0.5);
     background: linear-gradient(135deg, var(--arc), var(--pink));
 }
 
@@ -730,11 +829,11 @@ h1 {
 }
 
 .btn-info {
-    background: linear-gradient(135deg, rgba(78, 120, 232, 0.8), rgba(232, 122, 220, 0.8));
+    background: linear-gradient(135deg, rgba(255, 176, 32, 0.8), rgba(232, 122, 220, 0.8));
     color: #ffffff;
     border: 1px solid var(--arc);
     box-shadow:
-        0 4px 15px rgba(78, 120, 232, 0.3),
+        0 4px 15px rgba(255, 176, 32, 0.3),
         inset 0 1px 0 rgba(255, 255, 255, 0.2);
     text-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
 }
@@ -742,7 +841,7 @@ h1 {
 .btn-info:hover {
     transform: translateY(-2px);
     box-shadow:
-        0 6px 20px rgba(78, 120, 232, 0.5),
+        0 6px 20px rgba(255, 176, 32, 0.5),
         inset 0 1px 0 rgba(255, 255, 255, 0.3);
     background: linear-gradient(135deg, var(--arc), var(--pink));
     text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
@@ -824,7 +923,7 @@ h1 {
 }
 
 .glitch-text {
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Rajdhani', sans-serif;
     font-size: 2.5rem;
     font-weight: 700;
     color: var(--danger-red);
@@ -857,7 +956,7 @@ h1 {
 }
 
 .stat-label {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Share Tech Mono', monospace;
     font-size: 0.9rem;
     font-weight: 600;
     color: var(--text-secondary);
@@ -866,7 +965,7 @@ h1 {
 }
 
 .stat-value {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Share Tech Mono', monospace;
     font-size: 1.8rem;
     font-weight: 700;
     color: var(--pink);
@@ -905,8 +1004,8 @@ h1 {
 
 .rules-content {
     background: var(--card-bg);
-    border: 2px solid var(--border-glow);
-    border-radius: 15px;
+    border: 1px solid var(--border-glow);
+    border-radius: 6px;
     padding: 30px;
     max-width: 600px;
     width: 90%;
@@ -915,7 +1014,7 @@ h1 {
     overflow-y: auto;
     box-sizing: border-box;
     box-shadow:
-        0 20px 60px rgba(78, 120, 232, 0.4),
+        0 20px 60px rgba(255, 176, 32, 0.4),
         inset 0 1px 0 rgba(255, 255, 255, 0.05);
     animation: modalSlideIn 0.3s ease;
 }
@@ -937,7 +1036,7 @@ h1 {
     padding: 8px 15px;
     text-align: center;
     background: var(--card-bg);
-    border-bottom: 1px solid rgba(78, 120, 232, 0.2);
+    border-bottom: 1px solid rgba(255, 176, 32, 0.2);
 }
 
 .snapshot-header .score-value {
@@ -967,10 +1066,10 @@ h1 {
 
 .player-name-input {
     background: rgba(0, 0, 0, 0.4);
-    border: 1px solid rgba(78, 120, 232, 0.4);
+    border: 1px solid rgba(255, 176, 32, 0.4);
     border-radius: 8px;
     color: var(--text-primary);
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Rajdhani', sans-serif;
     font-size: 0.85rem;
     padding: 8px 12px;
     width: 160px;
@@ -980,7 +1079,7 @@ h1 {
 
 .player-name-input:focus {
     border-color: var(--arc);
-    box-shadow: 0 0 8px rgba(78, 120, 232, 0.3);
+    box-shadow: 0 0 8px rgba(255, 176, 32, 0.3);
 }
 
 .player-name-input::placeholder {
@@ -1003,7 +1102,7 @@ h1 {
 
 .btn-submit-score:hover {
     transform: scale(1.05);
-    box-shadow: 0 4px 12px rgba(78, 120, 232, 0.4);
+    box-shadow: 0 4px 12px rgba(255, 176, 32, 0.4);
 }
 
 .btn-submit-score:disabled {
@@ -1024,15 +1123,16 @@ h1 {
     justify-content: space-between;
     align-items: center;
     padding: 14px 18px;
-    border-bottom: 1px solid rgba(78, 120, 232, 0.2);
+    border-bottom: 1px solid rgba(255, 176, 32, 0.2);
 }
 
 .auth-modal-title {
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Orbitron', 'Rajdhani', sans-serif;
     font-weight: 700;
     font-size: 1.1rem;
     color: var(--text-primary);
     letter-spacing: 1px;
+    text-transform: uppercase;
     text-transform: uppercase;
 }
 
@@ -1068,7 +1168,7 @@ h1 {
     line-height: 1;
 }
 .auth-signedin-label {
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Rajdhani', sans-serif;
     color: var(--text-primary);
 }
 .auth-modal-body.signed-in .auth-tabs,
@@ -1088,7 +1188,7 @@ h1 {
     margin-bottom: 16px;
     border-radius: 8px;
     overflow: hidden;
-    border: 1px solid rgba(78, 120, 232, 0.3);
+    border: 1px solid rgba(255, 176, 32, 0.3);
 }
 
 .auth-tab {
@@ -1097,7 +1197,7 @@ h1 {
     background: transparent;
     border: none;
     color: var(--text-secondary);
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Rajdhani', sans-serif;
     font-size: 0.8rem;
     font-weight: 600;
     cursor: pointer;
@@ -1105,12 +1205,12 @@ h1 {
 }
 
 .auth-tab.active {
-    background: rgba(78, 120, 232, 0.2);
+    background: rgba(255, 176, 32, 0.2);
     color: var(--text-primary);
 }
 
 .auth-tab:hover:not(.active) {
-    background: rgba(78, 120, 232, 0.08);
+    background: rgba(255, 176, 32, 0.08);
 }
 
 .auth-form {
@@ -1121,10 +1221,10 @@ h1 {
 
 .auth-input {
     background: rgba(0, 0, 0, 0.4);
-    border: 1px solid rgba(78, 120, 232, 0.3);
+    border: 1px solid rgba(255, 176, 32, 0.3);
     border-radius: 8px;
     color: var(--text-primary);
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Rajdhani', sans-serif;
     font-size: 0.85rem;
     padding: 10px 14px;
     outline: none;
@@ -1133,7 +1233,7 @@ h1 {
 
 .auth-input:focus {
     border-color: var(--arc);
-    box-shadow: 0 0 8px rgba(78, 120, 232, 0.3);
+    box-shadow: 0 0 8px rgba(255, 176, 32, 0.3);
 }
 
 .auth-input::placeholder {
@@ -1146,7 +1246,7 @@ h1 {
     border: none;
     border-radius: 8px;
     color: white;
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Rajdhani', sans-serif;
     font-size: 0.85rem;
     font-weight: 600;
     padding: 10px;
@@ -1157,7 +1257,7 @@ h1 {
 
 .auth-btn-primary:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(78, 120, 232, 0.4);
+    box-shadow: 0 4px 12px rgba(255, 176, 32, 0.4);
 }
 
 .auth-btn-primary:disabled {
@@ -1170,7 +1270,7 @@ h1 {
     background: none;
     border: none;
     color: var(--text-secondary);
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Rajdhani', sans-serif;
     font-size: 0.7rem;
     cursor: pointer;
     padding: 0;
@@ -1189,7 +1289,7 @@ h1 {
     gap: 12px;
     margin: 16px 0;
     color: var(--text-secondary);
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Rajdhani', sans-serif;
     font-size: 0.7rem;
     opacity: 0.6;
 }
@@ -1199,7 +1299,7 @@ h1 {
     content: '';
     flex: 1;
     height: 1px;
-    background: rgba(78, 120, 232, 0.2);
+    background: rgba(255, 176, 32, 0.2);
 }
 
 .auth-btn-google {
@@ -1212,7 +1312,7 @@ h1 {
     border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 8px;
     color: var(--text-primary);
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Rajdhani', sans-serif;
     font-size: 0.85rem;
     font-weight: 500;
     padding: 10px;
@@ -1226,7 +1326,7 @@ h1 {
 }
 
 .auth-error {
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Rajdhani', sans-serif;
     font-size: 0.75rem;
     color: #E84E6A;
     text-align: center;
@@ -1235,7 +1335,7 @@ h1 {
 }
 
 .player-identity {
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Rajdhani', sans-serif;
     font-size: 0.8rem;
     font-weight: 600;
     color: var(--text-secondary);
@@ -1245,7 +1345,7 @@ h1 {
 }
 
 .score-submit-status {
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Rajdhani', sans-serif;
     font-size: 0.75rem;
     margin-top: 6px;
     min-height: 18px;
@@ -1295,7 +1395,7 @@ h1 {
 .snapshot-modal .modal-buttons {
     padding: 10px 15px;
     background: var(--card-bg);
-    border-top: 1px solid rgba(78, 120, 232, 0.2);
+    border-top: 1px solid rgba(255, 176, 32, 0.2);
 }
 
 .snapshot-modal .modal-buttons .btn-primary,
@@ -1333,7 +1433,7 @@ h1 {
 }
 
 .score-label {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Share Tech Mono', monospace;
     font-size: 0.9em;
     color: var(--text-secondary);
     margin-bottom: 10px;
@@ -1341,11 +1441,11 @@ h1 {
 }
 
 .score-value {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Share Tech Mono', monospace;
     font-size: 2.5em;
     font-weight: 700;
     color: var(--arc);
-    text-shadow: 0 0 30px rgba(78, 120, 232, 0.7);
+    text-shadow: 0 0 30px rgba(255, 176, 32, 0.7);
     letter-spacing: 3px;
 }
 
@@ -1354,7 +1454,7 @@ h1 {
     padding: 25px;
     background: rgba(0, 0, 0, 0.5);
     border-radius: 10px;
-    border: 1px solid rgba(78, 120, 232, 0.3);
+    border: 1px solid rgba(255, 176, 32, 0.3);
     width: calc(100% - 40px);
     max-width: 380px;
     flex-grow: 1;
@@ -1365,7 +1465,7 @@ h1 {
 }
 
 .score-item {
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Rajdhani', sans-serif;
     font-size: 1.1em;
     margin: 10px 0;
     color: var(--text-secondary);
@@ -1382,7 +1482,7 @@ h1 {
 }
 
 .compact-score .performance-rating {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Share Tech Mono', monospace;
     font-size: 1rem;
     font-weight: 600;
     color: var(--text-secondary);
@@ -1416,7 +1516,7 @@ h1 {
     flex: 1 !important;
     max-width: 100px !important;
     padding: 9px 8px !important;
-    font-family: 'Space Grotesk', sans-serif !important;
+    font-family: 'Rajdhani', sans-serif !important;
     font-size: 0.7rem !important;
     font-weight: 600 !important;
     border-radius: 6px !important;
@@ -1494,11 +1594,11 @@ h1 {
         border: 2px solid var(--border-glow);
         z-index: 1000;
         text-align: center;
-        font-family: 'Space Grotesk', sans-serif;
+        font-family: 'Rajdhani', sans-serif;
         font-weight: 600;
         font-size: 14px;
         max-width: 300px;
-        box-shadow: 0 10px 30px rgba(78, 120, 232, 0.4);
+        box-shadow: 0 10px 30px rgba(255, 176, 32, 0.4);
         text-shadow: 0 0 12px rgba(232, 122, 220, 0.6);
     }
     
@@ -1524,20 +1624,20 @@ h1 {
     background: var(--card-bg);
     color: var(--arc);
     border: 2px solid var(--border-glow);
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Rajdhani', sans-serif;
     font-size: 18px;
     font-weight: bold;
     cursor: pointer;
     backdrop-filter: blur(5px);
-    box-shadow: 0 4px 12px rgba(78, 120, 232, 0.3);
+    box-shadow: 0 4px 12px rgba(255, 176, 32, 0.3);
     transition: all 0.2s ease;
-    text-shadow: 0 0 8px rgba(78, 120, 232, 0.5);
+    text-shadow: 0 0 8px rgba(255, 176, 32, 0.5);
 }
 
 .info-button:hover {
-    background: rgba(78, 120, 232, 0.15);
+    background: rgba(255, 176, 32, 0.15);
     transform: scale(1.1);
-    box-shadow: 0 6px 15px rgba(78, 120, 232, 0.5);
+    box-shadow: 0 6px 15px rgba(255, 176, 32, 0.5);
 }
 
 .info-popup {
@@ -1548,7 +1648,7 @@ h1 {
     background: var(--card-bg);
     border: 1px solid var(--border-glow);
     border-radius: 12px;
-    box-shadow: 0 8px 32px rgba(78, 120, 232, 0.4);
+    box-shadow: 0 8px 32px rgba(255, 176, 32, 0.4);
     backdrop-filter: blur(10px);
     transition: all 0.3s ease;
     transform-origin: bottom right;
@@ -1566,7 +1666,7 @@ h1 {
     line-height: 1.5;
     color: var(--text-primary);
     position: relative;
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Rajdhani', sans-serif;
 }
 
 .close-button {
@@ -1641,7 +1741,7 @@ h1 {
 
 .status-success {
     color: var(--arc);
-    text-shadow: 0 0 20px rgba(78, 120, 232, 0.7);
+    text-shadow: 0 0 20px rgba(255, 176, 32, 0.7);
 }
 
 @keyframes pulse-red {
@@ -1694,7 +1794,7 @@ h1 {
 /* Status success style */
 .status-success {
     color: var(--arc) !important;
-    text-shadow: 0 0 20px rgba(78, 120, 232, 0.7) !important;
+    text-shadow: 0 0 20px rgba(255, 176, 32, 0.7) !important;
 }
 
 /* ============================================
@@ -1767,8 +1867,8 @@ h1 {
         left: 0 !important;
         bottom: 0 !important;
         width: calc(48px + env(safe-area-inset-left, 0px)) !important;
-        background: rgba(6, 6, 14, 0.95) !important;
-        border-right: 1px solid rgba(78, 120, 232, 0.25) !important;
+        background: rgba(8, 7, 4, 0.95) !important;
+        border-right: 1px solid rgba(255, 176, 32, 0.25) !important;
         z-index: 100 !important;
         padding: 0 !important;
         padding-left: env(safe-area-inset-left, 0px) !important;
@@ -1778,8 +1878,8 @@ h1 {
     .hamburger-btn {
         width: 34px;
         height: 34px;
-        background: rgba(78, 120, 232, 0.15);
-        border: 1px solid rgba(78, 120, 232, 0.35);
+        background: rgba(255, 176, 32, 0.15);
+        border: 1px solid rgba(255, 176, 32, 0.35);
         border-radius: 8px;
         color: var(--arc);
         font-size: 18px;
@@ -1828,8 +1928,8 @@ h1 {
     }
 
     .mobile-reset-btn {
-        background: rgba(78, 120, 232, 0.3);
-        border: 1px solid rgba(78, 120, 232, 0.5);
+        background: rgba(255, 176, 32, 0.3);
+        border: 1px solid rgba(255, 176, 32, 0.5);
         color: var(--arc);
     }
 
@@ -1837,8 +1937,8 @@ h1 {
         width: 34px;
         height: 34px;
         border-radius: 8px;
-        border: 1px solid rgba(78, 120, 232, 0.5);
-        background: rgba(78, 120, 232, 0.3);
+        border: 1px solid rgba(255, 176, 32, 0.5);
+        background: rgba(255, 176, 32, 0.3);
         color: var(--arc);
         font-size: 16px;
         cursor: pointer;
@@ -1876,7 +1976,7 @@ h1 {
         height: 100% !important;
         max-width: calc(100vw - 56px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)) !important;
         max-height: calc(100% - 8px) !important;
-        border: 1px solid rgba(78, 120, 232, 0.5) !important;
+        border: 1px solid rgba(255, 176, 32, 0.5) !important;
         border-radius: 4px !important;
         box-shadow: none !important;
     }
@@ -1942,12 +2042,12 @@ h1 {
         justify-content: space-between;
         align-items: center;
         padding: 15px;
-        border-bottom: 1px solid rgba(78, 120, 232, 0.3);
+        border-bottom: 1px solid rgba(255, 176, 32, 0.3);
         background: rgba(0, 0, 0, 0.3);
     }
 
     .mobile-menu-title {
-        font-family: 'Space Grotesk', sans-serif;
+        font-family: 'Rajdhani', sans-serif;
         font-size: 1.2rem;
         font-weight: 700;
         margin: 0;
@@ -1983,7 +2083,7 @@ h1 {
     }
 
     .mobile-menu-label {
-        font-family: 'JetBrains Mono', monospace;
+        font-family: 'Share Tech Mono', monospace;
         font-size: 0.7rem;
         font-weight: 600;
         color: var(--text-secondary);
@@ -2007,10 +2107,10 @@ h1 {
         width: 100%;
         padding: 14px 15px;
         background: transparent;
-        border: 1px solid rgba(78, 120, 232, 0.15);
+        border: 1px solid rgba(255, 176, 32, 0.15);
         border-radius: 10px;
         color: var(--text-primary);
-        font-family: 'Space Grotesk', sans-serif;
+        font-family: 'Rajdhani', sans-serif;
         font-size: 1rem;
         font-weight: 500;
         cursor: pointer;
@@ -2025,20 +2125,20 @@ h1 {
     }
 
     .mobile-menu-item:active {
-        background: rgba(78, 120, 232, 0.15);
+        background: rgba(255, 176, 32, 0.15);
         transform: scale(0.98);
     }
 
     .mobile-menu-footer {
         padding: 14px 15px;
-        border-top: 1px solid rgba(78, 120, 232, 0.15);
+        border-top: 1px solid rgba(255, 176, 32, 0.15);
     }
 
     .mobile-account-row {
         display: flex;
         align-items: center;
         gap: 10px;
-        font-family: 'Space Grotesk', sans-serif;
+        font-family: 'Rajdhani', sans-serif;
         font-size: 0.8rem;
         color: var(--text-secondary);
         cursor: pointer;
@@ -2240,7 +2340,7 @@ h1 {
     padding: 8px 16px;
     border: none;
     border-radius: 6px;
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Rajdhani', sans-serif;
     font-size: 0.75rem;
     font-weight: 600;
     letter-spacing: 0.5px;
@@ -2249,27 +2349,27 @@ h1 {
 }
 
 .btn-replay {
-    background: linear-gradient(135deg, var(--arc) 0%, #6B8FE8 100%);
+    background: var(--arc);
     color: white;
 }
 
 .btn-replay:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(78, 120, 232, 0.4);
+    box-shadow: 0 4px 12px rgba(255, 176, 32, 0.4);
 }
 
 .btn-save {
-    background: linear-gradient(135deg, var(--pink) 0%, #F0A0E8 100%);
-    color: white;
+    background: #B4B8C2;
+    color: #16130C;
 }
 
 .btn-save:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(232, 122, 220, 0.4);
+    box-shadow: 0 4px 12px rgba(180, 184, 194, 0.4);
 }
 
 .btn-share {
-    background: linear-gradient(135deg, #34C759 0%, #5AC778 100%);
+    background: #34C759;
     color: white;
 }
 
@@ -2280,9 +2380,16 @@ h1 {
 
 .btn-share:disabled,
 .btn-share.converting {
-    background: linear-gradient(135deg, #666 0%, #888 100%);
+    background: #666;
     cursor: wait;
     transform: none;
+}
+
+/* RETRY / primary action in result modals: solid red, completing the
+   Amber (replay) / Silver (save) / Green (share) / Red (retry) set. */
+.modal-buttons .btn-primary {
+    background: var(--flare);
+    color: #ffffff;
 }
 
 .btn-share.converting .share-text {
@@ -2315,12 +2422,12 @@ h1 {
     justify-content: space-between;
     align-items: center;
     padding: 12px 16px;
-    background: rgba(78, 120, 232, 0.1);
-    border-bottom: 1px solid rgba(78, 120, 232, 0.2);
+    background: rgba(255, 176, 32, 0.1);
+    border-bottom: 1px solid rgba(255, 176, 32, 0.2);
 }
 
 .replay-title {
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Rajdhani', sans-serif;
     font-size: 1rem;
     font-weight: 600;
     color: var(--arc);
@@ -2361,7 +2468,7 @@ h1 {
     gap: 10px;
     padding: 12px 16px;
     background: var(--card-bg);
-    border-top: 1px solid rgba(78, 120, 232, 0.2);
+    border-top: 1px solid rgba(255, 176, 32, 0.2);
     justify-content: center;
 }
 
@@ -2382,7 +2489,7 @@ h1 {
 
 .btn-replay-control:hover {
     transform: scale(1.05);
-    box-shadow: 0 4px 12px rgba(78, 120, 232, 0.4);
+    box-shadow: 0 4px 12px rgba(255, 176, 32, 0.4);
 }
 
 /* Modal buttons with replay - unified sizing handled by .modal-buttons rule */

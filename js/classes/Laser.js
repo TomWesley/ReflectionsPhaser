@@ -1,4 +1,5 @@
 import { CONFIG } from '../config.js';
+import { PALETTE, hex } from '../theme/palette.js';
 
 export class Laser {
     constructor(x, y, angle) {
@@ -67,10 +68,12 @@ export class Laser {
     draw(ctx) {
         // Color palette: pink for main game, mint green for daily challenge
         const isDaily = this.isDailyChallenge;
-        const glowR = isDaily ? 50 : 232;
-        const glowG = isDaily ? 255 : 122;
-        const glowB = isDaily ? 180 : 220;
-        const glowHex = isDaily ? '#32FFB4' : '#E87ADC';
+        // Amber energy beam for the main game; mint for the Daily Challenge.
+        const beam = isDaily ? PALETTE.daily : PALETTE.secondary;
+        const glowR = beam[0];
+        const glowG = beam[1];
+        const glowB = beam[2];
+        const glowHex = isDaily ? '#32FFB4' : hex(PALETTE.secondary);
 
         // Draw trail with dramatic fade
         if (this.trail.length > 1) {

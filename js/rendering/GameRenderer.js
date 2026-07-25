@@ -22,9 +22,14 @@ export class GameRenderer {
         const W = CONFIG.CANVAS_WIDTH;
         const H = CONFIG.CANVAS_HEIGHT;
 
-        // Clear canvas and fill with void background
+        // Clear canvas and fill with an instrument-panel background: a radial
+        // gradient (subtle depth toward the core), never flat black.
         ctx.clearRect(0, 0, W, H);
-        ctx.fillStyle = '#0A0A12';
+        const bgGrad = ctx.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, Math.max(W, H) * 0.72);
+        bgGrad.addColorStop(0, '#14110A');
+        bgGrad.addColorStop(0.6, '#0B0A06');
+        bgGrad.addColorStop(1, '#050403');
+        ctx.fillStyle = bgGrad;
         ctx.fillRect(0, 0, W, H);
 
         // Subtle green tint for daily challenge
@@ -40,6 +45,12 @@ export class GameRenderer {
 
         // Draw grid
         GridRenderer.drawGrid(ctx);
+
+        // Forbidden zones as a background layer — UNDER the core, so the core keeps
+        // its classic look on top even during the placement phase.
+        if (!this.game.isPlaying && !this.game.dailyCompleted) {
+            ZoneRenderer.drawForbiddenZones(ctx);
+        }
 
         // Draw center target with breach animation progress
         const breachProgress = this.game.breachProgress || 0;
@@ -78,7 +89,6 @@ export class GameRenderer {
 
         // Draw zones and validation when not playing (but not on completed daily view)
         if (!this.game.isPlaying && !this.game.dailyCompleted) {
-            ZoneRenderer.drawForbiddenZones(ctx);
             ValidationRenderer.drawValidationViolations(ctx, this.game.mirrors, this.game.isPlaying);
 
             // Draw spawner angle tooltip on top of everything
@@ -190,7 +200,8 @@ export class GameRenderer {
 
             // Draw all segments as dashed lines
             const isDaily = spawner.isDailyChallenge;
-            const baseColor = isDaily ? '50, 255, 180' : '78, 120, 232';
+            // Amber to match the beams the preview is tracing (mint for daily).
+            const baseColor = isDaily ? '50, 255, 180' : '255, 176, 32';
             const pulse = 0.65 + 0.15 * Math.sin(Date.now() / 600);
 
             // Glow layer
@@ -290,7 +301,7 @@ export class GameRenderer {
             const yOffset = -20 - progress * 25;
 
             ctx.save();
-            ctx.font = '500 11px "Space Grotesk", sans-serif';
+            ctx.font = '500 11px "Rajdhani", sans-serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'bottom';
 
@@ -332,7 +343,7 @@ export class GameRenderer {
 
         // "COMPLETED" banner
         const bannerY = H / 2 - 20;
-        ctx.font = '700 28px "JetBrains Mono", monospace';
+        ctx.font = '700 28px "Share Tech Mono", monospace';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillStyle = '#32FFB4';
@@ -342,7 +353,7 @@ export class GameRenderer {
 
         // Score line
         ctx.shadowBlur = 0;
-        ctx.font = '500 14px "Space Grotesk", sans-serif';
+        ctx.font = '500 14px "Rajdhani", sans-serif';
         ctx.fillStyle = 'rgba(212, 212, 232, 0.8)';
         ctx.fillText('Come back tomorrow for a new challenge', W / 2, bannerY + 36);
 
@@ -356,7 +367,7 @@ export class GameRenderer {
         const ctx = this.ctx;
         ctx.save();
 
-        ctx.font = '600 10px "JetBrains Mono", monospace';
+        ctx.font = '600 10px "Share Tech Mono", monospace';
         ctx.textAlign = 'right';
         ctx.textBaseline = 'bottom';
         ctx.fillStyle = 'rgba(50, 255, 180, 0.4)';
@@ -457,7 +468,7 @@ export class GameRenderer {
                         ctx.putImageData(imgData, Math.floor(shiftX), Math.floor(blockY));
                     } catch (e) {
                         // Fallback: draw colored glitch blocks
-                        const gColors = ['rgba(232,78,106,0.3)', 'rgba(78,120,232,0.2)', 'rgba(255,255,255,0.2)'];
+                        const gColors = ['rgba(232,78,106,0.3)', 'rgba(255,176,32,0.2)', 'rgba(255,255,255,0.2)'];
                         ctx.fillStyle = gColors[i % gColors.length];
                         ctx.fillRect(shiftX > 0 ? 0 : W + shiftX, blockY, Math.abs(shiftX), blockH);
                     }
@@ -501,7 +512,7 @@ export class GameRenderer {
                 const outerR = 80 + burstProgress * Math.max(W, H) * 0.6;
                 const width = 1 + ((i * 7) % 3);
 
-                ctx.strokeStyle = i % 3 === 0 ? '#E84E6A' : (i % 3 === 1 ? '#FF8FA3' : '#FFFFFF');
+                ctx.strokeStyle = i % 3 === 0 ? '#E84E6A' : (i % 3 === 1 ? '#FFB020' : '#FFFFFF');
                 ctx.lineWidth = width * (1 - burstProgress * 0.7);
                 ctx.shadowColor = ctx.strokeStyle;
                 ctx.shadowBlur = 6;
@@ -578,7 +589,7 @@ export class GameRenderer {
         const py = y - pillHeight / 2;
 
         // Background pill
-        ctx.fillStyle = isDailyCompleted ? 'rgba(6, 6, 14, 0.9)' : 'rgba(6, 6, 14, 0.8)';
+        ctx.fillStyle = isDailyCompleted ? 'rgba(8, 7, 4, 0.9)' : 'rgba(8, 7, 4, 0.8)';
         ctx.beginPath();
         if (ctx.roundRect) {
             ctx.roundRect(px, py, pillWidth, pillHeight, pillRadius);
@@ -599,9 +610,9 @@ export class GameRenderer {
             ctx.shadowBlur = 16;
         } else {
             const borderColor = isBreach ? 'rgba(232, 78, 106, 0.6)'
-                : (isDaily ? 'rgba(50, 255, 180, 0.4)' : 'rgba(78, 120, 232, 0.4)');
+                : (isDaily ? 'rgba(50, 255, 180, 0.4)' : 'rgba(255, 176, 32, 0.4)');
             const borderGlow = isBreach ? '#E84E6A'
-                : (isDaily ? 'rgba(50, 255, 180, 0.3)' : 'rgba(78, 120, 232, 0.3)');
+                : (isDaily ? 'rgba(50, 255, 180, 0.3)' : 'rgba(255, 176, 32, 0.3)');
             ctx.strokeStyle = borderColor;
             ctx.lineWidth = 1.5;
             ctx.shadowColor = borderGlow;
@@ -623,18 +634,18 @@ export class GameRenderer {
 
         if (isDailyCompleted) {
             // Large, bright mint green with strong glow
-            ctx.font = '700 28px "JetBrains Mono", "SF Mono", monospace';
+            ctx.font = '700 28px "Share Tech Mono", "SF Mono", monospace';
             ctx.shadowColor = '#32FFB4';
             ctx.shadowBlur = 20;
             ctx.fillStyle = '#32FFB4';
         } else if (isBreach) {
-            ctx.font = '700 22px "JetBrains Mono", "SF Mono", monospace';
+            ctx.font = '700 22px "Share Tech Mono", "SF Mono", monospace';
             ctx.shadowColor = '#E84E6A';
             ctx.shadowBlur = 14;
             ctx.fillStyle = '#E84E6A';
         } else {
-            ctx.font = '700 22px "JetBrains Mono", "SF Mono", monospace';
-            ctx.shadowColor = 'rgba(78, 120, 232, 0.5)';
+            ctx.font = '700 22px "Share Tech Mono", "SF Mono", monospace';
+            ctx.shadowColor = 'rgba(255, 176, 32, 0.5)';
             ctx.shadowBlur = 6;
             ctx.fillStyle = '#D4D4E8';
         }
@@ -687,9 +698,9 @@ export class GameRenderer {
         this.ctx.save();
 
         // Use arc blue glow for hover
-        this.ctx.shadowColor = 'rgba(78, 120, 232, 0.6)';
+        this.ctx.shadowColor = 'rgba(255, 176, 32, 0.6)';
         this.ctx.shadowBlur = 15;
-        this.ctx.strokeStyle = 'rgba(78, 120, 232, 0.4)';
+        this.ctx.strokeStyle = 'rgba(255, 176, 32, 0.4)';
         this.ctx.lineWidth = 3;
 
         // Draw outline based on shape
