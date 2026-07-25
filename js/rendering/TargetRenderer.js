@@ -25,10 +25,10 @@ export class TargetRenderer {
     }
 
     /**
-     * The core: a stationary reactor-chip — a hexagonal die with pin traces and
-     * contact pads, a graduated bezel ring at the exact hit radius, an inner circuit
-     * ring, and a glowing amber power core. Computer-chip + nuclear + power; amber /
-     * black / light-gray only. Breach & game-over flare red.
+     * The core: a reactor-chip — a hexagonal die with pin-trace stubs, a graduated
+     * amber bezel at the exact hit radius, an inner circuit ring, and a glowing amber
+     * power core, with glowing electrons orbiting the outer layer in a slow wave.
+     * Computer-chip + nuclear + power; amber / black / light-gray. Breach flares red.
      */
     static drawCore(ctx, centerX, centerY, radius, gameOver, breachProgress = 0) {
         // Breach shake
@@ -61,7 +61,7 @@ export class TargetRenderer {
         // pads, a graduated bezel, an inner circuit ring, and a glowing power core.
         // Computer chip + nuclear + power. Amber / black / light-gray.
         const hexRot = -Math.PI / 2;      // point-up hexagons
-        const dieR = R * 0.6, padR = R * 0.78, hubR = R * 0.3;
+        const dieR = R * 0.6, hubR = R * 0.3;
         const poly = (rr, sides, rot) => {
             ctx.beginPath();
             for (let i = 0; i < sides; i++) {
@@ -87,30 +87,38 @@ export class TargetRenderer {
         // Boundary ring at exactly TARGET_RADIUS (the honest hit edge), glowing.
         arc(R, 0, TAU, amber(0.6), 1.5, 8);
 
-        // Bezel graduations — fine gray minors + amber majors every 5th.
-        for (let i = 0; i < 60; i++) {
-            const ang = (i / 60) * TAU;
-            const major = i % 5 === 0;
-            ctx.strokeStyle = major ? amber(0.6) : gray(0.32);
-            ctx.lineWidth = major ? 1.4 : 0.8;
-            const r0 = major ? R * 0.855 : R * 0.9;
+        // Bezel graduations — amber major ticks only.
+        for (let i = 0; i < 12; i++) {
+            const ang = (i / 12) * TAU;
+            ctx.strokeStyle = amber(0.55); ctx.lineWidth = 1.4;
             ctx.beginPath();
-            ctx.moveTo(cx + Math.cos(ang) * r0, cy + Math.sin(ang) * r0);
+            ctx.moveTo(cx + Math.cos(ang) * R * 0.86, cy + Math.sin(ang) * R * 0.86);
             ctx.lineTo(cx + Math.cos(ang) * R * 0.96, cy + Math.sin(ang) * R * 0.96);
             ctx.stroke();
         }
 
-        // Chip pins: an amber trace from each die vertex out to a square contact pad.
+        // Orbiting electrons — glowing amber dots circling the outer layer (between
+        // the hex die and the boundary ring) in a slow, hypnotic wave.
+        for (let i = 0; i < 4; i++) {
+            const ang = (i / 4) * TAU + t / 5200;                          // slow orbit
+            const rr = R * 0.76 + R * 0.06 * Math.sin(ang * 3 - t / 1600); // wave in / out
+            const ex = cx + Math.cos(ang) * rr, ey = cy + Math.sin(ang) * rr;
+            ctx.shadowColor = isBreach ? '#E84E6A' : amber(1);
+            ctx.shadowBlur = 10;
+            ctx.fillStyle = isBreach ? '#FF6080' : amber(0.95);
+            ctx.beginPath(); ctx.arc(ex, ey, 2.3, 0, TAU); ctx.fill();
+            ctx.shadowBlur = 0;
+        }
+
+        // Chip pins: a short amber trace stub from each die vertex, with a tip node.
         for (let i = 0; i < 6; i++) {
             const ang = hexRot + (i / 6) * TAU;
             const dx = cx + Math.cos(ang) * dieR, dy = cy + Math.sin(ang) * dieR;
-            const px = cx + Math.cos(ang) * padR, py = cy + Math.sin(ang) * padR;
+            const px = cx + Math.cos(ang) * R * 0.68, py = cy + Math.sin(ang) * R * 0.68;
             ctx.strokeStyle = amber(0.55); ctx.lineWidth = 1.5;
             ctx.beginPath(); ctx.moveTo(dx, dy); ctx.lineTo(px, py); ctx.stroke();
-            ctx.save(); ctx.translate(px, py); ctx.rotate(ang);
-            ctx.fillStyle = amber(0.7); ctx.fillRect(-3, -3, 6, 6);
-            ctx.strokeStyle = gray(0.4); ctx.lineWidth = 0.8; ctx.strokeRect(-3, -3, 6, 6);
-            ctx.restore();
+            ctx.fillStyle = amber(0.65);
+            ctx.beginPath(); ctx.arc(px, py, 1.5, 0, TAU); ctx.fill();
         }
 
         // Hexagonal chip die — outer amber frame (glow) + inner gray frame.
