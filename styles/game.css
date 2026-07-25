@@ -163,8 +163,8 @@ body {
 
 .navbar-btn-secondary:hover {
     background: rgba(150, 156, 172, 0.2);
-    border-color: rgba(255, 176, 32, 0.5);
-    box-shadow: 0 0 14px rgba(255, 176, 32, 0.28);
+    border-color: rgba(150, 156, 172, 0.6);
+    box-shadow: 0 0 14px rgba(150, 156, 172, 0.25);
     transform: translateY(-2px);
 }
 
@@ -225,14 +225,15 @@ body {
     text-transform: uppercase;
     letter-spacing: 1px;
     white-space: nowrap;
-    background: rgba(160, 168, 185, 0.1);
-    color: #A8AEBD;
-    border: 1px solid rgba(160, 168, 185, 0.3);
+    /* Perpetually amber: duller when snapping is off. */
+    background: rgba(255, 176, 32, 0.08);
+    color: #BC8B3A;
+    border: 1px solid rgba(255, 176, 32, 0.28);
 }
 
 .navbar-btn-snap:hover {
-    background: rgba(160, 168, 185, 0.18);
-    border-color: rgba(255, 176, 32, 0.5);
+    background: rgba(255, 176, 32, 0.15);
+    border-color: rgba(255, 176, 32, 0.55);
     box-shadow: 0 0 14px rgba(255, 176, 32, 0.28);
     transform: translateY(-2px);
 }
@@ -253,14 +254,25 @@ body {
 }
 
 .navbar-btn-snap.snap-active {
-    background: rgba(255, 176, 32, 0.2);
-    color: #FFC860;
-    border-color: rgba(255, 176, 32, 0.5);
-    box-shadow: 0 0 12px rgba(255, 176, 32, 0.35);
+    background: rgba(255, 176, 32, 0.22);
+    color: #FFB020;
+    border-color: rgba(255, 176, 32, 0.7);
+    box-shadow: 0 0 12px rgba(255, 176, 32, 0.45);
 }
 
 .navbar-btn-snap i {
     font-size: 16px;
+}
+
+/* All four navbar action buttons share one fixed width so they're identically
+   sized regardless of label length (Daily / Snap / Start / Shuffle). */
+.navbar-btn-primary,
+.navbar-btn-secondary,
+.navbar-btn-daily,
+.navbar-btn-snap {
+    width: 122px;
+    min-width: 122px;
+    box-sizing: border-box;
 }
 
 .navbar-btn-primary i,
