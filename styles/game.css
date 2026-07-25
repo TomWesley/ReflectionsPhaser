@@ -287,28 +287,32 @@ body {
     display: none;
 }
 
+/* Icon-only nav buttons: no boxy fill or outline — just the glowing icon, with
+   a soft amber backdrop that fades in on hover and the icon glow intensifying. */
 .nav-icon-btn {
-    width: 42px;
-    height: 42px;
-    border-radius: 4px;
-    background: rgba(0, 0, 0, 0.3);
-    border: 1px solid rgba(255, 176, 32, 0.2);
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: transparent;
+    border: none;
     color: var(--text-secondary);
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.3s ease;
+    transition: background 0.2s ease, transform 0.2s ease, color 0.2s ease;
     text-decoration: none;
     font-size: 20px;
 }
 
 .nav-icon-btn:hover {
-    background: rgba(255, 176, 32, 0.15);
-    border-color: var(--arc);
+    background: rgba(255, 176, 32, 0.12);
     color: var(--arc);
-    box-shadow: 0 0 15px rgba(255, 176, 32, 0.3);
     transform: translateY(-2px);
+}
+
+.nav-icon-btn:hover .btn-eng-icon {
+    filter: drop-shadow(0 0 10px rgba(255, 176, 32, 1));
 }
 
 .nav-icon-btn:active {
