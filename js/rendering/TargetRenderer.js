@@ -73,37 +73,36 @@ export class TargetRenderer {
         ctx.fillStyle = glowGrad;
         ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU); ctx.fill();
 
-        // Reactor blades — 6 radial wedges spinning CCW (the nuclear homage).
-        const inR = R * 0.3, outR = R * 0.78;
-        const bladeGrad = ctx.createRadialGradient(cx, cy, inR * 0.5, cx, cy, outR);
+        // Radiation-trefoil blades — 3 annular sectors (radial sides, curved inner
+        // + outer arcs), ~60° wide with ~60° gaps, spinning slowly (nuclear icon).
+        const inR = R * 0.26, outR = R * 0.74;
+        const N = 3, hBlade = 0.52;
+        const bladeGrad = ctx.createRadialGradient(cx, cy, inR, cx, cy, outR);
         if (isBreach) {
-            bladeGrad.addColorStop(0, 'rgba(255, 96, 128, 0.9)'); bladeGrad.addColorStop(1, 'rgba(232, 78, 106, 0.35)');
+            bladeGrad.addColorStop(0, 'rgba(255, 96, 128, 0.95)'); bladeGrad.addColorStop(1, 'rgba(232, 78, 106, 0.4)');
         } else {
-            bladeGrad.addColorStop(0, amber(0.85)); bladeGrad.addColorStop(1, amber(0.35));
+            bladeGrad.addColorStop(0, amber(0.9)); bladeGrad.addColorStop(1, amber(0.4));
         }
         const bladePath = (a) => {
-            const hIn = 0.2, hOut = 0.38;
             ctx.beginPath();
-            ctx.moveTo(cx + Math.cos(a - hIn) * inR, cy + Math.sin(a - hIn) * inR);
-            ctx.lineTo(cx + Math.cos(a - hOut) * outR, cy + Math.sin(a - hOut) * outR);
-            ctx.arc(cx, cy, outR, a - hOut, a + hOut); // curved outer edge, flush to the ring's inner circle
-            ctx.lineTo(cx + Math.cos(a + hIn) * inR, cy + Math.sin(a + hIn) * inR);
+            ctx.arc(cx, cy, inR, a - hBlade, a + hBlade, false); // inner arc
+            ctx.arc(cx, cy, outR, a + hBlade, a - hBlade, true); // outer arc back (radial sides auto-close)
             ctx.closePath();
         };
         // Glowing blade fills — amber bloom, like the laser preview arrows.
         ctx.shadowColor = isBreach ? '#E84E6A' : amber(0.9);
         ctx.shadowBlur = 12 + flare * 18;
         ctx.fillStyle = bladeGrad;
-        for (let i = 0; i < 6; i++) { bladePath(rotInner + i * (TAU / 6)); ctx.fill(); }
+        for (let i = 0; i < N; i++) { bladePath(rotInner + i * (TAU / N)); ctx.fill(); }
         ctx.shadowBlur = 0;
-        // Crisp gray blade edges (no glow).
+        // Crisp gray blade edges.
         ctx.strokeStyle = gray(0.3); ctx.lineWidth = 1;
-        for (let i = 0; i < 6; i++) { bladePath(rotInner + i * (TAU / 6)); ctx.stroke(); }
+        for (let i = 0; i < N; i++) { bladePath(rotInner + i * (TAU / N)); ctx.stroke(); }
 
-        // Black hub over the blade roots + glowing amber rim.
+        // Central disc — a separate smaller circle (trefoil gap to the blades).
         ctx.fillStyle = gameOver ? '#1a0608' : '#050403';
-        ctx.beginPath(); ctx.arc(cx, cy, inR * 0.94, 0, TAU); ctx.fill();
-        arc(inR * 0.94, 0, TAU, amber(0.85), 1.5, 8);
+        ctx.beginPath(); ctx.arc(cx, cy, inR * 0.62, 0, TAU); ctx.fill();
+        arc(inR * 0.62, 0, TAU, amber(0.85), 1.5, 8);
 
         // Central glowing amber core, slowly pulsing.
         const orbR = inR * 0.46 * (0.85 + 0.3 * b1);
