@@ -103,9 +103,9 @@ export class TargetRenderer {
         arc(inR * 0.94, 0, TAU, amber(0.7), 1.5, 4);
 
         // Central glowing amber core, slowly pulsing.
-        const orbR = inR * 0.42 * (0.85 + 0.3 * b1);
+        const orbR = inR * 0.46 * (0.85 + 0.3 * b1);
         ctx.shadowColor = isBreach ? '#E84E6A' : amber(1);
-        ctx.shadowBlur = 12 + 8 * b1 + flare * 30;
+        ctx.shadowBlur = 22 + 14 * b1 + flare * 30;
         ctx.fillStyle = gameOver ? '#E84E6A' : (flare > 0.5 ? '#FF6080' : amber(1));
         ctx.globalAlpha = 0.92;
         ctx.beginPath(); ctx.arc(cx, cy, orbR, 0, TAU); ctx.fill();
