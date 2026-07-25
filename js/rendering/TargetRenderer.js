@@ -87,16 +87,6 @@ export class TargetRenderer {
         // Boundary ring at exactly TARGET_RADIUS (the honest hit edge), glowing.
         arc(R, 0, TAU, amber(0.6), 1.5, 8);
 
-        // Bezel graduations — amber major ticks only.
-        for (let i = 0; i < 12; i++) {
-            const ang = (i / 12) * TAU;
-            ctx.strokeStyle = amber(0.55); ctx.lineWidth = 1.4;
-            ctx.beginPath();
-            ctx.moveTo(cx + Math.cos(ang) * R * 0.86, cy + Math.sin(ang) * R * 0.86);
-            ctx.lineTo(cx + Math.cos(ang) * R * 0.96, cy + Math.sin(ang) * R * 0.96);
-            ctx.stroke();
-        }
-
         // Spokes: amber lines from each die vertex out to the boundary ring, as
         // thick and glowing as the hex's outer wall.
         ctx.strokeStyle = amber(0.75); ctx.lineWidth = 1.6;
@@ -118,9 +108,9 @@ export class TargetRenderer {
         ctx.strokeStyle = gray(0.35); ctx.lineWidth = 1;
         poly(dieR * 0.82, 6, hexRot); ctx.stroke();
 
-        // Inner circuit spokes (edge-aligned) with pad nodes.
+        // Inner circuit spokes with pad nodes — slowly churning.
         for (let i = 0; i < 6; i++) {
-            const ang = hexRot + (i / 6) * TAU + TAU / 12;
+            const ang = hexRot + (i / 6) * TAU + TAU / 12 + t / 7000;
             const ex = cx + Math.cos(ang) * dieR * 0.82, ey = cy + Math.sin(ang) * dieR * 0.82;
             ctx.strokeStyle = amber(0.4); ctx.lineWidth = 1;
             ctx.beginPath();
@@ -139,17 +129,31 @@ export class TargetRenderer {
         poly(hubR, 6, hexRot); ctx.stroke();
         ctx.shadowBlur = 0;
 
-        // Central power core — glowing amber radial gradient.
+        // Central power core — glowing amber radial gradient, gently pulsing.
+        const coreR = hubR * 0.7 * (0.88 + 0.14 * b1);
         const coreColor = gameOver ? '#E84E6A' : (flare > 0.5 ? '#FF6080' : amber(1));
-        const coreGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, hubR * 0.7);
+        const coreGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, coreR);
         coreGrad.addColorStop(0, isBreach ? '#FFD0D8' : '#FFE6B0');
         coreGrad.addColorStop(0.55, coreColor);
         coreGrad.addColorStop(1, isBreach ? 'rgba(232, 78, 106, 0.25)' : amber(0.25));
         ctx.shadowColor = isBreach ? '#E84E6A' : amber(1);
-        ctx.shadowBlur = 20 + flare * 30;
+        ctx.shadowBlur = 18 + 8 * b1 + flare * 30;
         ctx.fillStyle = coreGrad;
-        ctx.beginPath(); ctx.arc(cx, cy, hubR * 0.7, 0, TAU); ctx.fill();
+        ctx.beginPath(); ctx.arc(cx, cy, coreR, 0, TAU); ctx.fill();
         ctx.shadowBlur = 0;
+
+        // Churning plasma — 3 short bright arcs slowly rotating inside the core,
+        // for an air of power generation.
+        const swirl = t / 2200;
+        ctx.strokeStyle = isBreach ? 'rgba(255, 210, 220, 0.7)' : 'rgba(255, 235, 190, 0.7)';
+        ctx.lineWidth = 1.4;
+        ctx.lineCap = 'round';
+        for (let i = 0; i < 3; i++) {
+            const a0 = swirl + i * (TAU / 3);
+            ctx.beginPath();
+            ctx.arc(cx, cy, coreR * 0.62, a0, a0 + 0.85);
+            ctx.stroke();
+        }
     }
 
     static drawBreachEffects(ctx, centerX, centerY, radius, progress) {
