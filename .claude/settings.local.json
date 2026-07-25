@@ -174,7 +174,9 @@
       "Bash(node /tmp/dialtest.mjs)",
       "Bash(npm test *)",
       "Bash(echo \"exit code: $?\")",
-      "Read(//tmp/**)"
+      "Read(//tmp/**)",
+      "Bash(awk '/^\\\\.btn-primary \\\\{/,/^\\\\}/' styles/game.css)",
+      "Bash(awk '/<body/{f=1} f{print NR\": \"$0} /<\\\\/nav>/{if\\(f\\)exit}' leaderboard.html)"
     ],
     "deny": [],
     "ask": []
