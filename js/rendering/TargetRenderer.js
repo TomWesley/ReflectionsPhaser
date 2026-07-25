@@ -76,14 +76,14 @@ export class TargetRenderer {
         // RADIALLY: a bright band emanating in and out along the radial axis, as one
         // continuous circular sheet (the hub samples the same field, so it stays part
         // of the sheet rather than shimmering on its own diagonal).
-        const hp = 0.5 + 0.22 * Math.sin(t / 900); // highlight radius, breathes in/out
+        const hp = 0.52 + 0.26 * Math.sin(t / 900); // highlight radius, breathes in/out — reaches a bit farther at the outer end
         const steel = ctx.createRadialGradient(cx, cy, 0, cx, cy, R);
         steel.addColorStop(0, '#485571');
-        steel.addColorStop(hp - 0.22, '#3d4a63');
-        steel.addColorStop(hp - 0.08, '#97a6c2');
+        steel.addColorStop(hp - 0.20, '#3d4a63');
+        steel.addColorStop(hp - 0.07, '#97a6c2');
         steel.addColorStop(hp, '#d0dcf0');
-        steel.addColorStop(hp + 0.08, '#97a6c2');
-        steel.addColorStop(hp + 0.22, '#3d4a63');
+        steel.addColorStop(hp + 0.07, '#97a6c2');
+        steel.addColorStop(hp + 0.20, '#3d4a63');
         steel.addColorStop(1, '#485571');
         ctx.fillStyle = steel;
         ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU); ctx.fill();
