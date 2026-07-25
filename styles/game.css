@@ -306,13 +306,14 @@ body {
 }
 
 .nav-icon-btn:hover {
-    background: rgba(255, 176, 32, 0.12);
+    background: rgba(255, 176, 32, 0.22);
     color: var(--arc);
+    box-shadow: 0 0 18px rgba(255, 176, 32, 0.45);
     transform: translateY(-2px);
 }
 
 .nav-icon-btn:hover .btn-eng-icon {
-    filter: drop-shadow(0 0 10px rgba(255, 176, 32, 1));
+    filter: drop-shadow(0 0 6px rgba(255, 176, 32, 1)) drop-shadow(0 0 14px rgba(255, 176, 32, 0.85));
 }
 
 .nav-icon-btn:active {
