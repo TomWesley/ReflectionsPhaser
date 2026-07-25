@@ -2282,13 +2282,13 @@ h1 {
 }
 
 .btn-save {
-    background: var(--pink);
-    color: white;
+    background: #B4B8C2;
+    color: #16130C;
 }
 
 .btn-save:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(232, 122, 220, 0.4);
+    box-shadow: 0 4px 12px rgba(180, 184, 194, 0.4);
 }
 
 .btn-share {
@@ -2306,6 +2306,13 @@ h1 {
     background: #666;
     cursor: wait;
     transform: none;
+}
+
+/* RETRY / primary action in result modals: solid red, completing the
+   Amber (replay) / Silver (save) / Green (share) / Red (retry) set. */
+.modal-buttons .btn-primary {
+    background: var(--flare);
+    color: #ffffff;
 }
 
 .btn-share.converting .share-text {

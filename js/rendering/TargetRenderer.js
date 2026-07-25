@@ -72,16 +72,19 @@ export class TargetRenderer {
             ctx.closePath();
         };
 
-        // Core fill — the mirrors' blue-steel shimmer, as one circular metal sheet.
-        const shimmer = Math.sin(t / 600) * 0.15;
-        const steel = ctx.createLinearGradient(cx - R, cy - R, cx + R, cy + R);
-        steel.addColorStop(0, '#3d4a63');
-        steel.addColorStop(0.2 + shimmer, '#657391');
-        steel.addColorStop(0.4, '#97a6c2');
-        steel.addColorStop(0.5, '#d0dcf0');
-        steel.addColorStop(0.6, '#97a6c2');
-        steel.addColorStop(0.8 - shimmer, '#657391');
-        steel.addColorStop(1, '#3d4a63');
+        // Core fill — the mirrors' blue-steel palette, but the shimmer travels
+        // RADIALLY: a bright band emanating in and out along the radial axis, as one
+        // continuous circular sheet (the hub samples the same field, so it stays part
+        // of the sheet rather than shimmering on its own diagonal).
+        const hp = 0.5 + 0.22 * Math.sin(t / 900); // highlight radius, breathes in/out
+        const steel = ctx.createRadialGradient(cx, cy, 0, cx, cy, R);
+        steel.addColorStop(0, '#485571');
+        steel.addColorStop(hp - 0.22, '#3d4a63');
+        steel.addColorStop(hp - 0.08, '#97a6c2');
+        steel.addColorStop(hp, '#d0dcf0');
+        steel.addColorStop(hp + 0.08, '#97a6c2');
+        steel.addColorStop(hp + 0.22, '#3d4a63');
+        steel.addColorStop(1, '#485571');
         ctx.fillStyle = steel;
         ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU); ctx.fill();
 
