@@ -72,8 +72,17 @@ export class TargetRenderer {
             ctx.closePath();
         };
 
-        // Core disc fill — trying silver instead of black.
-        ctx.fillStyle = gameOver ? '#3a3036' : '#9CA0AA';
+        // Core fill — the mirrors' blue-steel shimmer, as one circular metal sheet.
+        const shimmer = Math.sin(t / 600) * 0.15;
+        const steel = ctx.createLinearGradient(cx - R, cy - R, cx + R, cy + R);
+        steel.addColorStop(0, '#3d4a63');
+        steel.addColorStop(0.2 + shimmer, '#657391');
+        steel.addColorStop(0.4, '#97a6c2');
+        steel.addColorStop(0.5, '#d0dcf0');
+        steel.addColorStop(0.6, '#97a6c2');
+        steel.addColorStop(0.8 - shimmer, '#657391');
+        steel.addColorStop(1, '#3d4a63');
+        ctx.fillStyle = steel;
         ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU); ctx.fill();
 
         // Soft amber glow.
@@ -121,8 +130,8 @@ export class TargetRenderer {
             ctx.beginPath(); ctx.arc(ex, ey, 1.4, 0, TAU); ctx.fill();
         }
 
-        // Inner hub hexagon — silver fill + amber outline.
-        ctx.fillStyle = gameOver ? '#42383E' : '#B0B4BE';
+        // Inner hub hexagon — same steel sheet + amber outline.
+        ctx.fillStyle = steel;
         poly(hubR, 6, hexRot); ctx.fill();
         ctx.shadowColor = amber(0.5); ctx.shadowBlur = 6;
         ctx.strokeStyle = amber(0.75); ctx.lineWidth = 1.3;
