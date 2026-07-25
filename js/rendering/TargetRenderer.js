@@ -74,7 +74,7 @@ export class TargetRenderer {
         ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU); ctx.fill();
 
         // Reactor blades — 6 radial wedges spinning CCW (the nuclear homage).
-        const inR = R * 0.3, outR = R * 0.78;
+        const inR = R * 0.3, outR = R * 0.86;
         const bladeGrad = ctx.createRadialGradient(cx, cy, inR * 0.5, cx, cy, outR);
         if (isBreach) {
             bladeGrad.addColorStop(0, 'rgba(255, 96, 128, 0.9)'); bladeGrad.addColorStop(1, 'rgba(232, 78, 106, 0.35)');
@@ -86,7 +86,7 @@ export class TargetRenderer {
             ctx.beginPath();
             ctx.moveTo(cx + Math.cos(a - hIn) * inR, cy + Math.sin(a - hIn) * inR);
             ctx.lineTo(cx + Math.cos(a - hOut) * outR, cy + Math.sin(a - hOut) * outR);
-            ctx.lineTo(cx + Math.cos(a + hOut) * outR, cy + Math.sin(a + hOut) * outR);
+            ctx.arc(cx, cy, outR, a - hOut, a + hOut); // curved outer edge, flush to the ring's inner circle
             ctx.lineTo(cx + Math.cos(a + hIn) * inR, cy + Math.sin(a + hIn) * inR);
             ctx.closePath();
         };
