@@ -72,8 +72,8 @@ export class TargetRenderer {
             ctx.closePath();
         };
 
-        // Black disc — masks the grid/zone beneath the core.
-        ctx.fillStyle = gameOver ? '#1a0608' : '#050403';
+        // Core disc fill — trying silver instead of black.
+        ctx.fillStyle = gameOver ? '#3a3036' : '#9CA0AA';
         ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU); ctx.fill();
 
         // Soft amber glow.
@@ -121,8 +121,8 @@ export class TargetRenderer {
             ctx.beginPath(); ctx.arc(ex, ey, 1.4, 0, TAU); ctx.fill();
         }
 
-        // Inner hub hexagon — dark fill + amber outline.
-        ctx.fillStyle = gameOver ? '#1a0608' : '#050403';
+        // Inner hub hexagon — silver fill + amber outline.
+        ctx.fillStyle = gameOver ? '#42383E' : '#B0B4BE';
         poly(hubR, 6, hexRot); ctx.fill();
         ctx.shadowColor = amber(0.5); ctx.shadowBlur = 6;
         ctx.strokeStyle = amber(0.75); ctx.lineWidth = 1.3;
