@@ -170,6 +170,10 @@ export class Game {
         // Wheel event for trackpad/mouse zoom
         this.canvas.addEventListener('wheel', (e) => this.onWheel(e), { passive: false });
 
+        // Keyboard fine-rotation of the selected mirror (Left/Right = -/+ 1°), so
+        // any exact integer angle is reachable even though the dial is coarse.
+        document.addEventListener('keydown', (e) => this.onKeyDown(e));
+
         // UI buttons
         document.getElementById('launchBtn').addEventListener('click', () => this.launchLasers());
         document.getElementById('resetBtn').addEventListener('click', () => this.resetGame());
@@ -461,6 +465,25 @@ export class Game {
             this.safeUpdateVertices(mirror);
             this.rotationControl.setAngle(oldRotation);
         }
+    }
+
+    /** Keyboard rotation: Left/Right arrows nudge the selected mirror by 1°. */
+    onKeyDown(e) {
+        if (this.isPlaying || this.dailyCompleted || !this.selectedMirror) return;
+        // Don't hijack typing in inputs / textareas / editable fields.
+        const tag = e.target && e.target.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target && e.target.isContentEditable)) return;
+        if (e.key === 'ArrowLeft') { e.preventDefault(); this.nudgeSelectedMirrorRotation(-1); }
+        else if (e.key === 'ArrowRight') { e.preventDefault(); this.nudgeSelectedMirrorRotation(1); }
+    }
+
+    /** Rotate the selected mirror by `delta` degrees (validated), and sync the dial. */
+    nudgeSelectedMirrorRotation(delta) {
+        const mirror = this.selectedMirror;
+        if (!mirror) return;
+        const target = ((((mirror.rotation || 0) + delta) % 360) + 360) % 360;
+        this.onRotationChange(target); // validates + applies (or reverts if invalid)
+        if (this.rotationControl) this.rotationControl.setAngle(mirror.rotation || 0);
     }
 
     // --- Zoom / Pan ---
