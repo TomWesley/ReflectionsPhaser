@@ -93,8 +93,9 @@ export class TargetRenderer {
         ctx.fillStyle = glowGrad;
         ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU); ctx.fill();
 
-        // Boundary ring at exactly TARGET_RADIUS (the honest hit edge), glowing.
-        arc(R, 0, TAU, amber(0.6), 1.5, 8);
+        // Boundary at exactly TARGET_RADIUS — the LOSE line. Soft wide halo here; a
+        // crisp bright rim is drawn last (below), on top of everything.
+        arc(R, 0, TAU, amber(0.5), 3.5, 24);
 
         // Spokes: amber lines from each die vertex out to the boundary ring, as
         // thick and glowing as the hex's outer wall.
@@ -150,6 +151,12 @@ export class TargetRenderer {
         ctx.fillStyle = coreGrad;
         ctx.beginPath(); ctx.arc(cx, cy, coreR, 0, TAU); ctx.fill();
         ctx.shadowBlur = 0;
+
+        // Prominent hit-boundary rim, drawn last on top of everything — the exact
+        // line at which a laser reaching it loses the game. Bright, pulsing glow.
+        const rimPulse = 0.85 + 0.15 * b1;
+        arc(R, 0, TAU, amber(rimPulse), 2.4, 14);
+        arc(R, 0, TAU, amber(1), 1.2, 4);
     }
 
     static drawBreachEffects(ctx, centerX, centerY, radius, progress) {
