@@ -65,24 +65,23 @@ export class TargetRenderer {
         ctx.fillStyle = gameOver ? '#1a0608' : '#050403';
         ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU); ctx.fill();
 
-        // Soft amber glow around the centre.
-        const glowGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * 0.62);
-        glowGrad.addColorStop(0, amber(0.5 * (0.7 + 0.3 * b1)));
-        glowGrad.addColorStop(0.5, amber(0.14));
+        // Soft amber glow filling the core — the power-core bloom.
+        const glowGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, R);
+        glowGrad.addColorStop(0, amber(0.55 * (0.72 + 0.28 * b1)));
+        glowGrad.addColorStop(0.5, amber(0.18));
         glowGrad.addColorStop(1, amber(0));
         ctx.fillStyle = glowGrad;
-        ctx.beginPath(); ctx.arc(cx, cy, R * 0.62, 0, TAU); ctx.fill();
+        ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU); ctx.fill();
 
         // Reactor blades — 6 radial wedges spinning CCW (the nuclear homage).
         const inR = R * 0.3, outR = R * 0.78;
         const bladeGrad = ctx.createRadialGradient(cx, cy, inR * 0.5, cx, cy, outR);
         if (isBreach) {
-            bladeGrad.addColorStop(0, 'rgba(255, 96, 128, 0.85)'); bladeGrad.addColorStop(1, 'rgba(232, 78, 106, 0.32)');
+            bladeGrad.addColorStop(0, 'rgba(255, 96, 128, 0.9)'); bladeGrad.addColorStop(1, 'rgba(232, 78, 106, 0.35)');
         } else {
-            bladeGrad.addColorStop(0, amber(0.8)); bladeGrad.addColorStop(1, amber(0.32));
+            bladeGrad.addColorStop(0, amber(0.85)); bladeGrad.addColorStop(1, amber(0.35));
         }
-        for (let i = 0; i < 6; i++) {
-            const a = rotInner + i * (TAU / 6);
+        const bladePath = (a) => {
             const hIn = 0.2, hOut = 0.38;
             ctx.beginPath();
             ctx.moveTo(cx + Math.cos(a - hIn) * inR, cy + Math.sin(a - hIn) * inR);
@@ -90,32 +89,37 @@ export class TargetRenderer {
             ctx.lineTo(cx + Math.cos(a + hOut) * outR, cy + Math.sin(a + hOut) * outR);
             ctx.lineTo(cx + Math.cos(a + hIn) * inR, cy + Math.sin(a + hIn) * inR);
             ctx.closePath();
-            ctx.fillStyle = bladeGrad;
-            ctx.fill();
-            ctx.strokeStyle = gray(0.3);
-            ctx.lineWidth = 1;
-            ctx.stroke();
-        }
+        };
+        // Glowing blade fills — amber bloom, like the laser preview arrows.
+        ctx.shadowColor = isBreach ? '#E84E6A' : amber(0.9);
+        ctx.shadowBlur = 12 + flare * 18;
+        ctx.fillStyle = bladeGrad;
+        for (let i = 0; i < 6; i++) { bladePath(rotInner + i * (TAU / 6)); ctx.fill(); }
+        ctx.shadowBlur = 0;
+        // Crisp gray blade edges (no glow).
+        ctx.strokeStyle = gray(0.3); ctx.lineWidth = 1;
+        for (let i = 0; i < 6; i++) { bladePath(rotInner + i * (TAU / 6)); ctx.stroke(); }
 
-        // Black hub over the blade roots + amber rim.
+        // Black hub over the blade roots + glowing amber rim.
         ctx.fillStyle = gameOver ? '#1a0608' : '#050403';
         ctx.beginPath(); ctx.arc(cx, cy, inR * 0.94, 0, TAU); ctx.fill();
-        arc(inR * 0.94, 0, TAU, amber(0.7), 1.5, 4);
+        arc(inR * 0.94, 0, TAU, amber(0.85), 1.5, 8);
 
         // Central glowing amber core, slowly pulsing.
         const orbR = inR * 0.46 * (0.85 + 0.3 * b1);
         ctx.shadowColor = isBreach ? '#E84E6A' : amber(1);
-        ctx.shadowBlur = 22 + 14 * b1 + flare * 30;
+        ctx.shadowBlur = 24 + 14 * b1 + flare * 30;
         ctx.fillStyle = gameOver ? '#E84E6A' : (flare > 0.5 ? '#FF6080' : amber(1));
-        ctx.globalAlpha = 0.92;
+        ctx.globalAlpha = 0.95;
         ctx.beginPath(); ctx.arc(cx, cy, orbR, 0, TAU); ctx.fill();
         ctx.globalAlpha = 1;
         ctx.shadowBlur = 0;
 
-        // Outer chunky beaded ring at the hit radius, spinning CW.
-        arc(R, 0, TAU, amber(0.55), 1.5);
+        // Outer chunky beaded ring at the hit radius, spinning CW (glowing).
+        arc(R, 0, TAU, amber(0.6), 1.5, 8);
         arc(R * 0.86, 0, TAU, amber(0.4), 1);
         ctx.strokeStyle = gray(0.45); ctx.lineWidth = 1.2;
+        ctx.shadowColor = amber(0.5); ctx.shadowBlur = 4;
         for (let i = 0; i < 48; i++) {
             const a = rotOuter + i * (TAU / 48);
             ctx.beginPath();
@@ -123,6 +127,7 @@ export class TargetRenderer {
             ctx.lineTo(cx + Math.cos(a) * R * 0.99, cy + Math.sin(a) * R * 0.99);
             ctx.stroke();
         }
+        ctx.shadowBlur = 0;
     }
 
     static drawBreachEffects(ctx, centerX, centerY, radius, progress) {
