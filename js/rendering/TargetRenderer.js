@@ -25,10 +25,11 @@ export class TargetRenderer {
     }
 
     /**
-     * The core: a slow "mandala" of nested breathing hexagons (alternating amber /
-     * light-gray) rippling in and out on a phase-shifted wave, around a gently
-     * pulsing amber orb, inside a boundary ring at the exact hit radius. Geometric,
-     * hypnotic; amber / black / light-gray only. Breach & game-over flare red.
+     * The core: a HUD targeting reticle — concentric segmented arc rings that
+     * slowly drift (counter-rotating), diagonal arrow markers, side tabs, a dotted
+     * arc, and a center crosshair, all around a glowing, gently-pulsing amber orb.
+     * Boundary ring sits on the exact hit radius. Amber / black / light-gray only;
+     * breach & game-over flare red.
      */
     static drawCore(ctx, centerX, centerY, radius, gameOver, breachProgress = 0) {
         // Breach shake
@@ -46,52 +47,80 @@ export class TargetRenderer {
         const TAU = Math.PI * 2;
 
         const P = PALETTE.secondary;
+        const R = radius;
         const amber = (a) => isBreach ? `rgba(232, 78, 106, ${a})` : `rgba(${P[0]}, ${P[1]}, ${P[2]}, ${a})`;
-        const gray = (a) => `rgba(190, 196, 210, ${a})`;
+        const gray = (a) => `rgba(200, 206, 220, ${a})`;
+        const arc = (rr, a0, ext, color, w, blur) => {
+            ctx.strokeStyle = color; ctx.lineWidth = w;
+            ctx.shadowColor = blur ? color : 'transparent';
+            ctx.shadowBlur = blur || 0;
+            ctx.beginPath(); ctx.arc(cx, cy, rr, a0, a0 + ext); ctx.stroke();
+            ctx.shadowBlur = 0;
+        };
 
         // Black disc — masks the grid/zone beneath the core.
         ctx.fillStyle = gameOver ? '#1a0608' : '#050403';
-        ctx.beginPath(); ctx.arc(cx, cy, radius, 0, TAU); ctx.fill();
+        ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU); ctx.fill();
 
-        // Boundary ring at exactly TARGET_RADIUS (the honest hit edge).
-        ctx.strokeStyle = amber(0.6);
-        ctx.lineWidth = 1.5;
-        ctx.shadowColor = amber(0.6);
-        ctx.shadowBlur = 6 + flare * 20;
-        ctx.beginPath(); ctx.arc(cx, cy, radius, 0, TAU); ctx.stroke();
-        ctx.shadowBlur = 0;
+        // Slow, hypnotic HUD rotations — rings drift at different rates/directions.
+        const s1 = t / 9000, s2 = -t / 13000, s3 = t / 17000;
 
-        // Nested breathing hexagons — a slow mandala tunnel. Each ring's radius and
-        // brightness ride a phase-shifted wave, so the pattern ripples slowly in and
-        // out. Rings alternate amber / light-gray. No rotation.
-        const hexagon = (rr, rot) => {
+        // Boundary at exactly TARGET_RADIUS (honest hit edge): a thin baseline ring
+        // plus heavier amber/gray accent arcs drifting around it.
+        arc(R, 0, TAU, amber(0.4), 1);
+        arc(R, s1, 1.7, amber(0.85), 3, 7);
+        arc(R, s1 + 2.5, 1.0, amber(0.6), 3, 5);
+        arc(R, s1 + 4.3, 0.55, gray(0.5), 3);
+
+        // Diagonal inward arrow markers, just inside the ring.
+        ctx.fillStyle = amber(0.7);
+        for (let i = 0; i < 4; i++) {
+            const a = i * (TAU / 4) + TAU / 8;
+            const ux = Math.cos(a), uy = Math.sin(a), px = -uy, py = ux;
+            const bx = cx + ux * R * 0.9, by = cy + uy * R * 0.9;
             ctx.beginPath();
-            for (let i = 0; i < 6; i++) {
-                const a = rot + (i / 6) * TAU;
-                const x = cx + Math.cos(a) * rr, y = cy + Math.sin(a) * rr;
-                if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-            }
-            ctx.closePath();
-        };
-        const M = 6;
-        for (let k = 0; k < M; k++) {
-            const f = k / (M - 1);
-            const wave = Math.sin(t / 2600 - k * 0.85);
-            const rr = radius * (0.2 + 0.66 * f) * (1 + 0.05 * wave);
-            const glow = 0.5 + 0.5 * wave;
-            ctx.strokeStyle = (k % 2 === 1) ? gray(0.12 + 0.18 * glow) : amber(0.25 + 0.45 * glow);
-            ctx.lineWidth = 1;
-            hexagon(rr, k * 0.26);
-            ctx.stroke();
+            ctx.moveTo(bx - ux * 5, by - uy * 5);
+            ctx.lineTo(bx + ux * 2 + px * 4, by + uy * 2 + py * 4);
+            ctx.lineTo(bx + ux * 2 - px * 4, by + uy * 2 - py * 4);
+            ctx.closePath(); ctx.fill();
         }
 
-        // Central amber glowing core, slowly pulsing.
-        const ballR = radius * 0.13 * (0.85 + 0.3 * b1) * (1 + flare * 0.6);
+        // Mid ring: segmented gray arcs counter-rotating + an amber accent.
+        arc(R * 0.66, s2, 2.2, gray(0.35), 1.5);
+        arc(R * 0.66, s2 + 2.6, 1.6, gray(0.3), 1.5);
+        arc(R * 0.66, s2 + 5.0, 0.8, amber(0.7), 2, 4);
+
+        // Dotted arc drifting at ~0.8R.
+        ctx.fillStyle = amber(0.7);
+        for (let i = 0; i < 14; i++) {
+            const a = s3 + 0.5 + i * 0.055;
+            ctx.beginPath();
+            ctx.arc(cx + Math.cos(a) * R * 0.8, cy + Math.sin(a) * R * 0.8, 1.1, 0, TAU);
+            ctx.fill();
+        }
+
+        // Side tabs (left / right).
+        ctx.strokeStyle = gray(0.5); ctx.lineWidth = 1.5;
+        for (const side of [-1, 1]) {
+            ctx.strokeRect(cx + side * R * 0.44 - 3, cy - 6, 6, 12);
+        }
+
+        // Inner crosshair + a small ring.
+        ctx.strokeStyle = gray(0.45); ctx.lineWidth = 1;
+        const ch = R * 0.2;
+        ctx.beginPath();
+        ctx.moveTo(cx - ch, cy); ctx.lineTo(cx + ch, cy);
+        ctx.moveTo(cx, cy - ch); ctx.lineTo(cx, cy + ch);
+        ctx.stroke();
+        arc(R * 0.16, 0, TAU, gray(0.5), 1);
+
+        // Central glowing amber orb — the glow near the centre, slowly pulsing.
+        const orbR = R * 0.09 * (0.85 + 0.3 * b1);
         ctx.shadowColor = isBreach ? '#E84E6A' : amber(1);
-        ctx.shadowBlur = ballR * (2.2 + flare * 4);
+        ctx.shadowBlur = 16 + 10 * b1 + flare * 30;
         ctx.fillStyle = gameOver ? '#E84E6A' : (flare > 0.5 ? '#FF6080' : amber(1));
-        ctx.globalAlpha = 0.85 + 0.15 * b1;
-        ctx.beginPath(); ctx.arc(cx, cy, ballR, 0, TAU); ctx.fill();
+        ctx.globalAlpha = 0.92;
+        ctx.beginPath(); ctx.arc(cx, cy, orbR, 0, TAU); ctx.fill();
         ctx.globalAlpha = 1;
         ctx.shadowBlur = 0;
     }
