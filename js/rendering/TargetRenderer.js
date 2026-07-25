@@ -25,10 +25,10 @@ export class TargetRenderer {
     }
 
     /**
-     * The core: a reactor emblem (nuclear homage) — 6 amber radial blades spinning
-     * slowly one way, a chunky beaded ring at the exact hit radius spinning the
-     * other, a black hub, and a glowing gently-pulsing amber center. Amber / black /
-     * light-gray only; breach & game-over flare red.
+     * The core: a stationary reactor-chip — a hexagonal die with pin traces and
+     * contact pads, a graduated bezel ring at the exact hit radius, an inner circuit
+     * ring, and a glowing amber power core. Computer-chip + nuclear + power; amber /
+     * black / light-gray only. Breach & game-over flare red.
      */
     static drawCore(ctx, centerX, centerY, radius, gameOver, breachProgress = 0) {
         // Breach shake
@@ -57,75 +57,101 @@ export class TargetRenderer {
             ctx.shadowBlur = 0;
         };
 
-        // Inner blades and outer ring spin slowly in OPPOSITE directions.
-        const rotInner = -t / 9000;  // reactor blades, CCW
-        const rotOuter = t / 11000;  // chunky beaded ring, CW
+        // STATIONARY reactor-chip core: a hexagonal die with pin traces + contact
+        // pads, a graduated bezel, an inner circuit ring, and a glowing power core.
+        // Computer chip + nuclear + power. Amber / black / light-gray.
+        const hexRot = -Math.PI / 2;      // point-up hexagons
+        const dieR = R * 0.6, padR = R * 0.78, hubR = R * 0.3;
+        const poly = (rr, sides, rot) => {
+            ctx.beginPath();
+            for (let i = 0; i < sides; i++) {
+                const ang = rot + (i / sides) * TAU;
+                const x = cx + Math.cos(ang) * rr, y = cy + Math.sin(ang) * rr;
+                if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+        };
 
         // Black disc — masks the grid/zone beneath the core.
         ctx.fillStyle = gameOver ? '#1a0608' : '#050403';
         ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU); ctx.fill();
 
-        // Soft amber glow filling the core — the power-core bloom.
+        // Soft amber glow.
         const glowGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, R);
-        glowGrad.addColorStop(0, amber(0.55 * (0.72 + 0.28 * b1)));
-        glowGrad.addColorStop(0.5, amber(0.18));
+        glowGrad.addColorStop(0, amber(0.42));
+        glowGrad.addColorStop(0.5, amber(0.14));
         glowGrad.addColorStop(1, amber(0));
         ctx.fillStyle = glowGrad;
         ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU); ctx.fill();
 
-        // Radiation-trefoil blades — 3 annular sectors (radial sides, curved inner
-        // + outer arcs), ~60° wide with ~60° gaps, spinning slowly (nuclear icon).
-        const inR = R * 0.26, outR = R * 0.74;
-        const N = 3, hBlade = 0.52;
-        const bladeGrad = ctx.createRadialGradient(cx, cy, inR, cx, cy, outR);
-        if (isBreach) {
-            bladeGrad.addColorStop(0, 'rgba(255, 96, 128, 0.95)'); bladeGrad.addColorStop(1, 'rgba(232, 78, 106, 0.4)');
-        } else {
-            bladeGrad.addColorStop(0, amber(0.9)); bladeGrad.addColorStop(1, amber(0.4));
-        }
-        const bladePath = (a) => {
-            ctx.beginPath();
-            ctx.arc(cx, cy, inR, a - hBlade, a + hBlade, false); // inner arc
-            ctx.arc(cx, cy, outR, a + hBlade, a - hBlade, true); // outer arc back (radial sides auto-close)
-            ctx.closePath();
-        };
-        // Glowing blade fills — amber bloom, like the laser preview arrows.
-        ctx.shadowColor = isBreach ? '#E84E6A' : amber(0.9);
-        ctx.shadowBlur = 12 + flare * 18;
-        ctx.fillStyle = bladeGrad;
-        for (let i = 0; i < N; i++) { bladePath(rotInner + i * (TAU / N)); ctx.fill(); }
-        ctx.shadowBlur = 0;
-        // Crisp gray blade edges.
-        ctx.strokeStyle = gray(0.3); ctx.lineWidth = 1;
-        for (let i = 0; i < N; i++) { bladePath(rotInner + i * (TAU / N)); ctx.stroke(); }
-
-        // Central disc — a separate smaller circle (trefoil gap to the blades).
-        ctx.fillStyle = gameOver ? '#1a0608' : '#050403';
-        ctx.beginPath(); ctx.arc(cx, cy, inR * 0.62, 0, TAU); ctx.fill();
-        arc(inR * 0.62, 0, TAU, amber(0.85), 1.5, 8);
-
-        // Central glowing amber core, slowly pulsing.
-        const orbR = inR * 0.46 * (0.85 + 0.3 * b1);
-        ctx.shadowColor = isBreach ? '#E84E6A' : amber(1);
-        ctx.shadowBlur = 24 + 14 * b1 + flare * 30;
-        ctx.fillStyle = gameOver ? '#E84E6A' : (flare > 0.5 ? '#FF6080' : amber(1));
-        ctx.globalAlpha = 0.95;
-        ctx.beginPath(); ctx.arc(cx, cy, orbR, 0, TAU); ctx.fill();
-        ctx.globalAlpha = 1;
-        ctx.shadowBlur = 0;
-
-        // Outer chunky beaded ring at the hit radius, spinning CW (glowing).
+        // Boundary ring at exactly TARGET_RADIUS (the honest hit edge), glowing.
         arc(R, 0, TAU, amber(0.6), 1.5, 8);
-        arc(R * 0.86, 0, TAU, amber(0.4), 1);
-        ctx.strokeStyle = gray(0.45); ctx.lineWidth = 1.2;
-        ctx.shadowColor = amber(0.5); ctx.shadowBlur = 4;
-        for (let i = 0; i < 48; i++) {
-            const a = rotOuter + i * (TAU / 48);
+
+        // Bezel graduations — fine gray minors + amber majors every 5th.
+        for (let i = 0; i < 60; i++) {
+            const ang = (i / 60) * TAU;
+            const major = i % 5 === 0;
+            ctx.strokeStyle = major ? amber(0.6) : gray(0.32);
+            ctx.lineWidth = major ? 1.4 : 0.8;
+            const r0 = major ? R * 0.855 : R * 0.9;
             ctx.beginPath();
-            ctx.moveTo(cx + Math.cos(a) * R * 0.87, cy + Math.sin(a) * R * 0.87);
-            ctx.lineTo(cx + Math.cos(a) * R * 0.99, cy + Math.sin(a) * R * 0.99);
+            ctx.moveTo(cx + Math.cos(ang) * r0, cy + Math.sin(ang) * r0);
+            ctx.lineTo(cx + Math.cos(ang) * R * 0.96, cy + Math.sin(ang) * R * 0.96);
             ctx.stroke();
         }
+
+        // Chip pins: an amber trace from each die vertex out to a square contact pad.
+        for (let i = 0; i < 6; i++) {
+            const ang = hexRot + (i / 6) * TAU;
+            const dx = cx + Math.cos(ang) * dieR, dy = cy + Math.sin(ang) * dieR;
+            const px = cx + Math.cos(ang) * padR, py = cy + Math.sin(ang) * padR;
+            ctx.strokeStyle = amber(0.55); ctx.lineWidth = 1.5;
+            ctx.beginPath(); ctx.moveTo(dx, dy); ctx.lineTo(px, py); ctx.stroke();
+            ctx.save(); ctx.translate(px, py); ctx.rotate(ang);
+            ctx.fillStyle = amber(0.7); ctx.fillRect(-3, -3, 6, 6);
+            ctx.strokeStyle = gray(0.4); ctx.lineWidth = 0.8; ctx.strokeRect(-3, -3, 6, 6);
+            ctx.restore();
+        }
+
+        // Hexagonal chip die — outer amber frame (glow) + inner gray frame.
+        ctx.shadowColor = amber(0.5); ctx.shadowBlur = 6;
+        ctx.strokeStyle = amber(0.75); ctx.lineWidth = 1.6;
+        poly(dieR, 6, hexRot); ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = gray(0.35); ctx.lineWidth = 1;
+        poly(dieR * 0.82, 6, hexRot); ctx.stroke();
+
+        // Inner circuit spokes (edge-aligned) with pad nodes.
+        for (let i = 0; i < 6; i++) {
+            const ang = hexRot + (i / 6) * TAU + TAU / 12;
+            const ex = cx + Math.cos(ang) * dieR * 0.82, ey = cy + Math.sin(ang) * dieR * 0.82;
+            ctx.strokeStyle = amber(0.4); ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(cx + Math.cos(ang) * hubR, cy + Math.sin(ang) * hubR);
+            ctx.lineTo(ex, ey);
+            ctx.stroke();
+            ctx.fillStyle = amber(0.6);
+            ctx.beginPath(); ctx.arc(ex, ey, 1.4, 0, TAU); ctx.fill();
+        }
+
+        // Inner hub hexagon — dark fill + amber outline.
+        ctx.fillStyle = gameOver ? '#1a0608' : '#050403';
+        poly(hubR, 6, hexRot); ctx.fill();
+        ctx.shadowColor = amber(0.5); ctx.shadowBlur = 6;
+        ctx.strokeStyle = amber(0.75); ctx.lineWidth = 1.3;
+        poly(hubR, 6, hexRot); ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        // Central power core — glowing amber radial gradient.
+        const coreColor = gameOver ? '#E84E6A' : (flare > 0.5 ? '#FF6080' : amber(1));
+        const coreGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, hubR * 0.7);
+        coreGrad.addColorStop(0, isBreach ? '#FFD0D8' : '#FFE6B0');
+        coreGrad.addColorStop(0.55, coreColor);
+        coreGrad.addColorStop(1, isBreach ? 'rgba(232, 78, 106, 0.25)' : amber(0.25));
+        ctx.shadowColor = isBreach ? '#E84E6A' : amber(1);
+        ctx.shadowBlur = 20 + flare * 30;
+        ctx.fillStyle = coreGrad;
+        ctx.beginPath(); ctx.arc(cx, cy, hubR * 0.7, 0, TAU); ctx.fill();
         ctx.shadowBlur = 0;
     }
 
