@@ -2272,7 +2272,7 @@ h1 {
 }
 
 .btn-replay {
-    background: linear-gradient(135deg, var(--arc) 0%, #6B8FE8 100%);
+    background: var(--arc);
     color: white;
 }
 
@@ -2282,7 +2282,7 @@ h1 {
 }
 
 .btn-save {
-    background: linear-gradient(135deg, var(--pink) 0%, #F0A0E8 100%);
+    background: var(--pink);
     color: white;
 }
 
@@ -2292,7 +2292,7 @@ h1 {
 }
 
 .btn-share {
-    background: linear-gradient(135deg, #34C759 0%, #5AC778 100%);
+    background: #34C759;
     color: white;
 }
 
@@ -2303,7 +2303,7 @@ h1 {
 
 .btn-share:disabled,
 .btn-share.converting {
-    background: linear-gradient(135deg, #666 0%, #888 100%);
+    background: #666;
     cursor: wait;
     transform: none;
 }
