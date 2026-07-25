@@ -61,7 +61,14 @@ export class RotationControl {
         // 0° = up (north), clockwise positive
         let angle = Math.atan2(x, -y) * 180 / Math.PI;
         if (angle < 0) angle += 360;
-        return Math.round(angle) % 360;
+        angle = Math.round(angle) % 360;
+        // Magnetic detents at the axis-aligned angles (0/90/180/270). The dial is
+        // absolute-positioned, so without these an exact 90-multiple is a ~1°-wide
+        // target and a normal drag jumps straight past it. Snaps only within TOL°.
+        const TOL = 5;
+        const nearest = Math.round(angle / 90) * 90;
+        if (Math.abs(angle - nearest) <= TOL) angle = nearest % 360;
+        return angle;
     }
 
     onPointerDown(e) {
