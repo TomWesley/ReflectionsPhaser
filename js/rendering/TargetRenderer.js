@@ -48,7 +48,7 @@ export class TargetRenderer {
         const P = PALETTE.secondary;
         const R = radius;
         const amber = (a) => isBreach ? `rgba(232, 78, 106, ${a})` : `rgba(${P[0]}, ${P[1]}, ${P[2]}, ${a})`;
-        const gray = (a) => `rgba(200, 206, 220, ${a})`;
+        const gray = (a) => `rgba(212, 208, 200, ${a})`;
         const arc = (rr, a0, ext, color, w, blur) => {
             ctx.strokeStyle = color; ctx.lineWidth = w;
             ctx.shadowColor = blur ? color : 'transparent';
