@@ -1005,6 +1005,9 @@ h1 {
 .rules-modal.hidden {
     opacity: 0;
     pointer-events: none;
+    /* Robustly gone: higher specificity than the mobile `.rules-modal` display
+       overrides below, so a hidden modal can never be forced half-visible. */
+    display: none !important;
 }
 
 .rules-content {
@@ -1575,18 +1578,20 @@ h1 {
         display: none !important;
     }
     
-    .rules-modal {
+    /* Game page only: hide game modals on mobile. Secondary pages (leaderboard /
+       about) share game.css but need their auth modal to open on mobile. */
+    body:not(.leaderboard-page):not(.about-page) .rules-modal {
         display: none !important;
     }
-    
+
     .info-bubble {
         display: block;
     }
 }
 
-/* Mobile portrait - show rotation prompt */
+/* Mobile portrait - show rotation prompt (game page only) */
 @media screen and (max-width: 768px) and (orientation: portrait) {
-    body::after {
+    body:not(.leaderboard-page):not(.about-page)::after {
         content: "ROTATE DEVICE FOR OPTIMAL LASER EXPERIENCE";
         position: fixed;
         top: 50%;
@@ -1607,7 +1612,7 @@ h1 {
         text-shadow: 0 0 12px rgba(232, 122, 220, 0.6);
     }
     
-    body > * {
+    body:not(.leaderboard-page):not(.about-page) > * {
         opacity: 0.3;
     }
 }
@@ -1832,8 +1837,8 @@ h1 {
         display: none !important;
     }
 
-    /* Hide desktop UI */
-    .navbar,
+    /* Hide desktop UI (game page only — secondary pages keep their navbar). */
+    body:not(.leaderboard-page):not(.about-page) .navbar,
     .game-header-section,
     .game-controls-bar,
     .info-bubble,
