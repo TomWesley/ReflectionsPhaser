@@ -315,6 +315,69 @@ body {
     transform: translateY(0);
 }
 
+/* ---- Site header: wordmark + labeled nav links (about / leaderboard pages) ---- */
+.navbar-brand {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 800;
+    font-size: 1.1rem;
+    letter-spacing: 2px;
+    color: var(--arc);
+    text-decoration: none;
+    text-shadow: 0 0 14px rgba(255, 176, 32, 0.4);
+    transition: all 0.2s ease;
+}
+
+.navbar-brand:hover {
+    color: #FFC860;
+    text-shadow: 0 0 20px rgba(255, 176, 32, 0.7);
+}
+
+.nav-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 14px;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 176, 32, 0.2);
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+}
+
+.nav-link i {
+    font-size: 17px;
+}
+
+.nav-link:hover {
+    background: rgba(255, 176, 32, 0.15);
+    border-color: var(--arc);
+    color: var(--arc);
+    box-shadow: 0 0 15px rgba(255, 176, 32, 0.3);
+    transform: translateY(-2px);
+}
+
+/* Current page: highlighted and non-interactive. */
+.nav-link.active {
+    background: rgba(255, 176, 32, 0.18);
+    border-color: var(--arc);
+    color: var(--arc);
+    cursor: default;
+    pointer-events: none;
+}
+
+@media (max-width: 600px) {
+    .nav-link-label { display: none; }
+    .nav-link { padding: 8px 11px; }
+    .navbar-brand { font-size: 0.95rem; letter-spacing: 1px; }
+}
+
 /* Mode Selector - REMOVED (keeping for cleanup) */
 
 /* Scan lines background */
