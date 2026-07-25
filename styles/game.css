@@ -186,21 +186,22 @@ body {
     text-transform: uppercase;
     letter-spacing: 1px;
     white-space: nowrap;
-    background: rgba(50, 255, 180, 0.15);
-    color: #7FFFD4;
-    border: 1px solid rgba(50, 255, 180, 0.3);
+    /* Same treatment as the share button: solid green + white lettering. */
+    background: #34C759;
+    color: #ffffff;
+    border: 1px solid #34C759;
 }
 
 .navbar-btn-daily:hover {
-    background: rgba(50, 255, 180, 0.3);
-    box-shadow: 0 0 14px rgba(50, 255, 180, 0.3);
+    background: #2FB350;
+    box-shadow: 0 0 14px rgba(52, 199, 89, 0.35);
     transform: translateY(-2px);
 }
 
 .navbar-btn-daily.daily-active {
-    background: rgba(50, 255, 180, 0.35);
-    border-color: rgba(50, 255, 180, 0.6);
-    box-shadow: 0 0 12px rgba(50, 255, 180, 0.3);
+    background: #34C759;
+    border-color: #5AC778;
+    box-shadow: 0 0 12px rgba(52, 199, 89, 0.45);
 }
 
 .navbar-btn-daily i {
@@ -225,16 +226,17 @@ body {
     text-transform: uppercase;
     letter-spacing: 1px;
     white-space: nowrap;
-    /* Perpetually amber: duller when snapping is off. */
-    background: rgba(255, 176, 32, 0.08);
-    color: #BC8B3A;
-    border: 1px solid rgba(255, 176, 32, 0.28);
+    /* Same treatment as the replay button: solid amber + white lettering.
+       Duller amber when snapping is off, full bright amber when on. */
+    background: #B5842A;
+    color: #ffffff;
+    border: 1px solid #B5842A;
 }
 
 .navbar-btn-snap:hover {
-    background: rgba(255, 176, 32, 0.15);
-    border-color: rgba(255, 176, 32, 0.55);
-    box-shadow: 0 0 14px rgba(255, 176, 32, 0.28);
+    background: #C89530;
+    border-color: #C89530;
+    box-shadow: 0 0 14px rgba(255, 176, 32, 0.3);
     transform: translateY(-2px);
 }
 
@@ -254,10 +256,10 @@ body {
 }
 
 .navbar-btn-snap.snap-active {
-    background: rgba(255, 176, 32, 0.22);
-    color: #FFB020;
-    border-color: rgba(255, 176, 32, 0.7);
-    box-shadow: 0 0 12px rgba(255, 176, 32, 0.45);
+    background: #FFB020;
+    color: #ffffff;
+    border-color: #FFB020;
+    box-shadow: 0 0 12px rgba(255, 176, 32, 0.5);
 }
 
 .navbar-btn-snap i {
