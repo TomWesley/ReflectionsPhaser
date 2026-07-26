@@ -320,6 +320,120 @@ body {
     transform: translateY(0);
 }
 
+/* ---- Solid info button (top-left): a filled amber chip like the other buttons ---- */
+.nav-info-btn {
+    width: 42px;
+    height: 42px;
+    border-radius: 8px;
+    background: var(--arc);
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.nav-info-btn .btn-eng-icon {
+    width: 24px;
+    height: 24px;
+}
+
+.nav-info-btn:hover {
+    background: #FFC24D;
+    box-shadow: 0 0 16px rgba(255, 176, 32, 0.5);
+    transform: translateY(-2px);
+}
+
+.nav-info-btn:active {
+    transform: translateY(0);
+}
+
+/* ---- Desktop navbar dropdown: hamburger + Daily / Leaderboard / About / Feedback ---- */
+.nav-menu-wrap {
+    position: relative;
+    display: inline-flex;
+}
+
+.nav-menu-btn {
+    width: 42px;
+    height: 42px;
+    border-radius: 8px;
+    background: #34C759;
+    border: none;
+    color: #ffffff;
+    font-size: 22px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.nav-menu-btn:hover {
+    background: #2FB350;
+    box-shadow: 0 0 16px rgba(52, 199, 89, 0.5);
+    transform: translateY(-2px);
+}
+
+.nav-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    min-width: 200px;
+    background: var(--card-bg);
+    border: 1px solid rgba(255, 176, 32, 0.25);
+    border-radius: 8px;
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    box-shadow: 0 12px 34px rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(10px);
+    z-index: 200;
+}
+
+.nav-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 6px;
+    background: transparent;
+    border: none;
+    color: var(--text-primary);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.nav-dropdown-item .btn-eng-icon {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+}
+
+.nav-dropdown-item:hover {
+    background: rgba(255, 176, 32, 0.14);
+    color: var(--arc);
+}
+
+/* Daily challenge active: tint the item green (its label also flips to Main Game). */
+.nav-dropdown-item.daily-active {
+    color: #34C759;
+}
+
+.nav-dropdown-item.daily-active:hover {
+    background: rgba(52, 199, 89, 0.14);
+    color: #34C759;
+}
+
 /* ---- Site header: wordmark + labeled nav links (about / leaderboard pages) ---- */
 .navbar-brand {
     font-family: 'Orbitron', sans-serif;

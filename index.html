@@ -40,8 +40,8 @@
     <!-- Professional Navigation Bar -->
     <nav class="navbar">
         <div class="navbar-left">
-            <button class="nav-icon-btn" onclick="openRules()" title="How to Play">
-                <canvas class="btn-eng-icon" data-eng-icon="info" data-eng-color="244,244,250" width="36" height="36"></canvas>
+            <button class="nav-info-btn" onclick="openRules()" title="How to Play">
+                <canvas class="btn-eng-icon" data-eng-icon="info" data-eng-color="22,19,12" width="36" height="36"></canvas>
             </button>
             <span id="navbarUser" class="navbar-user" onclick="openAuthModal()" title="Account"></span>
         </div>
@@ -50,31 +50,41 @@
         </div>
 
         <div class="navbar-right">
-            <button id="dailyChallengeToggle" class="navbar-btn-daily" title="Daily Challenge">
-                <canvas class="btn-eng-icon" data-eng-icon="daily" data-eng-color="255,255,255" width="36" height="36"></canvas>
-                <span>Daily</span>
+            <button id="launchBtn" class="navbar-btn-primary">
+                <canvas class="btn-eng-icon" data-eng-icon="launch" data-eng-color="235,240,255" width="36" height="36"></canvas>
+                <span>Start</span>
             </button>
             <button id="snapToggle" class="navbar-btn-snap" title="Toggle Mirror Snapping">
                 <canvas class="btn-eng-icon" data-eng-icon="snap" data-eng-color="255,255,255" width="36" height="36"></canvas>
                 <span>Snap</span>
             </button>
-            <button id="launchBtn" class="navbar-btn-primary">
-                <canvas class="btn-eng-icon" data-eng-icon="launch" data-eng-color="235,240,255" width="36" height="36"></canvas>
-                <span>Start</span>
-            </button>
             <button id="resetBtn" class="navbar-btn-secondary">
                 <canvas class="btn-eng-icon" data-eng-icon="shuffle" data-eng-color="200,208,225" width="36" height="36"></canvas>
                 <span>Shuffle</span>
             </button>
-            <a href="/leaderboard" class="nav-icon-btn" title="Leaderboard">
-                <canvas class="btn-eng-icon" data-eng-icon="leaderboard" data-eng-color="244,244,250" width="36" height="36"></canvas>
-            </a>
-            <a href="/about" class="nav-icon-btn" title="About">
-                <canvas class="btn-eng-icon" data-eng-icon="about" data-eng-color="244,244,250" width="36" height="36"></canvas>
-            </a>
-            <button class="nav-icon-btn" title="Feedback" onclick="openFeedbackModal()">
-                <canvas class="btn-eng-icon" data-eng-icon="comms" data-eng-color="244,244,250" width="36" height="36"></canvas>
-            </button>
+            <div class="nav-menu-wrap">
+                <button id="navMenuBtn" class="nav-menu-btn" onclick="toggleNavMenu()" aria-label="Menu" aria-haspopup="true" aria-expanded="false">
+                    <i class="iconoir-menu"></i>
+                </button>
+                <div id="navMenu" class="nav-dropdown hidden" role="menu">
+                    <button id="dailyChallengeToggle" class="nav-dropdown-item" title="Daily Challenge" role="menuitem">
+                        <canvas class="btn-eng-icon" data-eng-icon="daily" data-eng-color="127,255,212" width="36" height="36"></canvas>
+                        <span>Daily</span>
+                    </button>
+                    <a href="/leaderboard" class="nav-dropdown-item" title="Leaderboard" role="menuitem">
+                        <canvas class="btn-eng-icon" data-eng-icon="leaderboard" data-eng-color="244,244,250" width="36" height="36"></canvas>
+                        <span>Leaderboard</span>
+                    </a>
+                    <a href="/about" class="nav-dropdown-item" title="About" role="menuitem">
+                        <canvas class="btn-eng-icon" data-eng-icon="about" data-eng-color="244,244,250" width="36" height="36"></canvas>
+                        <span>About</span>
+                    </a>
+                    <button class="nav-dropdown-item" onclick="closeNavMenu(); openFeedbackModal()" role="menuitem">
+                        <canvas class="btn-eng-icon" data-eng-icon="comms" data-eng-color="244,244,250" width="36" height="36"></canvas>
+                        <span>Feedback</span>
+                    </button>
+                </div>
+            </div>
         </div>
     </nav>
 
@@ -874,6 +884,33 @@
                 statusEl.style.color = '#E84E6A';
             }
         }
+
+        // Desktop navbar dropdown (Daily / Leaderboard / About / Feedback)
+        function toggleNavMenu() {
+            const menu = document.getElementById('navMenu');
+            const btn = document.getElementById('navMenuBtn');
+            if (!menu) return;
+            const isOpen = menu.classList.toggle('hidden') === false;
+            if (btn) btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        }
+
+        function closeNavMenu() {
+            const menu = document.getElementById('navMenu');
+            const btn = document.getElementById('navMenuBtn');
+            if (menu) menu.classList.add('hidden');
+            if (btn) btn.setAttribute('aria-expanded', 'false');
+        }
+
+        // Close the dropdown on outside click or Escape.
+        document.addEventListener('click', (e) => {
+            const wrap = document.querySelector('.nav-menu-wrap');
+            const menu = document.getElementById('navMenu');
+            if (!wrap || !menu || menu.classList.contains('hidden')) return;
+            if (!wrap.contains(e.target)) closeNavMenu();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeNavMenu();
+        });
 
         // Mobile Menu Functions
         function toggleMobileMenu() {
