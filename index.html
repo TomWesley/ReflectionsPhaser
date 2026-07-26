@@ -1137,5 +1137,65 @@
 
     <!-- Main Game Module -->
     <script type="module" src="/js/main.js?v=18"></script>
+
+    <!-- AI Exhibition + Record mode (gated behind ?exhibit). Loads the AI's top runs
+         from ai/exhibit-runs.json and plays each through the REAL game engine, so the
+         recording is identical to a live session. Save with the normal Save button. -->
+    <script>
+    (function () {
+        if (!new URLSearchParams(location.search).has('exhibit')) return;
+
+        const waitForGame = () => new Promise((resolve) => {
+            const t = setInterval(() => {
+                if (window.game && window.game.boardReady) { clearInterval(t); resolve(window.game); }
+            }, 150);
+        });
+
+        function play(game, run) {
+            if (game.isPlaying || game._launching) return;
+            ['gameOverModal', 'victoryModal'].forEach(id => {
+                const m = document.getElementById(id); if (m) m.classList.add('hidden');
+            });
+            // Inject the AI's exact solved board and play it for real.
+            game.applyServerPuzzle({ mode: 'main', mirrors: run.mirrors, spawners: run.spawners });
+            game.isRanked = false;      // exhibition — never submitted to the leaderboard
+            game.sessionId = null;
+            game.selectedMirror = null;
+            game.gameOver = false;
+            try { game.render(); } catch (e) {}
+            game.launchLasers();        // real engine starts + auto-records
+        }
+
+        async function main() {
+            const game = await waitForGame();
+            let runs = [];
+            try {
+                const res = await fetch('/ai/exhibit-runs.json', { cache: 'no-store' });
+                runs = (await res.json()).runs || [];
+            } catch (e) {
+                alert('Could not load /ai/exhibit-runs.json — run the AI (node ../ai/run.mjs) and serve the site from the repo root.');
+                return;
+            }
+
+            const panel = document.createElement('div');
+            panel.style.cssText = 'position:fixed;left:14px;bottom:14px;z-index:9999;background:rgba(14,12,8,0.95);border:1px solid rgba(255,176,32,0.4);border-radius:10px;padding:12px 14px;font-family:ui-monospace,monospace;color:#ece7dd;box-shadow:0 8px 30px rgba(0,0,0,0.6);width:230px;';
+            panel.innerHTML = '<div style="font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:#ffb020;margin-bottom:8px;">AI Exhibition — Record</div>';
+            runs.forEach((r) => {
+                const b = document.createElement('button');
+                b.textContent = 'Play #' + r.rank + '  ·  ' + r.score.toFixed(1) + 's';
+                b.style.cssText = 'display:block;width:100%;margin:4px 0;padding:8px 10px;border:none;border-radius:6px;background:#ffb020;color:#16130c;font-family:ui-monospace,monospace;font-weight:700;font-size:12px;cursor:pointer;';
+                b.onclick = () => play(game, r);
+                panel.appendChild(b);
+            });
+            const hint = document.createElement('div');
+            hint.style.cssText = 'font-size:10px;color:#9aa0ac;margin-top:8px;line-height:1.4;';
+            hint.textContent = 'Pick a run — it plays and records in real time. When the core is breached, click Save to download that run as MP4.';
+            panel.appendChild(hint);
+            document.body.appendChild(panel);
+        }
+
+        main();
+    })();
+    </script>
 </body>
 </html>

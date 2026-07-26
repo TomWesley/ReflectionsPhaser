@@ -1,0 +1,364 @@
+<title>REFLECTIONS — Machine Player</title>
+<style>
+  :root {
+    --void: #0a0906;
+    --void2: #0e0c07;
+    --panel: #16130c;
+    --panel2: #1c1810;
+    --line: rgba(150,156,172,0.14);
+    --amber: #ffb020;
+    --amber-dim: #b5842a;
+    --red: #e84e6a;
+    --steel: #97a6c2;
+    --ink: #ece7dd;
+    --ink-dim: #9aa0ac;
+    --mono: ui-monospace, "SF Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  .wrap {
+    background:
+      radial-gradient(1100px 600px at 50% -10%, rgba(255,176,32,0.06), transparent 60%),
+      var(--void);
+    color: var(--ink);
+    font-family: var(--sans);
+    line-height: 1.5;
+    min-height: 100vh;
+    padding: clamp(20px, 4vw, 56px) clamp(16px, 4vw, 40px) 80px;
+  }
+  .inner { max-width: 1120px; margin: 0 auto; }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 12px; letter-spacing: 0.32em; text-transform: uppercase;
+    color: var(--amber); margin: 0 0 14px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .eyebrow::before { content: ""; width: 26px; height: 1px; background: var(--amber); opacity: 0.7; }
+  h1 {
+    font-family: var(--sans); font-weight: 800;
+    font-size: clamp(30px, 5.2vw, 56px); line-height: 1.02; letter-spacing: -0.02em;
+    margin: 0 0 16px; text-wrap: balance;
+  }
+  h1 .hl { color: var(--amber); }
+  .lede { font-size: clamp(15px, 1.7vw, 18px); color: var(--ink-dim); max-width: 64ch; margin: 0; }
+
+  /* stat tiles */
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 34px 0 8px; }
+  @media (max-width: 720px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+  .tile {
+    background: linear-gradient(180deg, var(--panel2), var(--panel));
+    border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px;
+  }
+  .tile .k { font-family: var(--mono); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-dim); }
+  .tile .v {
+    font-family: var(--mono); font-variant-numeric: tabular-nums;
+    font-size: clamp(24px, 3.4vw, 34px); font-weight: 700; color: var(--amber);
+    margin-top: 8px; line-height: 1;
+  }
+  .tile .v small { font-size: 0.5em; color: var(--ink-dim); font-weight: 500; letter-spacing: 0.05em; }
+  .tile.red .v { color: var(--red); }
+
+  section { margin-top: 56px; }
+  .sec-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 6px; flex-wrap: wrap; }
+  h2 { font-size: clamp(20px, 2.6vw, 26px); font-weight: 700; letter-spacing: -0.01em; margin: 0; }
+  .sec-note { font-size: 14px; color: var(--ink-dim); max-width: 60ch; margin: 4px 0 0; }
+
+  .panel-box {
+    background: linear-gradient(180deg, var(--panel2), var(--panel));
+    border: 1px solid var(--line); border-radius: 14px; padding: 18px;
+    margin-top: 18px;
+  }
+  #curve { width: 100%; height: auto; display: block; }
+  .legend { display: flex; gap: 20px; flex-wrap: wrap; font-family: var(--mono); font-size: 12px; color: var(--ink-dim); margin-top: 10px; letter-spacing: 0.04em; }
+  .legend span { display: inline-flex; align-items: center; gap: 7px; }
+  .swatch { width: 16px; height: 3px; border-radius: 2px; display: inline-block; }
+
+  /* replay grid */
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 20px; }
+  @media (max-width: 900px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 600px) { .grid { grid-template-columns: 1fr; } }
+  .run {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    overflow: hidden; transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+  }
+  .run:hover { transform: translateY(-3px); border-color: rgba(255,176,32,0.4); box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+  .run.feature { grid-column: 1 / -1; display: grid; grid-template-columns: 1.4fr 1fr; }
+  @media (max-width: 720px) { .run.feature { grid-template-columns: 1fr; } }
+  .stage { position: relative; background: #060504; aspect-ratio: 4 / 3; }
+  .stage canvas { width: 100%; height: 100%; display: block; }
+  .rankbadge {
+    position: absolute; top: 10px; left: 10px; z-index: 2;
+    font-family: var(--mono); font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--void); background: var(--amber); padding: 4px 9px; border-radius: 5px; font-weight: 700;
+  }
+  .run.feature .rankbadge { background: var(--red); color: #fff; }
+  .livetag {
+    position: absolute; top: 10px; right: 10px; z-index: 2;
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--ink-dim); background: rgba(0,0,0,0.45); padding: 4px 8px; border-radius: 5px;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .livetag .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--red); box-shadow: 0 0 6px var(--red); }
+  .meta { padding: 14px 16px; }
+  .meta .score { font-family: var(--mono); font-variant-numeric: tabular-nums; font-weight: 700; color: var(--amber); font-size: clamp(22px, 3vw, 30px); line-height: 1; }
+  .meta .score small { color: var(--ink-dim); font-size: 0.45em; font-weight: 500; letter-spacing: 0.08em; }
+  .meta .sub { font-family: var(--mono); font-size: 12px; color: var(--ink-dim); letter-spacing: 0.05em; margin-top: 8px; display: flex; gap: 14px; flex-wrap: wrap; }
+  .run.feature .meta { align-self: center; padding: 22px 24px; }
+  .run.feature .meta .blurb { color: var(--ink-dim); font-family: var(--sans); font-size: 14px; margin-top: 12px; max-width: 40ch; }
+
+  .controls { display: flex; align-items: center; gap: 12px; margin-top: 18px; }
+  .btn {
+    font-family: var(--mono); font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--void); background: var(--amber); border: none; border-radius: 6px;
+    padding: 9px 16px; cursor: pointer; font-weight: 700;
+  }
+  .btn:hover { background: #ffc24d; }
+  .btn.ghost { background: transparent; color: var(--ink-dim); border: 1px solid var(--line); }
+  .btn.ghost:hover { color: var(--amber); border-color: rgba(255,176,32,0.4); }
+
+  footer { margin-top: 64px; border-top: 1px solid var(--line); padding-top: 24px; color: var(--ink-dim); font-size: 14px; }
+  footer h3 { color: var(--ink); font-size: 15px; margin: 0 0 8px; font-family: var(--mono); letter-spacing: 0.1em; text-transform: uppercase; }
+  footer p { max-width: 72ch; margin: 0 0 10px; }
+  code { font-family: var(--mono); color: var(--amber); font-size: 0.92em; }
+</style>
+
+<div class="wrap">
+  <div class="inner">
+    <p class="eyebrow">REFLECTIONS · Machine Player</p>
+    <h1>An AI taught itself to <span class="hl">defend the core</span>.</h1>
+    <p class="lede" id="lede">It played hundreds of freshly dealt boards. On each one it started from the mirrors as dealt and rearranged them, keeping only the changes that kept the lasers out longer — learning, board by board, what a good defense looks like.</p>
+
+    <div class="stats" id="stats"></div>
+
+    <section id="learn">
+      <div class="sec-head">
+        <h2>Learning to hold the line</h2>
+      </div>
+      <p class="sec-note">Average survival across every board as the AI refines its placement. It starts near the dealt layout and climbs as it discovers arrangements that bounce lasers away from the core.</p>
+      <div class="panel-box">
+        <canvas id="curve" width="1040" height="360"></canvas>
+        <div class="legend">
+          <span><i class="swatch" style="background:var(--amber)"></i> Mean survival</span>
+          <span><i class="swatch" style="background:rgba(255,176,32,0.28)"></i> Middle 50% of boards</span>
+          <span><i class="swatch" style="background:var(--steel)"></i> Dealt layout (start)</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="best">
+      <div class="sec-head">
+        <h2>The ten best defenses</h2>
+        <div class="controls" style="margin:0">
+          <button class="btn" id="playAll">Pause all</button>
+        </div>
+      </div>
+      <p class="sec-note">The AI's ten highest-scoring games, replayed with the real physics. Blue-steel mirrors are its placement; amber darts are the lasers; the ringed core is what it's protecting.</p>
+      <div class="grid" id="grid"></div>
+    </section>
+
+    <footer>
+      <h3>How it works</h3>
+      <p>The score is <strong>survival time</strong> — how long the AI keeps all five lasers away from the center core, capped at five minutes. Every board is server-generated with a fixed set of mirrors; the AI may only move and rotate them.</p>
+      <p>Its method is deliberately simple: an <strong>evolutionary hill-climb</strong>. Starting from the dealt layout, it repeatedly nudges or rotates a mirror, re-runs the exact game physics, and keeps the change only if the board survives at least as long. Exploration shrinks over time so it settles into a strong defense. Interesting finding: a single fixed strategy doesn't generalize across boards — the reflections are too chaotic — so the intelligence lives in optimizing each board on its own.</p>
+    </footer>
+  </div>
+</div>
+
+<script>
+const DATA = __DATA__;
+(function () {
+  const CW = 800, CH = 600, CX = 400, CY = 300, CORE = 50;
+  const AMBER = '#ffb020', RED = '#e84e6a', STEEL_HI = '#a6b4cf', STEEL_LO = '#3d4a63';
+  const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const fmt = (s) => (s >= 300 ? '5:00' : (Math.floor(s / 60) > 0 ? Math.floor(s/60)+':'+String(Math.floor(s%60)).padStart(2,'0') : s.toFixed(1) + 's'));
+
+  // ---- stat tiles ----
+  const m = DATA.meta;
+  const stats = [
+    { k: 'Boards played', v: m.rows.toLocaleString() },
+    { k: 'Refined from', v: m.startAvg.toFixed(1) + 's', v2: '<small>dealt avg</small>' },
+    { k: 'Refined to', v: m.endAvg.toFixed(1) + 's', v2: '<small>' + m.improvement + '× longer</small>' },
+    { k: 'Best single game', v: fmt(m.bestScore), red: true, v2: '<small>' + (m.bestScore>=300?'perfect':'survival') + '</small>' },
+  ];
+  document.getElementById('stats').innerHTML = stats.map(s =>
+    '<div class="tile' + (s.red ? ' red' : '') + '"><div class="k">' + s.k + '</div><div class="v">' + s.v + ' ' + (s.v2||'') + '</div></div>'
+  ).join('');
+
+  // ---- learning curve ----
+  function drawCurve(progress) {
+    const cv = document.getElementById('curve'), ctx = cv.getContext('2d');
+    const W = cv.width, H = cv.height, padL = 58, padR = 18, padT = 18, padB = 34;
+    const L = DATA.learning;
+    const n = L.meanTraj.length;
+    const xs = L.stepAxis, ymax = Math.max.apply(null, L.p75Traj) * 1.08 || 10;
+    const X = (i) => padL + (i / (n - 1)) * (W - padL - padR);
+    const Y = (v) => H - padB - (v / ymax) * (H - padT - padB);
+    ctx.clearRect(0, 0, W, H);
+    // grid + y labels
+    ctx.font = '11px ui-monospace, monospace'; ctx.textBaseline = 'middle';
+    const yticks = 4;
+    for (let t = 0; t <= yticks; t++) {
+      const val = (ymax / yticks) * t, y = Y(val);
+      ctx.strokeStyle = 'rgba(150,156,172,0.10)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(W - padR, y); ctx.stroke();
+      ctx.fillStyle = 'rgba(154,160,172,0.75)'; ctx.textAlign = 'right';
+      ctx.fillText(val.toFixed(0) + 's', padL - 8, y);
+    }
+    // x labels
+    ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(154,160,172,0.75)';
+    for (let t = 0; t <= 4; t++) {
+      const i = Math.round((n - 1) * t / 4);
+      ctx.fillText(xs[i], X(i), H - padB + 14);
+    }
+    ctx.fillStyle = 'rgba(154,160,172,0.55)'; ctx.fillText('refinement step  →', (W)/2, H - 6);
+    const lim = Math.max(2, Math.floor(n * progress));
+    // band p25-p75
+    ctx.beginPath();
+    for (let i = 0; i < lim; i++) { const x = X(i), y = Y(L.p75Traj[i]); i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }
+    for (let i = lim - 1; i >= 0; i--) { ctx.lineTo(X(i), Y(L.p25Traj[i])); }
+    ctx.closePath(); ctx.fillStyle = 'rgba(255,176,32,0.14)'; ctx.fill();
+    // dealt-layout baseline
+    ctx.strokeStyle = 'rgba(151,166,194,0.5)'; ctx.setLineDash([4,4]); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(padL, Y(L.meanTraj[0])); ctx.lineTo(W - padR, Y(L.meanTraj[0])); ctx.stroke(); ctx.setLineDash([]);
+    // mean line
+    ctx.beginPath();
+    for (let i = 0; i < lim; i++) { const x = X(i), y = Y(L.meanTraj[i]); i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }
+    ctx.strokeStyle = AMBER; ctx.lineWidth = 2.4; ctx.lineJoin = 'round';
+    ctx.shadowColor = 'rgba(255,176,32,0.6)'; ctx.shadowBlur = 10; ctx.stroke(); ctx.shadowBlur = 0;
+    // endpoint dot
+    const ei = lim - 1, ex = X(ei), ey = Y(L.meanTraj[ei]);
+    ctx.fillStyle = AMBER; ctx.beginPath(); ctx.arc(ex, ey, 4, 0, 7); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 12px ui-monospace, monospace'; ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
+    if (progress >= 1) ctx.fillText(L.meanTraj[ei].toFixed(1) + 's', ex - 6, ey - 6);
+  }
+  // animate curve on load
+  if (reduce) { drawCurve(1); }
+  else {
+    let p = 0; const step = () => { p += 0.03; drawCurve(Math.min(1, p)); if (p < 1) requestAnimationFrame(step); };
+    requestAnimationFrame(step);
+  }
+  window.addEventListener('resize', () => drawCurve(1), { passive: true });
+
+  // ---- replay renderer ----
+  const TRAIL = 11;
+  function makeRun(container, run, feature) {
+    const cv = document.createElement('canvas'); cv.width = CW; cv.height = CH;
+    container.appendChild(cv);
+    const ctx = cv.getContext('2d');
+    const frames = run.trace.frames, nF = frames.length, fps = run.trace.fps || 30;
+    const polys = run.trace.mirrorPolys, spawns = run.spawners;
+
+    function bg() {
+      ctx.fillStyle = '#060504'; ctx.fillRect(0, 0, CW, CH);
+      ctx.strokeStyle = 'rgba(150,156,172,0.05)'; ctx.lineWidth = 1;
+      for (let x = 40; x < CW; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, CH); ctx.stroke(); }
+      for (let y = 40; y < CH; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(CW, y); ctx.stroke(); }
+    }
+    function core(flash) {
+      const g = ctx.createRadialGradient(CX, CY, 0, CX, CY, CORE + 34);
+      g.addColorStop(0, flash ? 'rgba(232,78,106,0.55)' : 'rgba(255,176,32,0.20)');
+      g.addColorStop(1, 'rgba(255,176,32,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(CX, CY, CORE + 34, 0, 7); ctx.fill();
+      ctx.strokeStyle = flash ? RED : AMBER; ctx.lineWidth = 2.4;
+      ctx.shadowColor = flash ? RED : 'rgba(255,176,32,0.8)'; ctx.shadowBlur = 14;
+      ctx.beginPath(); ctx.arc(CX, CY, CORE, 0, 7); ctx.stroke(); ctx.shadowBlur = 0;
+      ctx.fillStyle = flash ? RED : AMBER; ctx.beginPath(); ctx.arc(CX, CY, 5, 0, 7); ctx.fill();
+    }
+    function mirrors() {
+      for (const p of polys) {
+        if (!p.length) continue;
+        let miny = 1e9, maxy = -1e9; for (const v of p) { miny = Math.min(miny, v[1]); maxy = Math.max(maxy, v[1]); }
+        const g = ctx.createLinearGradient(0, miny, 0, maxy);
+        g.addColorStop(0, STEEL_HI); g.addColorStop(1, STEEL_LO);
+        ctx.beginPath(); ctx.moveTo(p[0][0], p[0][1]);
+        for (let i = 1; i < p.length; i++) ctx.lineTo(p[i][0], p[i][1]);
+        ctx.closePath();
+        ctx.fillStyle = g; ctx.fill();
+        ctx.strokeStyle = 'rgba(206,216,236,0.85)'; ctx.lineWidth = 1.3; ctx.stroke();
+      }
+    }
+    function spawners() {
+      for (const s of spawns) {
+        ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(Math.PI / 4);
+        ctx.fillStyle = 'rgba(232,78,106,0.9)'; ctx.shadowColor = RED; ctx.shadowBlur = 8;
+        ctx.fillRect(-4, -4, 8, 8); ctx.restore(); ctx.shadowBlur = 0;
+      }
+    }
+    function lasers(f) {
+      const cur = frames[f]; if (!cur) return;
+      const nL = cur.length;
+      for (let i = 0; i < nL; i++) {
+        // trail
+        ctx.lineWidth = 2; ctx.lineCap = 'round';
+        let prev = null;
+        for (let k = TRAIL; k >= 0; k--) {
+          const g = frames[f - k]; if (!g) continue; const pt = g[i]; if (!pt) { prev = null; continue; }
+          if (prev) {
+            const a = (1 - k / TRAIL) * 0.55;
+            // skip long jumps (wall/edge wrap) to avoid streaks across the board
+            if (Math.abs(pt[0]-prev[0]) < 60 && Math.abs(pt[1]-prev[1]) < 60) {
+              ctx.strokeStyle = 'rgba(255,176,32,' + a.toFixed(3) + ')';
+              ctx.beginPath(); ctx.moveTo(prev[0], prev[1]); ctx.lineTo(pt[0], pt[1]); ctx.stroke();
+            }
+          }
+          prev = pt;
+        }
+        const head = cur[i]; if (!head) continue;
+        ctx.shadowColor = AMBER; ctx.shadowBlur = 12;
+        ctx.fillStyle = AMBER; ctx.beginPath(); ctx.arc(head[0], head[1], 3.4, 0, 7); ctx.fill();
+        ctx.shadowBlur = 0; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(head[0], head[1], 1.3, 0, 7); ctx.fill();
+      }
+    }
+    function render(f) {
+      const flash = run.trace.breached && f >= nF - 2;
+      bg(); core(flash); mirrors(); spawners(); lasers(f);
+    }
+    return { cv, render, nF, fps, run };
+  }
+
+  const runs = [];
+  const grid = document.getElementById('grid');
+  DATA.top10.forEach((run, idx) => {
+    const feature = idx === 0;
+    const el = document.createElement('div'); el.className = 'run' + (feature ? ' feature' : '');
+    const stage = document.createElement('div'); stage.className = 'stage';
+    stage.innerHTML = '<span class="rankbadge">' + (feature ? 'Best defense' : '#' + run.rank) + '</span>' +
+      '<span class="livetag"><span class="dot"></span>Live physics</span>';
+    el.appendChild(stage);
+    const meta = document.createElement('div'); meta.className = 'meta';
+    meta.innerHTML =
+      '<div class="score">' + (run.score>=300?'5:00':run.score.toFixed(1)+'s') + ' <small>survived</small></div>' +
+      '<div class="sub"><span>' + run.mirrorCount + ' mirrors</span><span>' + run.spawners.length + ' lasers</span>' +
+      (run.cappedPerfect ? '<span style="color:var(--amber)">perfect run</span>' : '') + '</div>' +
+      (feature ? '<div class="blurb">Its strongest game. Watch how the mirrors form a shell that keeps deflecting every laser back outward, never letting one reach the center.</div>' : '');
+    el.appendChild(meta);
+    grid.appendChild(el);
+    runs.push(makeRun(stage, run, feature));
+  });
+
+  // ---- single animation loop ----
+  let playing = !reduce;
+  let last = performance.now();
+  const acc = runs.map(() => 0);
+  runs.forEach((r, i) => r.render(0));
+  function loop(now) {
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    if (playing) {
+      runs.forEach((r, i) => {
+        acc[i] += dt * r.fps;
+        let f = Math.floor(acc[i]);
+        if (f >= r.nF) { acc[i] = 0; f = 0; }
+        r.render(f);
+      });
+    }
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+
+  const btn = document.getElementById('playAll');
+  btn.textContent = playing ? 'Pause all' : 'Play all';
+  btn.addEventListener('click', () => { playing = !playing; last = performance.now(); btn.textContent = playing ? 'Pause all' : 'Play all'; });
+})();
+</script>
