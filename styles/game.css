@@ -320,12 +320,12 @@ body {
     transform: translateY(0);
 }
 
-/* ---- Solid info button (top-left): a filled amber chip like the other buttons ---- */
+/* ---- Solid info button (top-left): light-gray chip, black icon, pill height ---- */
 .nav-info-btn {
     width: 42px;
-    height: 42px;
+    height: 36px;
     border-radius: 8px;
-    background: var(--arc);
+    background: #B4B8C2;
     border: none;
     cursor: pointer;
     display: flex;
@@ -335,13 +335,13 @@ body {
 }
 
 .nav-info-btn .btn-eng-icon {
-    width: 24px;
-    height: 24px;
+    width: 20px;
+    height: 20px;
 }
 
 .nav-info-btn:hover {
-    background: #FFC24D;
-    box-shadow: 0 0 16px rgba(255, 176, 32, 0.5);
+    background: #C7CBD4;
+    box-shadow: 0 0 14px rgba(180, 184, 194, 0.4);
     transform: translateY(-2px);
 }
 
@@ -357,12 +357,12 @@ body {
 
 .nav-menu-btn {
     width: 42px;
-    height: 42px;
+    height: 36px;
     border-radius: 8px;
-    background: #34C759;
+    background: #B4B8C2;
     border: none;
-    color: #ffffff;
-    font-size: 22px;
+    color: #000000;
+    font-size: 20px;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -371,8 +371,8 @@ body {
 }
 
 .nav-menu-btn:hover {
-    background: #2FB350;
-    box-shadow: 0 0 16px rgba(52, 199, 89, 0.5);
+    background: #C7CBD4;
+    box-shadow: 0 0 14px rgba(180, 184, 194, 0.4);
     transform: translateY(-2px);
 }
 
