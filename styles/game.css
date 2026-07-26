@@ -812,6 +812,33 @@ h1 {
     cursor: grabbing;
 }
 
+/* Fine-rotation buttons under the dial (desktop + mobile). */
+.rot-nudge-row {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.rot-nudge {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--arc);
+    background: rgba(255, 176, 32, 0.12);
+    border: 1px solid rgba(255, 176, 32, 0.4);
+    border-radius: 6px;
+    padding: 6px 10px;
+    min-width: 42px;
+    cursor: pointer;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    transition: background 0.12s ease, transform 0.08s ease;
+}
+
+.rot-nudge:hover { background: rgba(255, 176, 32, 0.22); }
+.rot-nudge:active { background: var(--arc); color: #16130c; transform: translateY(1px); }
+
 /* Canvas loading overlay */
 .canvas-loader {
     position: absolute;
@@ -2122,6 +2149,13 @@ h1 {
     .rotation-control #rotationCanvas {
         width: 90px !important;
         height: 110px !important;
+    }
+
+    /* Bigger tap targets for the fine-rotation buttons on touch. */
+    .rot-nudge {
+        padding: 10px 12px;
+        font-size: 0.82rem;
+        min-width: 48px;
     }
 
     /* Mobile Menu Overlay */

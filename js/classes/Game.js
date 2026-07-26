@@ -174,6 +174,10 @@ export class Game {
         // any exact integer angle is reachable even though the dial is coarse.
         document.addEventListener('keydown', (e) => this.onKeyDown(e));
 
+        // On-screen -1°/+1° fine-rotation buttons (work on desktop AND touch, so
+        // mobile players get the same precise angle control the keyboard gives).
+        this.setupRotationNudgeButtons();
+
         // UI buttons
         document.getElementById('launchBtn').addEventListener('click', () => this.launchLasers());
         document.getElementById('resetBtn').addEventListener('click', () => this.resetGame());
@@ -484,6 +488,35 @@ export class Game {
         const target = ((((mirror.rotation || 0) + delta) % 360) + 360) % 360;
         this.onRotationChange(target); // validates + applies (or reverts if invalid)
         if (this.rotationControl) this.rotationControl.setAngle(mirror.rotation || 0);
+    }
+
+    /**
+     * Wire the -1°/+1° buttons. Uses pointer events so a single implementation
+     * covers mouse, pen, and touch. Tap = one degree; press-and-hold repeats so
+     * you can spin to any exact angle without spamming taps.
+     */
+    setupRotationNudgeButtons() {
+        const bind = (id, delta) => {
+            const btn = document.getElementById(id);
+            if (!btn) return;
+            let holdTimer = null, repeatTimer = null;
+            const stop = () => {
+                if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; }
+                if (repeatTimer) { clearInterval(repeatTimer); repeatTimer = null; }
+            };
+            btn.addEventListener('pointerdown', (e) => {
+                e.preventDefault();
+                this.nudgeSelectedMirrorRotation(delta);
+                holdTimer = setTimeout(() => {
+                    repeatTimer = setInterval(() => this.nudgeSelectedMirrorRotation(delta), 55);
+                }, 340);
+            });
+            btn.addEventListener('pointerup', stop);
+            btn.addEventListener('pointerleave', stop);
+            btn.addEventListener('pointercancel', stop);
+        };
+        bind('rotMinus', -1);
+        bind('rotPlus', 1);
     }
 
     // --- Zoom / Pan ---
