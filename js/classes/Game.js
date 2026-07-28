@@ -178,6 +178,16 @@ export class Game {
         // mobile players get the same precise angle control the keyboard gives).
         this.setupRotationNudgeButtons();
 
+        // Keep the floating mobile dial centered in the right margin as the
+        // viewport changes (rotate device, resize, browser chrome show/hide).
+        const repositionDial = () => {
+            if (this.rotationControlEl && !this.rotationControlEl.classList.contains('hidden')) {
+                this.positionRotationControlMobile();
+            }
+        };
+        window.addEventListener('resize', repositionDial);
+        window.addEventListener('orientationchange', repositionDial);
+
         // UI buttons
         document.getElementById('launchBtn').addEventListener('click', () => this.launchLasers());
         document.getElementById('resetBtn').addEventListener('click', () => this.resetGame());
@@ -442,6 +452,7 @@ export class Game {
             this.rotationControl.isDailyChallenge = this.isDailyChallenge;
             this.rotationControl.setAngle(mirror.rotation || 0);
             this.rotationControlEl.classList.remove('hidden');
+            this.positionRotationControlMobile();
         } else {
             this.rotationControlEl.classList.add('hidden');
         }
@@ -517,6 +528,32 @@ export class Game {
         };
         bind('rotMinus', -1);
         bind('rotPlus', 1);
+    }
+
+    /**
+     * On mobile landscape the dial floats in the black margin to the right of the
+     * board. The board is 4:3 and centered, so that margin's width depends on the
+     * viewport — center the dial in it with JS (CSS can't compute it). No-op on
+     * desktop, where the CSS positions the dial beside the board.
+     */
+    positionRotationControlMobile() {
+        const el = this.rotationControlEl;
+        if (!el) return;
+        const mobileLandscape = window.matchMedia(
+            '(max-width: 932px) and (orientation: landscape), (max-height: 500px) and (orientation: landscape)'
+        ).matches;
+        if (!mobileLandscape) {
+            el.style.removeProperty('left');
+            el.style.removeProperty('right');
+            el.style.removeProperty('transform');
+            return;
+        }
+        const rect = this.canvas.getBoundingClientRect();
+        const viewportRight = document.documentElement.clientWidth;   // UI layout only, not game logic
+        const gapCenter = (rect.right + viewportRight) / 2;           // midpoint of the right margin
+        el.style.setProperty('left', gapCenter + 'px', 'important');
+        el.style.setProperty('right', 'auto', 'important');
+        el.style.setProperty('transform', 'translate(-50%, -50%)', 'important');
     }
 
     // --- Zoom / Pan ---
