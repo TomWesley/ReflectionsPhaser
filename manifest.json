@@ -1,7 +1,7 @@
 {
     "name": "REFLECTIONS",
     "short_name": "Reflections",
-    "description": "Place mirrors, bounce five lasers, and keep them off the core as long as you can.",
+    "description": "Place mirrors to reflect incoming lasers and protect the core as long as you can.",
     "start_url": "/reflections/",
     "display": "standalone",
     "orientation": "landscape",
