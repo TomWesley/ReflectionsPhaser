@@ -194,7 +194,9 @@
       "Bash(node -e \"const d=require\\('./ai/exhibit-runs.json'\\); console.log\\('runs:',d.runs.length\\); const r=d.runs[0]; console.log\\('run1 score:',r.score,'mirrors:',r.mirrors.length,'spawners:',r.spawners.length\\); console.log\\('mirror0:',JSON.stringify\\(r.mirrors[0]\\)\\); console.log\\('spawner0:',JSON.stringify\\(r.spawners[0]\\)\\);\")",
       "Bash(curl -s -o /dev/null -w \"exhibit-runs.json: %{http_code} %{content_type}\\\\n\" http://localhost:8000/ai/exhibit-runs.json)",
       "Bash(curl -s -o /dev/null -w \"index.html: %{http_code}\\\\n\" http://localhost:8000/)",
-      "Bash(node ai/build-gallery.mjs)"
+      "Bash(node ai/build-gallery.mjs)",
+      "Bash(awk 'NR>=1821 && NR<=2000 && \\(/#gameCanvas/||/gameContainer/||/aspect|object-fit|max-width|max-height|width:|height:/\\)' styles/game.css)",
+      "Bash(node -e ' *)"
     ],
     "deny": [],
     "ask": []
