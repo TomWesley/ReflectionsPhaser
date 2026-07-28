@@ -7,7 +7,7 @@
     { "maxTime": 12, "rating": "Quality", "color": "#4E78E8" },
     { "maxTime": 20, "rating": "Resolute", "color": "#60A0F0" },
     { "maxTime": 30, "rating": "Dexterous", "color": "#88C8FF" },
-    { "maxTime": 50, "rating": "Splendid", "color": "#A8E0FF" },
+    { "maxTime": 60, "rating": "Splendid", "color": "#A8E0FF" },
     { "maxTime": 75, "rating": "Phenomenal", "color": "#A8E0FF" },
     { "maxTime": 999999, "rating": "Transcendent", "color": "#D4D4E8" }
   ]
