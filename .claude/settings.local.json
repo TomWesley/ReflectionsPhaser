@@ -196,7 +196,16 @@
       "Bash(curl -s -o /dev/null -w \"index.html: %{http_code}\\\\n\" http://localhost:8000/)",
       "Bash(node ai/build-gallery.mjs)",
       "Bash(awk 'NR>=1821 && NR<=2000 && \\(/#gameCanvas/||/gameContainer/||/aspect|object-fit|max-width|max-height|width:|height:/\\)' styles/game.css)",
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "Bash(fc-list)",
+      "Bash(rsvg-convert --version)",
+      "Bash(\"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome\" --version)",
+      "Bash(sed -i '' 's/font-size:96px;line-height:0.92;letter-spacing:4px/font-size:88px;line-height:0.94;letter-spacing:3px/' /private/tmp/claude-501/-Users-tomwesley-LocalGithubFiles-ReflectionsPhaser/80043efe-c66d-48d6-8fac-5a957da50bb4/scratchpad/og-card.html)",
+      "Bash(sed -i '' 's/font-size:26px;line-height:1.42;color:#c8ccd4;letter-spacing:0.01em;max-width:15ch/font-size:25px;line-height:1.4;color:#c8ccd4;letter-spacing:0.01em;max-width:440px/' /private/tmp/claude-501/-Users-tomwesley-LocalGithubFiles-ReflectionsPhaser/80043efe-c66d-48d6-8fac-5a957da50bb4/scratchpad/og-card.html)",
+      "Bash('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' --headless --disable-gpu --hide-scrollbars --force-device-scale-factor=1 --window-size=1200,630 --screenshot=/private/tmp/claude-501/-Users-tomwesley-LocalGithubFiles-ReflectionsPhaser/80043efe-c66d-48d6-8fac-5a957da50bb4/scratchpad/og.png file:///private/tmp/claude-501/-Users-tomwesley-LocalGithubFiles-ReflectionsPhaser/80043efe-c66d-48d6-8fac-5a957da50bb4/scratchpad/og-card.html)",
+      "Bash(node -e \"JSON.parse\\(require\\('fs'\\).readFileSync\\('manifest.json','utf8'\\)\\); console.log\\('manifest.json valid'\\)\")",
+      "Bash(rsvg-convert -w 8 public/favicon.svg -o /dev/null)",
+      "Bash(awk '{print $5, $9}')"
     ],
     "deny": [],
     "ask": []
