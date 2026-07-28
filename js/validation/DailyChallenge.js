@@ -487,7 +487,12 @@ export class DailyChallenge {
                 const w = config.width || config.size || CONFIG.GRID_SIZE;
                 const g = CONFIG.GRID_SIZE;
                 const opts = [g, g * 2, g * 3].filter(r => w - r >= g);
-                topWidth = w - (opts.length ? opts[shapeRng.nextInt(0, opts.length - 1)] : g);
+                const reduction = opts.length ? opts[shapeRng.nextInt(0, opts.length - 1)] : g;
+                // Clamp to at least one grid unit: a too-small trapezoid would compute
+                // topWidth 0 (falsy), which skipped the override below and left the
+                // constructor's Math.random topWidth — making the daily board differ
+                // per player/reload. Keeping it >= g guarantees a deterministic board.
+                topWidth = Math.max(g, w - reduction);
             }
 
             let mirror = null;
