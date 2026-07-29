@@ -1176,7 +1176,9 @@ h1 {
 /* Snapshot Modal Styles - For shareable game over/victory screens */
 .snapshot-modal {
     padding: 0 !important;
-    overflow: hidden;
+    /* Clip horizontally (keeps the rounded corners/snapshot tidy) but allow
+       vertical scroll, so on short screens the buttons are never cut off. */
+    overflow: hidden auto;
     max-width: 500px;
     border-radius: 12px;
 }
