@@ -1124,8 +1124,10 @@
             modal.classList.remove('hidden');
 
             try {
-                const { getStorage } = await import('./js/firebase/FirebaseConfig.js');
-                const storage = getStorage();
+                // Use the already-loaded compat Storage SDK directly. (A relative
+                // dynamic import here resolved wrong under the /reflections/ base
+                // path in production and 404'd, showing "No replay available".)
+                const storage = firebase.storage();
                 const url = await storage.ref(videoPath).getDownloadURL();
 
                 loading.style.display = 'none';
