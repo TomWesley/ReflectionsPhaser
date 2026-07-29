@@ -205,7 +205,11 @@
       "Bash('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' --headless --disable-gpu --hide-scrollbars --force-device-scale-factor=1 --window-size=1200,630 --screenshot=/private/tmp/claude-501/-Users-tomwesley-LocalGithubFiles-ReflectionsPhaser/80043efe-c66d-48d6-8fac-5a957da50bb4/scratchpad/og.png file:///private/tmp/claude-501/-Users-tomwesley-LocalGithubFiles-ReflectionsPhaser/80043efe-c66d-48d6-8fac-5a957da50bb4/scratchpad/og-card.html)",
       "Bash(node -e \"JSON.parse\\(require\\('fs'\\).readFileSync\\('manifest.json','utf8'\\)\\); console.log\\('manifest.json valid'\\)\")",
       "Bash(rsvg-convert -w 8 public/favicon.svg -o /dev/null)",
-      "Bash(awk '{print $5, $9}')"
+      "Bash(awk '{print $5, $9}')",
+      "Bash(firebase use *)",
+      "Bash(gcloud config *)",
+      "Read(//Users/tomwesley/.config/gcloud/**)",
+      "Bash(gcloud projects *)"
     ],
     "deny": [],
     "ask": []
