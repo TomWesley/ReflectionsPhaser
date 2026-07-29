@@ -2092,6 +2092,11 @@ export class Game {
                                         this.gameOver = true;
                                         breachFrame = 0;
                                         this.breachProgress = 0;
+                                        // Snap the frozen timer to the true survival time. The
+                                        // running timer is quantized to the 30fps frame start, but
+                                        // breach lands mid-frame — pin the final value to the exact
+                                        // score so the video reads identically to the leaderboard.
+                                        this.gameTime = state.duration;
                                     }
 
                                     if (this.laserCollisionHandler.isOutOfBounds(laser)) {
