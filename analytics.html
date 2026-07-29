@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>REFLECTIONS — Analytics</title>
+    <link rel="icon" type="image/svg+xml" href="/public/favicon.svg?v=3">
+    <meta name="theme-color" content="#0A0906">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --void: #0a0906; --panel: #16130c; --panel2: #1c1810;
+            --line: rgba(150,156,172,0.14); --amber: #ffb020; --red: #e84e6a;
+            --ink: #ece7dd; --ink-dim: #9aa0ac;
+            --mono: 'Share Tech Mono', ui-monospace, monospace;
+            --sans: 'Rajdhani', system-ui, sans-serif;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0; min-height: 100vh; background:
+              radial-gradient(1000px 560px at 50% -10%, rgba(255,176,32,0.06), transparent 60%), var(--void);
+            color: var(--ink); font-family: var(--sans);
+            display: flex; align-items: center; justify-content: center; padding: 28px;
+        }
+        .brand { font-family: 'Orbitron', sans-serif; font-weight: 800; letter-spacing: 3px; color: var(--amber); text-transform: uppercase; }
+        .eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--ink-dim); }
+
+        /* Gate */
+        .gate { width: 100%; max-width: 380px; background: linear-gradient(180deg, var(--panel2), var(--panel));
+            border: 1px solid var(--line); border-radius: 14px; padding: 30px 26px; text-align: center; }
+        .gate .brand { font-size: 1.5rem; margin: 10px 0 4px; }
+        .gate p { color: var(--ink-dim); font-size: 0.95rem; margin: 6px 0 20px; }
+        .gate input { width: 100%; padding: 12px 14px; border-radius: 8px; border: 1px solid var(--line);
+            background: rgba(0,0,0,0.35); color: var(--ink); font-family: var(--mono); font-size: 1rem; text-align: center; letter-spacing: 0.2em; }
+        .gate input:focus { outline: none; border-color: var(--amber); }
+        .gate button { width: 100%; margin-top: 12px; padding: 12px; border: none; border-radius: 8px; cursor: pointer;
+            background: var(--amber); color: var(--void); font-family: var(--mono); font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; font-size: 0.85rem; }
+        .gate button:hover { background: #ffc24d; }
+        .gate .err { color: var(--red); font-family: var(--mono); font-size: 0.8rem; min-height: 1.1em; margin-top: 10px; }
+
+        /* Dashboard */
+        .dash { width: 100%; max-width: 900px; display: none; }
+        .dash.on { display: block; }
+        .head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 4px; }
+        .head .brand { font-size: 1.7rem; }
+        .sub { color: var(--ink-dim); font-family: var(--mono); font-size: 12px; letter-spacing: 0.06em; margin: 2px 0 26px; }
+        .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+        @media (max-width: 720px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+        .tile { background: linear-gradient(180deg, var(--panel2), var(--panel)); border: 1px solid var(--line); border-radius: 12px; padding: 18px 18px 20px; }
+        .tile .k { font-family: var(--mono); font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-dim); }
+        .tile .v { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: clamp(26px, 4vw, 40px); font-weight: 700; color: var(--amber); margin-top: 10px; line-height: 1; }
+        .tile.red .v { color: var(--red); }
+        .tile.wide { grid-column: 1 / -1; }
+        .tile .k small { color: var(--ink-dim); text-transform: none; letter-spacing: 0; }
+        .bar { display: flex; gap: 14px; align-items: center; margin-top: 22px; }
+        .btn { font-family: var(--mono); font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer;
+            background: transparent; color: var(--ink-dim); border: 1px solid var(--line); border-radius: 7px; padding: 9px 15px; }
+        .btn:hover { color: var(--amber); border-color: rgba(255,176,32,0.4); }
+    </style>
+</head>
+<body>
+    <!-- Password gate -->
+    <div class="gate" id="gate">
+        <div class="eyebrow">Reflections</div>
+        <div class="brand">Analytics</div>
+        <p>Enter the access password.</p>
+        <form id="gateForm" autocomplete="off">
+            <input type="password" id="pw" placeholder="••••••" autocomplete="off" aria-label="Password">
+            <button type="submit">Unlock</button>
+            <div class="err" id="err"></div>
+        </form>
+    </div>
+
+    <!-- Dashboard -->
+    <div class="dash" id="dash">
+        <div class="head">
+            <div><div class="eyebrow">Reflections</div><div class="brand">Analytics</div></div>
+        </div>
+        <div class="sub" id="updated">Loading…</div>
+        <div class="grid" id="grid"></div>
+        <div class="bar">
+            <button class="btn" id="refresh">Refresh</button>
+            <button class="btn" id="lock">Lock</button>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+    <script>
+        const PASSWORD = 'absurd';
+        const firebaseConfig = {
+            apiKey: "AIzaSyBaTbUHflVyBoxrsvcFbXNY_lTD7RCVYgs",
+            authDomain: "singularity-c216f.firebaseapp.com",
+            projectId: "singularity-c216f",
+            storageBucket: "reflections-n6czi",
+            messagingSenderId: "877374644269",
+            appId: "1:877374644269:web:70b40d0b558941781b98a4",
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        const gate = document.getElementById('gate');
+        const dash = document.getElementById('dash');
+        const err = document.getElementById('err');
+        const grid = document.getElementById('grid');
+        const updated = document.getElementById('updated');
+
+        const fmt = (n) => (n == null ? '—' : Number(n).toLocaleString());
+
+        async function load() {
+            updated.textContent = 'Loading…';
+            let s = {};
+            try {
+                const doc = await db.collection('stats').doc('global').get();
+                s = doc.exists ? doc.data() : {};
+            } catch (e) {
+                updated.textContent = 'Could not load stats: ' + e.message;
+                return;
+            }
+            const started = s.gamesStarted || 0, submitted = s.gamesSubmitted || 0;
+            const rate = started ? Math.round((submitted / started) * 100) : 0;
+            const tiles = [
+                { k: 'Page views', v: fmt(s.pageViews || 0) },
+                { k: 'Games started', v: fmt(started) },
+                { k: 'Games submitted', v: fmt(submitted), red: false },
+                { k: 'Accounts created', v: fmt(s.accounts || 0) },
+                { k: 'Completion rate <small>(submitted / started)</small>', v: rate + '%', wide: true },
+            ];
+            grid.innerHTML = tiles.map(t =>
+                '<div class="tile' + (t.wide ? ' wide' : '') + (t.red ? ' red' : '') + '">' +
+                '<div class="k">' + t.k + '</div><div class="v">' + t.v + '</div></div>'
+            ).join('');
+            const ts = s.updatedAt && s.updatedAt.toDate ? s.updatedAt.toDate() : null;
+            updated.textContent = ts ? ('Last activity: ' + ts.toLocaleString()) : 'No activity recorded yet.';
+        }
+
+        function unlock() {
+            gate.style.display = 'none';
+            dash.classList.add('on');
+            load();
+        }
+
+        if (sessionStorage.getItem('reflAnalyticsAuthed') === '1') unlock();
+
+        document.getElementById('gateForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            if (document.getElementById('pw').value === PASSWORD) {
+                sessionStorage.setItem('reflAnalyticsAuthed', '1');
+                err.textContent = '';
+                unlock();
+            } else {
+                err.textContent = 'Incorrect password.';
+                document.getElementById('pw').value = '';
+            }
+        });
+        document.getElementById('refresh').addEventListener('click', load);
+        document.getElementById('lock').addEventListener('click', () => {
+            sessionStorage.removeItem('reflAnalyticsAuthed');
+            location.reload();
+        });
+    </script>
+</body>
+</html>

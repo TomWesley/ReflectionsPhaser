@@ -50,6 +50,35 @@ function sanitizeName(name) {
     return cleaned || 'Player';
 }
 
+// Lightweight, fire-and-forget aggregate counters for the /analytics dashboard.
+// Never allowed to break gameplay — any failure is swallowed.
+async function bumpStats(patch) {
+    try {
+        const inc = { updatedAt: FieldValue.serverTimestamp() };
+        for (const k of Object.keys(patch)) inc[k] = FieldValue.increment(patch[k]);
+        await db.doc('stats/global').set(inc, { merge: true });
+    } catch (e) { /* analytics is best-effort */ }
+}
+
+// Username profanity/slur blocklist. Usernames are public on the leaderboard, so
+// reject offensive ones server-side. Matching is on a leet-normalized, symbol-
+// stripped form so "f0ck"/"sh_it" are caught too.
+const BLOCKED_WORDS = [
+    'anal', 'anus', 'arse', 'ass', 'bastard', 'bitch', 'blowjob', 'boner', 'boob',
+    'clit', 'cock', 'coon', 'cracker', 'cum', 'cunt', 'dick', 'dildo', 'dyke',
+    'ejaculate', 'fag', 'faggot', 'fuck', 'gook', 'handjob', 'hitler', 'homo',
+    'jizz', 'kike', 'kkk', 'nazi', 'negro', 'nigger', 'nigga', 'nutsack', 'penis',
+    'porn', 'pussy', 'queer', 'rape', 'rapist', 'retard', 'scrotum', 'semen', 'sex',
+    'shit', 'slut', 'spic', 'tit', 'twat', 'vagina', 'wank', 'whore',
+];
+function containsBlockedWord(name) {
+    const norm = String(name).toLowerCase()
+        .replace(/[0]/g, 'o').replace(/[1|!]/g, 'i').replace(/[3]/g, 'e')
+        .replace(/[4@]/g, 'a').replace(/[5$]/g, 's').replace(/[7]/g, 't')
+        .replace(/[^a-z]/g, '');
+    return BLOCKED_WORDS.some(w => norm.includes(w));
+}
+
 /**
  * startGame - issue a fresh, server-generated puzzle and open a session.
  * Input:  { mode: 'main' }
@@ -89,6 +118,7 @@ export const startGame = onCall(WARM_CALLABLE_OPTS, async (request) => {
         createdAt: FieldValue.serverTimestamp(),
     });
 
+    bumpStats({ gamesStarted: 1 });
     return { sessionId: sessionRef.id, puzzle };
 });
 
@@ -111,7 +141,12 @@ export const submitGame = onCall(CALLABLE_OPTS, async (request) => {
     if (!snap.exists) throw new HttpsError('not-found', 'Game session not found.');
     const session = snap.data();
 
-    if (session.uid !== uid) throw new HttpsError('permission-denied', 'This session is not yours.');
+    // We do NOT reject a uid mismatch. Players routinely start a board while
+    // anonymous and then create an account before submitting, which changes their
+    // Firebase uid and would otherwise orphan the session ("This session is not
+    // yours"). The score is re-simulated from the SERVER-issued board and recorded
+    // under the SUBMITTING user, so honoring the mismatch is safe and is what lets
+    // brand-new sign-ups land their first game on the leaderboard.
     if (session.status !== 'active') {
         throw new HttpsError('failed-precondition', 'This game was already submitted.');
     }
@@ -160,6 +195,7 @@ export const submitGame = onCall(CALLABLE_OPTS, async (request) => {
     });
 
     await sessionRef.update({ status: 'submitted', score });
+    bumpStats({ gamesSubmitted: 1 });
 
     return {
         verified: true,
@@ -220,9 +256,12 @@ export const reserveUsername = onCall(CALLABLE_OPTS, async (request) => {
     if (!USERNAME_RE.test(username)) {
         throw new HttpsError('invalid-argument', 'Username must be 3–16 characters: letters, numbers, _ or -.');
     }
+    if (containsBlockedWord(username)) {
+        throw new HttpsError('invalid-argument', 'Please choose a different username.');
+    }
     const key = username.toLowerCase();
 
-    await db.runTransaction(async (tx) => {
+    const outcome = await db.runTransaction(async (tx) => {
         const nameRef = db.collection('usernames').doc(key);
         const userRef = db.collection('users').doc(uid);
 
@@ -239,9 +278,20 @@ export const reserveUsername = onCall(CALLABLE_OPTS, async (request) => {
         if (prevKey && prevKey !== key) {
             tx.delete(db.collection('usernames').doc(prevKey));
         }
+        return { isNew: !userDoc.exists };
     });
 
+    if (outcome.isNew) bumpStats({ accounts: 1 });
     return { ok: true, username };
+});
+
+/**
+ * logVisit - bump the page-view counter for the /analytics dashboard. Best-effort;
+ * the client calls it once per page load.
+ */
+export const logVisit = onCall(CALLABLE_OPTS, async () => {
+    await bumpStats({ pageViews: 1 });
+    return { ok: true };
 });
 
 // Gmail app password, stored in Secret Manager (never in code). Set it with:

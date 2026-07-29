@@ -23,6 +23,9 @@ async function initFirebaseServices(cacheBust) {
     window.videoUploader = videoUploader;
     window.gameService = gameService;
 
+    // Best-effort page-view ping for the /analytics dashboard (never blocks load).
+    try { firebase.functions().httpsCallable('logVisit')().catch(() => {}); } catch (e) {}
+
     // Pre-fill name input from saved name or Google profile
     const savedName = auth.getDisplayName() || auth.generateDefaultName();
     if (savedName) {

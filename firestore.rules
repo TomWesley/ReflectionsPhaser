@@ -42,6 +42,13 @@ service cloud.firestore {
       allow read, update, delete: if false;
     }
 
+    // Aggregate analytics counters, written ONLY by Cloud Functions. Public read
+    // (just totals, nothing sensitive) so the /analytics dashboard can display them.
+    match /stats/{doc} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     // Deny everything else by default.
     match /{document=**} {
       allow read, write: if false;
