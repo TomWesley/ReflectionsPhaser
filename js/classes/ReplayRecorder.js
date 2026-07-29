@@ -270,6 +270,12 @@ export class ReplayRecorder {
                 width: m.width,
                 height: m.height,
                 rotation: m.rotation,
+                // Shape-specific dimensions — WITHOUT these the re-simulated replay
+                // rebuilds a trapezoid's top / parallelogram's skew from the mirror
+                // constructor's random default, so its reflections (and the survival
+                // time it shows) diverge from the real game.
+                topWidth: m.topWidth,
+                skew: m.skew,
                 isDailyChallenge: m.isDailyChallenge || false,
             })),
             spawners: spawners.map(s => ({

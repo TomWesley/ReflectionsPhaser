@@ -1946,6 +1946,8 @@ export class Game {
             mirror.width = saved.width;
             mirror.height = saved.height;
             mirror.rotation = saved.rotation;
+            if (saved.topWidth !== undefined) mirror.topWidth = saved.topWidth;
+            if (saved.skew !== undefined) mirror.skew = saved.skew;
             mirror.isDailyChallenge = saved.isDailyChallenge;
             mirror.updateVertices();
             return mirror;
@@ -2024,6 +2026,10 @@ export class Game {
                 mirror.width = saved.width;
                 mirror.height = saved.height;
                 mirror.rotation = saved.rotation;
+                // Restore shape-specific dims so the replay geometry matches the real
+                // game exactly (else trapezoid/parallelogram reflections diverge).
+                if (saved.topWidth !== undefined) mirror.topWidth = saved.topWidth;
+                if (saved.skew !== undefined) mirror.skew = saved.skew;
                 mirror.isDailyChallenge = saved.isDailyChallenge;
                 mirror.updateVertices();
                 return mirror;
