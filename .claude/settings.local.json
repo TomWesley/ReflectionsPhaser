@@ -209,7 +209,8 @@
       "Bash(firebase use *)",
       "Bash(gcloud config *)",
       "Read(//Users/tomwesley/.config/gcloud/**)",
-      "Bash(gcloud projects *)"
+      "Bash(gcloud projects *)",
+      "Bash(node --check js/classes/ReplayRecorder.js)"
     ],
     "deny": [],
     "ask": []
