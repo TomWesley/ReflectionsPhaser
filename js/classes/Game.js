@@ -750,6 +750,14 @@ export class Game {
      * until the board is ready so a game can't start on an empty field.
      */
     async setupBoard() {
+        // Each call gets a generation id. Rapid shuffling fires overlapping
+        // setupBoard() calls whose startGame() promises resolve out of order; a
+        // straggler must NOT swap the board (and its sessionId) out from under a
+        // newer setup or an in-progress/just-finished game, or the score ends up
+        // verified against a board that was never played.
+        const gen = (this._setupGen = (this._setupGen | 0) + 1);
+        const isCurrent = () => gen === this._setupGen && !this.isPlaying;
+
         this.boardReady = false;
         this.sessionId = null;
         this.isRanked = false;
@@ -765,6 +773,7 @@ export class Game {
             if (service) {
                 try {
                     const { sessionId, puzzle } = await service.startGame(mode);
+                    if (!isCurrent()) return; // superseded or already playing — discard
                     this.applyServerPuzzle(puzzle);
                     this.sessionId = sessionId;
                     this.isRanked = true;
@@ -775,14 +784,17 @@ export class Game {
             }
 
             // Fallback: local generation, unranked.
+            if (!isCurrent()) return;
             this.generateMirrors();
             this.generateSpawners();
         } finally {
-            this.boardReady = true;
-            if (launchBtn) launchBtn.disabled = false;
-            // Remove the initial loading overlay once the first board is ready.
-            const loader = document.getElementById('canvasLoader');
-            if (loader) { loader.classList.add('hidden'); loader.remove(); }
+            // Only the latest, not-yet-launched setup owns the board-ready UI.
+            if (isCurrent()) {
+                this.boardReady = true;
+                if (launchBtn) launchBtn.disabled = false;
+                const loader = document.getElementById('canvasLoader');
+                if (loader) { loader.classList.add('hidden'); loader.remove(); }
+            }
         }
     }
 
@@ -894,6 +906,12 @@ export class Game {
             this.lasers = [];
             this.lastTimestamp = null;
             this.physicsAccumulator = 0;
+
+            // Snapshot exactly the board being played (session + placements) so the
+            // score is always submitted against THIS board, immune to any later
+            // setupBoard() that might swap game.sessionId / game.mirrors.
+            this.rankedSessionId = this.sessionId;
+            this.rankedPlacements = this.getPlacements();
 
             // Save game state for canvas replay fallback, then start recording
             this.replayRecorder.saveGameState(this.mirrors, this.spawners);

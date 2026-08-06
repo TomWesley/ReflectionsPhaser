@@ -51,9 +51,9 @@ export class GameService {
      * @param {string} displayName
      * @returns {Promise<{ verified: boolean, score: number, scoreFormatted: string, isNewBest: boolean }>}
      */
-    async submitGame(sessionId, placements, displayName) {
+    async submitGame(sessionId, placements, displayName, clientScore) {
         this._ensure();
-        const result = await this._submitGame({ sessionId, placements, displayName });
+        const result = await this._submitGame({ sessionId, placements, displayName, clientScore });
         return result.data;
     }
 

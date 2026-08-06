@@ -805,12 +805,17 @@
 
                 let score, scoreFormatted, isNewBest, docId;
 
-                if (game.isRanked && game.sessionId && window.gameService) {
+                // Use the board SNAPSHOT captured at launch, not the live game.*
+                // fields — a straggling setupBoard() can swap those after the game
+                // ends, which would submit the wrong board to the server.
+                const submitSessionId = game.rankedSessionId || game.sessionId;
+                const submitPlacements = game.rankedPlacements || game.getPlacements();
+                if (game.isRanked && submitSessionId && window.gameService) {
                     // Server-authoritative: the server re-simulates the exact board
                     // and computes the score. The client's time is not trusted.
                     const displayName = auth.getDisplayNameOrDefault();
                     const res = await window.gameService.submitGame(
-                        game.sessionId, game.getPlacements(), displayName
+                        submitSessionId, submitPlacements, displayName, game.gameTime
                     );
                     score = res.score;
                     scoreFormatted = res.scoreFormatted;

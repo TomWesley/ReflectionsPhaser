@@ -163,6 +163,17 @@ export const submitGame = onCall(CALLABLE_OPTS, async (request) => {
     }
 
     const score = result.score;
+
+    // Diagnostics: the client sends the time it actually showed the player. If the
+    // server's re-simulation disagrees, the submitted board didn't match the one
+    // played (e.g. a swapped sessionId) — log it loudly so we can catch regressions.
+    const clientScore = Number(request.data?.clientScore);
+    if (Number.isFinite(clientScore)) {
+        const delta = Math.abs(clientScore - score);
+        const line = `[submit] uid=${uid} session=${sessionId} client=${clientScore.toFixed(2)} server=${score.toFixed(2)} delta=${delta.toFixed(2)}`;
+        if (delta > 0.5) console.error('SCORE MISMATCH ' + line);
+        else console.log(line);
+    }
     // The leaderboard name is the user's RESERVED username (server-owned), not
     // whatever the client sent — so it can't be spoofed. Fall back to a sanitized
     // client name only if no username is on file.
