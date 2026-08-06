@@ -13,6 +13,18 @@ export class Laser {
         this.totalReflections = 0;
         this.maxReflections = 50; // Prevent infinite bouncing
         this.isDailyChallenge = false;
+        // Grows +LASER_BOUNCE_SPEEDUP per bounce (capped), scaling how far the laser
+        // travels each step. Kept separate from vx/vy because mirror reflection resets
+        // the velocity magnitude to LASER_SPEED.
+        this.speedMult = 1;
+    }
+
+    /** Accelerate on a bounce (mirror or wall), up to the capped multiplier. */
+    accelerateOnBounce() {
+        this.speedMult = Math.min(
+            CONFIG.LASER_MAX_SPEED_MULT,
+            this.speedMult + CONFIG.LASER_BOUNCE_SPEEDUP
+        );
     }
     
     update(deltaTime) {
@@ -31,20 +43,24 @@ export class Laser {
             this.trail.shift();
         }
         
-        // Move laser (frame-rate independent)
+        // Move laser (frame-rate independent), scaled by the accumulated bounce speed-up.
         // Base multiplier 60 (for 60fps), then * 0.4 for 60% slower (40% of original speed)
-        this.x += this.vx * deltaTime * 35;
-        this.y += this.vy * deltaTime * 35;
-        
+        this.x += this.vx * this.speedMult * deltaTime * 35;
+        this.y += this.vy * this.speedMult * deltaTime * 35;
+
         // Bounce off walls (clamp slightly inward to prevent re-trigger next frame)
+        let wallBounce = false;
         if (this.x <= 0 || this.x >= CONFIG.CANVAS_WIDTH) {
             this.vx = -this.vx;
             this.x = Math.max(1, Math.min(CONFIG.CANVAS_WIDTH - 1, this.x));
+            wallBounce = true;
         }
         if (this.y <= 0 || this.y >= CONFIG.CANVAS_HEIGHT) {
             this.vy = -this.vy;
             this.y = Math.max(1, Math.min(CONFIG.CANVAS_HEIGHT - 1, this.y));
+            wallBounce = true;
         }
+        if (wallBounce) this.accelerateOnBounce();
     }
     
     reflect(mirror) {
@@ -60,6 +76,7 @@ export class Laser {
         this.reflectionCooldown = 5; // Increased from 3 to 5 frames for better stability
         this.lastReflectedMirror = mirror;
         this.totalReflections++;
+        this.accelerateOnBounce();
 
         // Call the mirror's reflection logic
         mirror.reflect(this);

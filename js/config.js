@@ -8,8 +8,13 @@ export const CONFIG = {
     MIRROR_MIN_SIZE: 20, // 1x1 grid cells
     MIRROR_MAX_SIZE: 120, // 6x6 grid cells
     MAX_MIRRORS: 15, // Safety limit to prevent infinite loops
-    LASER_SPEED: 8, 
+    LASER_SPEED: 8,
     LASER_RADIUS: 2,
+    // Lasers speed up slightly on every bounce (mirror or wall), so long-lived
+    // games ramp in difficulty and curb runaway top scores. Barely affects short
+    // games (few bounces). Deterministic -> client and server stay in sync.
+    LASER_BOUNCE_SPEEDUP: 0.01, // +1% of base speed per bounce
+    LASER_MAX_SPEED_MULT: 1.5,  // capped at +50%
     TARGET_RADIUS: 50, // Aligns hexagon top/bottom vertices with grid lines
     // Mirror-free zone around the core (validation + the drawn red zone). Was
     // TARGET_RADIUS + 40 = 90; bumped +10% to 99 so it's harder to pack mirrors
