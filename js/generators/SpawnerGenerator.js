@@ -106,8 +106,16 @@ export class SpawnerGenerator {
                 break;
         }
 
-        // Add random variation within allowed range
-        const variation = (Math.random() - 0.5) * allowedRange;
+        // Add random variation, but keep it at least MIN_DEVIATION off the
+        // straight-in (perpendicular) direction. A laser fired perpendicular to its
+        // wall shoots directly across the board and bounces straight back and forth
+        // forever — trivially harmless if it misses the core, or an instant loss if
+        // it doesn't. Excluding a deadzone around perpendicular forces every laser
+        // in on a diagonal, which is both fairer and a little harder.
+        const MIN_DEVIATION = 18;          // degrees off perpendicular
+        const half = allowedRange / 2;     // 60
+        const magnitude = MIN_DEVIATION + Math.random() * (half - MIN_DEVIATION);
+        const variation = (Math.random() < 0.5 ? -1 : 1) * magnitude;
         const randomDegrees = baseAngleDegrees + variation;
 
         // Snap to 15-degree increments
