@@ -112,7 +112,7 @@ export class SpawnerGenerator {
         // forever — trivially harmless if it misses the core, or an instant loss if
         // it doesn't. Excluding a deadzone around perpendicular forces every laser
         // in on a diagonal, which is both fairer and a little harder.
-        const MIN_DEVIATION = 18;          // degrees off perpendicular
+        const MIN_DEVIATION = 6;           // degrees off perpendicular
         const half = allowedRange / 2;     // 60
         const magnitude = MIN_DEVIATION + Math.random() * (half - MIN_DEVIATION);
         const variation = (Math.random() < 0.5 ? -1 : 1) * magnitude;

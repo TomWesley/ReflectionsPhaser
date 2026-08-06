@@ -458,9 +458,9 @@ export class DailyChallenge {
                 case 'bottom': baseAngle = 270; break;
             }
 
-            // Keep at least 18 degrees off perpendicular so lasers never fire
+            // Keep at least 6 degrees off perpendicular so lasers never fire
             // straight across the board and bounce back and forth (see SpawnerGenerator).
-            const MIN_DEVIATION = 18;
+            const MIN_DEVIATION = 6;
             const magnitude = MIN_DEVIATION + rng.nextFloat(0, 1) * (60 - MIN_DEVIATION);
             const variation = (rng.nextFloat(0, 1) < 0.5 ? -1 : 1) * magnitude;
             const degrees = Math.round(baseAngle + variation);
