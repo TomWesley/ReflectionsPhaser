@@ -7,7 +7,7 @@ export class ZoneRenderer {
     static drawForbiddenZones(ctx) {
         const W = CONFIG.CANVAS_WIDTH, H = CONFIG.CANVAS_HEIGHT;
         const centerX = W / 2, centerY = H / 2;
-        const centerRadius = CONFIG.TARGET_RADIUS + 40; // Matches validation logic
+        const centerRadius = CONFIG.CORE_EXCLUSION_RADIUS; // Matches validation logic
         const edgeMargin = CONFIG.EDGE_MARGIN;
 
         // Solid red forbidden zones (no dashed perimeter). Higher opacity so the

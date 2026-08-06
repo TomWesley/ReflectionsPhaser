@@ -17,7 +17,7 @@ export const W = CONFIG.CANVAS_WIDTH;
 export const H = CONFIG.CANVAS_HEIGHT;
 export const CENTER = { x: W / 2, y: H / 2 };
 export const TARGET_RADIUS = CONFIG.TARGET_RADIUS;         // 50 — the kill circle
-export const FORBID_RADIUS = CONFIG.TARGET_RADIUS + 40;    // 90 — no mirrors inside this
+export const FORBID_RADIUS = CONFIG.CORE_EXCLUSION_RADIUS; // mirror-free zone around the core
 export const EDGE = CONFIG.EDGE_MARGIN;                    // 40 — no mirrors past this from edges
 export const MAX_TIME = CONFIG.MAX_GAME_TIME;              // 300 — perfect score
 

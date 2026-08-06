@@ -180,7 +180,7 @@ export class IronCladValidator {
         // Check C: Is the entire mirror area in a forbidden zone? (polygon containment)
         const centerX = CONFIG.CANVAS_WIDTH / 2;
         const centerY = CONFIG.CANVAS_HEIGHT / 2;
-        const forbiddenRadius = CONFIG.TARGET_RADIUS + 40;
+        const forbiddenRadius = CONFIG.CORE_EXCLUSION_RADIUS;
 
         // Check if center of mirror is too close to target
         const distToCenter = Math.sqrt((mirror.x - centerX) ** 2 + (mirror.y - centerY) ** 2);

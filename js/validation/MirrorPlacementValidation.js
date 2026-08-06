@@ -40,7 +40,7 @@ export class MirrorPlacementValidation {
         // Center forbidden zone: Circle around target
         const centerX = CONFIG.CANVAS_WIDTH / 2;
         const centerY = CONFIG.CANVAS_HEIGHT / 2;
-        const centerRadius = CONFIG.TARGET_RADIUS + 40; // 50 + 40 = 90px radius
+        const centerRadius = CONFIG.CORE_EXCLUSION_RADIUS;
 
         this.forbiddenZones.push({
             type: 'circle',

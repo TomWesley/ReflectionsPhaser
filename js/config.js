@@ -11,6 +11,10 @@ export const CONFIG = {
     LASER_SPEED: 8, 
     LASER_RADIUS: 2,
     TARGET_RADIUS: 50, // Aligns hexagon top/bottom vertices with grid lines
+    // Mirror-free zone around the core (validation + the drawn red zone). Was
+    // TARGET_RADIUS + 40 = 90; bumped +10% to 99 so it's harder to pack mirrors
+    // tightly around the center. Single source of truth for both.
+    CORE_EXCLUSION_RADIUS: 99,
     EDGE_MARGIN: 40,
     ANGLE_INCREMENT: 1, // degrees
     MIRROR_COUNT: 8,
