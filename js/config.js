@@ -16,10 +16,10 @@ export const CONFIG = {
     LASER_BOUNCE_SPEEDUP: 0.01, // +1% of base speed per bounce
     LASER_MAX_SPEED_MULT: 1.5,  // capped at +50%
     TARGET_RADIUS: 50, // Aligns hexagon top/bottom vertices with grid lines
-    // Mirror-free zone around the core (validation + the drawn red zone). Was
-    // TARGET_RADIUS + 40 = 90; bumped +10% to 99 so it's harder to pack mirrors
+    // Mirror-free zone around the core (validation + the drawn red zone). Grew
+    // from the original TARGET_RADIUS + 40 = 90 to make it harder to pack mirrors
     // tightly around the center. Single source of truth for both.
-    CORE_EXCLUSION_RADIUS: 99,
+    CORE_EXCLUSION_RADIUS: 108,
     EDGE_MARGIN: 40,
     ANGLE_INCREMENT: 1, // degrees
     MIRROR_COUNT: 8,
