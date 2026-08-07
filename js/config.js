@@ -10,11 +10,13 @@ export const CONFIG = {
     MAX_MIRRORS: 15, // Safety limit to prevent infinite loops
     LASER_SPEED: 8,
     LASER_RADIUS: 2,
-    // Lasers speed up slightly on every bounce (mirror or wall), so long-lived
-    // games ramp in difficulty and curb runaway top scores. Barely affects short
-    // games (few bounces). Deterministic -> client and server stay in sync.
-    LASER_BOUNCE_SPEEDUP: 0.01, // +1% of base speed per bounce
-    LASER_MAX_SPEED_MULT: 1.5,  // capped at +50%
+    // Lasers ramp speed smoothly over the course of a game: they start a touch
+    // slow and reach the cap at LASER_RAMP_SECONDS, so long survivals get
+    // progressively (hypnotically) harder while short games stay gentle. Speed is a
+    // pure function of elapsed game time -> deterministic, client and server agree.
+    LASER_START_MULT: 0.85,     // speed at t=0, relative to base LASER_SPEED
+    LASER_MAX_SPEED_MULT: 1.5,  // speed at (and past) LASER_RAMP_SECONDS
+    LASER_RAMP_SECONDS: 300,    // time to reach max speed (= MAX_GAME_TIME)
     TARGET_RADIUS: 50, // Aligns hexagon top/bottom vertices with grid lines
     // Mirror-free zone around the core (validation + the drawn red zone). Grew
     // from the original TARGET_RADIUS + 40 = 90 to make it harder to pack mirrors
