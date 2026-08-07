@@ -13,11 +13,6 @@ export class Laser {
         this.totalReflections = 0;
         this.maxReflections = 50; // Prevent infinite bouncing
         this.isDailyChallenge = false;
-        // Elapsed alive time (all lasers spawn at game start, so this equals game
-        // time). Drives the speed ramp; kept separate from vx/vy because mirror
-        // reflection resets the velocity magnitude back to LASER_SPEED.
-        this.age = 0;
-        this.speedMult = CONFIG.LASER_START_MULT;
     }
     
     update(deltaTime) {
@@ -36,17 +31,10 @@ export class Laser {
             this.trail.shift();
         }
         
-        // Speed ramps smoothly with time: slow at the start, reaching the cap at
-        // LASER_RAMP_SECONDS. Makes long survivals progressively (hypnotically) harder.
-        this.age += deltaTime;
-        const ramp = Math.min(1, this.age / CONFIG.LASER_RAMP_SECONDS);
-        this.speedMult = CONFIG.LASER_START_MULT +
-            (CONFIG.LASER_MAX_SPEED_MULT - CONFIG.LASER_START_MULT) * ramp;
-
-        // Move laser (frame-rate independent), scaled by the current speed ramp.
+        // Move laser (frame-rate independent)
         // Base multiplier 60 (for 60fps), then * 0.4 for 60% slower (40% of original speed)
-        this.x += this.vx * this.speedMult * deltaTime * 35;
-        this.y += this.vy * this.speedMult * deltaTime * 35;
+        this.x += this.vx * deltaTime * 35;
+        this.y += this.vy * deltaTime * 35;
 
         // Bounce off walls (clamp slightly inward to prevent re-trigger next frame)
         if (this.x <= 0 || this.x >= CONFIG.CANVAS_WIDTH) {
