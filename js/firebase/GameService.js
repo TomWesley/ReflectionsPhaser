@@ -23,6 +23,7 @@ export class GameService {
         this._submitGame = functions.httpsCallable('submitGame');
         this._setVideoPath = functions.httpsCallable('setReplayVideoPath');
         this._reserveUsername = functions.httpsCallable('reserveUsername');
+        this._releaseUsername = functions.httpsCallable('releaseUsername');
     }
 
     /**
@@ -31,6 +32,16 @@ export class GameService {
     async reserveUsername(username) {
         this._ensure();
         const result = await this._reserveUsername({ username });
+        return result.data;
+    }
+
+    /**
+     * Give back a username this user reserved (used to roll back a failed sign-up
+     * so the name isn't burned). Best-effort; only frees a name the caller owns.
+     */
+    async releaseUsername(username) {
+        this._ensure();
+        const result = await this._releaseUsername({ username });
         return result.data;
     }
 

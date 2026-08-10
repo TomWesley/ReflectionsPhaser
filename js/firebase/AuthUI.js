@@ -136,7 +136,12 @@ window.doEmailSignUp = async function() {
     }
     const result = await _auth.signUpWithEmail(email, password, name);
     if (result.success) { window.closeAuthModal(); afterAuth(); toast('Account created!'); }
-    else { errorEl.textContent = result.error || 'Sign up failed.'; }
+    else {
+        // Account creation failed after we already reserved the name (still under
+        // this anonymous uid). Release it so a failed attempt doesn't burn the name.
+        try { await gameService().releaseUsername(name); } catch { /* best-effort */ }
+        errorEl.textContent = result.error || 'Sign up failed.';
+    }
 };
 
 window.doGoogleSignInFromModal = async function() {

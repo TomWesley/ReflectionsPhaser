@@ -1132,6 +1132,15 @@
 
                 loading.style.display = 'none';
                 video.style.display = 'block';
+                // A codec/decode failure (e.g. a Firefox-recorded WebM replay opened
+                // in Safari/iOS) fires 'error' on the element, not the getDownloadURL
+                // catch — surface the "No replay available" state instead of a silent
+                // black box.
+                video.onerror = () => {
+                    loading.style.display = 'none';
+                    video.style.display = 'none';
+                    error.style.display = 'block';
+                };
                 video.src = url;
                 video.play().catch(() => {});
             } catch (err) {
@@ -1144,6 +1153,7 @@
             const modal = document.getElementById('replayModal');
             const video = document.getElementById('replayVideo');
             video.pause();
+            video.onerror = null; // clearing src below would otherwise fire our handler
             video.src = '';
             modal.classList.add('hidden');
         };

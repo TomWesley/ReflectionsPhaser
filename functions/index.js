@@ -16,6 +16,7 @@ import { onDocumentCreated } from 'firebase-functions/v2/firestore';
 import { defineSecret } from 'firebase-functions/params';
 import { initializeApp } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { getStorage } from 'firebase-admin/storage';
 import nodemailer from 'nodemailer';
 
 import { generateMainPuzzle, generateDailyPuzzle } from './js/core/PuzzleGenerator.js';
@@ -26,6 +27,10 @@ const db = getFirestore();
 
 // Require a valid App Check token on every callable — only the real app can call these.
 const CALLABLE_OPTS = { enforceAppCheck: true };
+
+// Replay videos live in a non-default Storage bucket; the admin app has no default
+// bucket configured, so reference it by name.
+const REPLAY_BUCKET = 'reflections-n6czi';
 
 // startGame is the only callable on the page-load render path: the grid stays
 // hidden until it returns. Keep one instance warm so a session's first board
@@ -190,6 +195,8 @@ export const submitGame = onCall(CALLABLE_OPTS, async (request) => {
         if (existing.exists && existing.data().score >= score) {
             return { isNewBest: false };
         }
+        // The previous video (if any) is about to be superseded and unreferenced.
+        const oldVideoPath = existing.exists ? (existing.data().videoPath || null) : null;
         tx.set(scoreRef, {
             uid,
             displayName: cleanName,
@@ -206,11 +213,21 @@ export const submitGame = onCall(CALLABLE_OPTS, async (request) => {
             videoPath: null,
             timestamp: FieldValue.serverTimestamp(),
         });
-        return { isNewBest: true };
+        return { isNewBest: true, oldVideoPath };
     });
 
     await sessionRef.update({ status: 'submitted', score });
     bumpStats({ gamesSubmitted: 1 });
+
+    // Reclaim the now-unreferenced previous replay so old videos don't pile up in
+    // Storage. Best-effort — a failure here just leaves an orphan, never blocks the score.
+    if (outcome.isNewBest && outcome.oldVideoPath) {
+        try {
+            await getStorage().bucket(REPLAY_BUCKET).file(outcome.oldVideoPath).delete();
+        } catch (e) {
+            console.warn(`Superseded replay delete failed (non-fatal): ${outcome.oldVideoPath} — ${e.message}`);
+        }
+    }
 
     return {
         verified: true,
@@ -298,6 +315,30 @@ export const reserveUsername = onCall(CALLABLE_OPTS, async (request) => {
 
     if (outcome.isNew) bumpStats({ accounts: 1 });
     return { ok: true, username };
+});
+
+/**
+ * releaseUsername - give back a name reserved by THIS user. Used to roll back a
+ * reservation when sign-up fails after reserveUsername already succeeded: without
+ * this, the name stays owned by a throwaway (still-anonymous) uid and is burned
+ * from the global namespace forever. Only releases a name the caller owns.
+ */
+export const releaseUsername = onCall(CALLABLE_OPTS, async (request) => {
+    const uid = request.auth?.uid;
+    if (!uid) throw new HttpsError('unauthenticated', 'Sign in required.');
+    const username = String(request.data?.username || '').trim();
+    if (!username) return { ok: true };
+    const key = username.toLowerCase();
+
+    await db.runTransaction(async (tx) => {
+        const nameRef = db.collection('usernames').doc(key);
+        const snap = await tx.get(nameRef);
+        if (snap.exists && snap.data().uid === uid) {
+            tx.delete(nameRef);
+            tx.delete(db.collection('users').doc(uid));
+        }
+    });
+    return { ok: true };
 });
 
 /**

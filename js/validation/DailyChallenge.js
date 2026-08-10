@@ -31,11 +31,14 @@ export class DailyChallenge {
     }
 
     /**
-     * Mark today's challenge as completed
+     * Mark a daily challenge as completed. `date` is the date of the puzzle that
+     * was actually PLAYED — pass it explicitly so a game finished just after local
+     * midnight records under the day it was played, not the new day (which would
+     * otherwise lock the player out of a challenge they never attempted).
      */
-    static markCompleted(gameTime, timeString, mirrors, lasers) {
+    static markCompleted(gameTime, timeString, mirrors, lasers, date = DailyChallenge.getTodayString()) {
         try {
-            const today = DailyChallenge.getTodayString();
+            const today = date;
             localStorage.setItem(`daily_challenge_${today}`, JSON.stringify({
                 gameTime,
                 timeString,

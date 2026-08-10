@@ -765,6 +765,9 @@ export class Game {
         if (launchBtn) launchBtn.disabled = true;
 
         const mode = this.isDailyChallenge ? 'daily' : 'main';
+        // Pin the daily date for THIS session so completion records under the date
+        // actually played, even if the game finishes just after local midnight.
+        if (mode === 'daily') this.dailyDate = DailyChallenge.getTodayString();
         try {
             // Prefer a server-issued board so the puzzle can't be rigged. gameService
             // may not exist yet on first load (Firebase inits after the Game object),
@@ -1868,7 +1871,7 @@ export class Game {
 
         // Save daily challenge result if applicable
         if (this.isDailyChallenge && !this.isReplayMode) {
-            DailyChallenge.markCompleted(finalGameTime, finalTimeString, this.mirrors, this.lasers);
+            DailyChallenge.markCompleted(finalGameTime, finalTimeString, this.mirrors, this.lasers, this.dailyDate);
         }
 
         // Update modal content
@@ -1931,7 +1934,7 @@ export class Game {
 
         // Save daily challenge result if applicable
         if (this.isDailyChallenge && !this.isReplayMode) {
-            DailyChallenge.markCompleted(finalGameTime, finalTimeString, this.mirrors, this.lasers);
+            DailyChallenge.markCompleted(finalGameTime, finalTimeString, this.mirrors, this.lasers, this.dailyDate);
         }
 
         // Update modal content
