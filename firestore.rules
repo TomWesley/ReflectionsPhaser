@@ -49,6 +49,13 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Per-day analytics buckets for the dashboard's time-range filters. Same
+    // non-sensitive counters, one doc per UTC day.
+    match /statsDaily/{doc} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     // Deny everything else by default.
     match /{document=**} {
       allow read, write: if false;

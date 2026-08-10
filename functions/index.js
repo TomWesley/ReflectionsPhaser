@@ -61,7 +61,15 @@ async function bumpStats(patch) {
     try {
         const inc = { updatedAt: FieldValue.serverTimestamp() };
         for (const k of Object.keys(patch)) inc[k] = FieldValue.increment(patch[k]);
-        await db.doc('stats/global').set(inc, { merge: true });
+        // Cumulative all-time totals.
+        const global = db.doc('stats/global').set(inc, { merge: true });
+        // Per-day bucket (UTC; doc id = YYYY-MM-DD sorts chronologically) so the
+        // dashboard can report last-7-days / last-30-days ranges. Buckets only
+        // start accruing from the first write after this deploy — history before
+        // that exists only in the all-time totals.
+        const day = new Date().toISOString().slice(0, 10);
+        const daily = db.doc(`statsDaily/${day}`).set({ ...inc, date: day }, { merge: true });
+        await Promise.all([global, daily]);
     } catch (e) { /* analytics is best-effort */ }
 }
 
