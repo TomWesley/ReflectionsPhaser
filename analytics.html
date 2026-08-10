@@ -88,6 +88,7 @@
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-check-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
     <script>
         const PASSWORD = 'absurd';
@@ -100,6 +101,20 @@
             appId: "1:877374644269:web:70b40d0b558941781b98a4",
         };
         firebase.initializeApp(firebaseConfig);
+
+        // Firestore App Check is enforced in production, so attest before any read
+        // (same reCAPTCHA Enterprise key the game uses). Without this the token-less
+        // read is rejected as "Missing or insufficient permissions".
+        const APP_CHECK_SITE_KEY = "6Ldr3lgtAAAAAHxEUfFSYuy1uvPrVxGp-rCJtxHn";
+        try {
+            const provider = firebase.appCheck.ReCaptchaEnterpriseProvider
+                ? new firebase.appCheck.ReCaptchaEnterpriseProvider(APP_CHECK_SITE_KEY)
+                : APP_CHECK_SITE_KEY;
+            firebase.appCheck().activate(provider, true);
+        } catch (e) {
+            console.warn('App Check activation failed:', e.message);
+        }
+
         const db = firebase.firestore();
 
         const gate = document.getElementById('gate');
