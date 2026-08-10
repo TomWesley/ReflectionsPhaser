@@ -199,7 +199,11 @@ export const submitGame = onCall(CALLABLE_OPTS, async (request) => {
             scoreFormatted: formatScore(score),
             mirrorCount: placements.length,
             spawnerCount: session.spawners.length,
-            videoPath: existing.exists ? existing.data().videoPath || null : null,
+            // A new best gets a fresh replay: null the video now and let the client
+            // stamp the new path once its upload finishes (setReplayVideoPath). If we
+            // carried the previous video forward and the re-upload then failed, the
+            // leaderboard would play the OLD, lower run under this higher score.
+            videoPath: null,
             timestamp: FieldValue.serverTimestamp(),
         });
         return { isNewBest: true };

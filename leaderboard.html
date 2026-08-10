@@ -1066,18 +1066,18 @@
 
         async function loadStats() {
             try {
-                // Total players
-                const total = await service.getTotalPlayers(currentMode);
+                // Total players (daily scoped to the selected date's puzzle)
+                const dailyDate = currentMode === 'daily' ? currentDailyDate : null;
+                const total = await service.getTotalPlayers(currentMode, dailyDate);
                 document.getElementById('statTotalPlayers').textContent = total.toLocaleString();
 
                 // User's best score
-                const dailyDate = currentMode === 'daily' ? currentDailyDate : null;
                 const userScore = await service.getUserScore(currentMode, dailyDate);
                 if (userScore) {
                     document.getElementById('statYourBest').textContent = userScore.scoreFormatted || formatScore(userScore.score);
 
-                    // User's rank
-                    const rank = await service.getUserRank(currentMode, userScore.score);
+                    // User's rank (scoped to the same date for daily)
+                    const rank = await service.getUserRank(currentMode, userScore.score, dailyDate);
                     document.getElementById('statYourRank').textContent = rank ? `#${rank}` : '--';
                 } else {
                     document.getElementById('statYourBest').textContent = '--';

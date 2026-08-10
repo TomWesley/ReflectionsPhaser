@@ -805,6 +805,14 @@
 
                 let score, scoreFormatted, isNewBest, docId;
 
+                // Daily is scoped to a single date's puzzle; compute it once so the
+                // rank query below counts only today's players, not every past day.
+                let dailyDate = null;
+                if (mode === 'daily') {
+                    const { DailyChallenge } = await import('./js/validation/DailyChallenge.js');
+                    dailyDate = DailyChallenge.getTodayString();
+                }
+
                 // Use the board SNAPSHOT captured at launch, not the live game.*
                 // fields — a straggling setupBoard() can swap those after the game
                 // ends, which would submit the wrong board to the server.
@@ -820,33 +828,22 @@
                     score = res.score;
                     scoreFormatted = res.scoreFormatted;
                     isNewBest = res.isNewBest;
-                    docId = `${auth.getUID()}_main`;
-                } else if (window.leaderboardService) {
-                    // Unranked fallback (offline, or daily until it's server-backed).
-                    const DailyChallenge = (await import('./js/validation/DailyChallenge.js')).DailyChallenge;
-                    const dailyDate = game.isDailyChallenge ? DailyChallenge.getTodayString() : null;
-                    const minutes = Math.floor(game.gameTime / 60);
-                    const seconds = Math.floor(game.gameTime % 60);
-                    const centiseconds = Math.floor((game.gameTime % 1) * 100);
-                    scoreFormatted = `${minutes}:${seconds.toString().padStart(2, '0')}.${centiseconds.toString().padStart(2, '0')}`;
-                    score = game.gameTime;
-                    const result = await window.leaderboardService.submitScore(mode, game.gameTime, scoreFormatted, {
-                        dailyDate,
-                        mirrorCount: game.mirrors.length,
-                        spawnerCount: game.spawners.length,
-                    });
-                    isNewBest = result.isNewBest;
-                    docId = result.docId;
+                    docId = mode === 'daily' ? `${auth.getUID()}_${dailyDate}` : `${auth.getUID()}_main`;
                 } else {
-                    statusEl.textContent = '';
+                    // Unranked: the server board couldn't be issued (offline, or a
+                    // server hiccup at setup), so this run can't be verified. Client
+                    // score writes are blocked by the security rules, so don't pretend
+                    // it saved — tell the player plainly instead of "Submission failed".
+                    statusEl.textContent = "Couldn't reach the ranked server, so this run wasn't scored.";
+                    statusEl.style.color = 'var(--text-secondary)';
                     return;
                 }
 
                 statusEl.dataset.submitted = 'true';
 
-                // Rank (read-only query against the leaderboard)
+                // Rank (read-only query against the leaderboard, scoped to today for daily)
                 const rank = window.leaderboardService
-                    ? await window.leaderboardService.getUserRank(mode, score)
+                    ? await window.leaderboardService.getUserRank(mode, score, dailyDate)
                     : null;
                 const rankNum = Number(rank);
                 const safeRank = (Number.isFinite(rankNum) && rankNum > 0) ? `#${rankNum}` : '';

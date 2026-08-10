@@ -771,16 +771,27 @@ export class Game {
             // so wait briefly for it before deciding.
             const service = await this._waitForGameService(3000);
             if (service) {
-                try {
-                    const { sessionId, puzzle } = await service.startGame(mode);
-                    if (!isCurrent()) return; // superseded or already playing — discard
-                    this.applyServerPuzzle(puzzle);
-                    this.sessionId = sessionId;
-                    this.isRanked = true;
-                    return;
-                } catch (e) {
-                    console.warn(`[Ranked] startGame(${mode}) failed; using local unranked board:`, e.message);
+                // A transient blip (App Check token, cold start, network) shouldn't
+                // strand the player on an unrankable local board — retry a couple
+                // times with a short backoff before giving up on a ranked board.
+                for (let attempt = 0; attempt < 3; attempt++) {
+                    try {
+                        const { sessionId, puzzle } = await service.startGame(mode);
+                        if (!isCurrent()) return; // superseded or already playing — discard
+                        this.applyServerPuzzle(puzzle);
+                        this.sessionId = sessionId;
+                        this.isRanked = true;
+                        return;
+                    } catch (e) {
+                        if (!isCurrent()) return;
+                        console.warn(`[Ranked] startGame(${mode}) attempt ${attempt + 1}/3 failed:`, e.message);
+                        if (attempt < 2) {
+                            await new Promise(resolve => setTimeout(resolve, 400 * (attempt + 1)));
+                            if (!isCurrent()) return;
+                        }
+                    }
                 }
+                console.warn(`[Ranked] startGame(${mode}) failed after retries; using local unranked board.`);
             }
 
             // Fallback: local generation, unranked.

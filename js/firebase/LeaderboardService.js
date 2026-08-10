@@ -135,28 +135,34 @@ export class LeaderboardService {
     }
 
     /**
-     * Get the user's rank for a given mode (how many players scored higher)
+     * Get the user's rank for a given mode (how many players scored higher).
+     * Daily is scoped to a single date's puzzle — without the dailyDate filter the
+     * rank would count higher scores from every past day's (differently-difficult)
+     * puzzle, inflating the number and disagreeing with the leaderboard page.
      */
-    async getUserRank(mode, userScore) {
+    async getUserRank(mode, userScore, dailyDate = null) {
         if (userScore === null || userScore === undefined) return null;
 
         const db = getFirestore();
-        const snapshot = await db.collection('scores')
-            .where('mode', '==', mode)
-            .where('score', '>', userScore)
-            .get();
+        let query = db.collection('scores').where('mode', '==', mode);
+        if (mode === 'daily' && dailyDate) {
+            query = query.where('dailyDate', '==', dailyDate);
+        }
+        const snapshot = await query.where('score', '>', userScore).get();
 
         return snapshot.size + 1;
     }
 
     /**
-     * Get total player count for a mode
+     * Get total player count for a mode (daily scoped to a single date's puzzle).
      */
-    async getTotalPlayers(mode) {
+    async getTotalPlayers(mode, dailyDate = null) {
         const db = getFirestore();
-        const snapshot = await db.collection('scores')
-            .where('mode', '==', mode)
-            .get();
+        let query = db.collection('scores').where('mode', '==', mode);
+        if (mode === 'daily' && dailyDate) {
+            query = query.where('dailyDate', '==', dailyDate);
+        }
+        const snapshot = await query.get();
         return snapshot.size;
     }
 
