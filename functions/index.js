@@ -74,22 +74,40 @@ async function bumpStats(patch) {
 }
 
 // Username profanity/slur blocklist. Usernames are public on the leaderboard, so
-// reject offensive ones server-side. Matching is on a leet-normalized, symbol-
-// stripped form so "f0ck"/"sh_it" are caught too.
-const BLOCKED_WORDS = [
-    'anal', 'anus', 'arse', 'ass', 'bastard', 'bitch', 'blowjob', 'boner', 'boob',
-    'clit', 'cock', 'coon', 'cracker', 'cum', 'cunt', 'dick', 'dildo', 'dyke',
-    'ejaculate', 'fag', 'faggot', 'fuck', 'gook', 'handjob', 'hitler', 'homo',
-    'jizz', 'kike', 'kkk', 'nazi', 'negro', 'nigger', 'nigga', 'nutsack', 'penis',
-    'porn', 'pussy', 'queer', 'rape', 'rapist', 'retard', 'scrotum', 'semen', 'sex',
-    'shit', 'slut', 'spic', 'tit', 'twat', 'vagina', 'wank', 'whore',
+// reject offensive ones server-side. Matching is on a leet-normalized form so
+// "f0ck"/"sh_it" are still caught.
+//
+// Two tiers to avoid the "Scunthorpe problem" (rejecting innocent names that merely
+// contain a bad substring — class, analysis, titan, cumberland, dickens, sussex…):
+//   SEVERE   — matched ANYWHERE as a substring. Reserved for slurs/terms with no
+//              meaningful innocent substring use, so evasion ("xxfuckxx") still fails.
+//   MODERATE — matched only as a WHOLE token (delimited by start/end, a separator,
+//              or a digit) or the whole name. Bare "ass"/"sex"/"dick" are blocked,
+//              but "class"/"sussex"/"dickens" pass.
+const SEVERE_WORDS = [
+    'bastard', 'bitch', 'blowjob', 'boner', 'clit', 'dildo', 'ejaculate', 'fag',
+    'faggot', 'fuck', 'gook', 'handjob', 'hitler', 'jizz', 'kike', 'kkk', 'nazi',
+    'nigger', 'nigga', 'nutsack', 'penis', 'porn', 'pussy', 'queer', 'rapist',
+    'scrotum', 'shit', 'slut', 'twat', 'vagina', 'wank', 'whore',
 ];
-function containsBlockedWord(name) {
-    const norm = String(name).toLowerCase()
+const MODERATE_WORDS = [
+    'anal', 'anus', 'arse', 'ass', 'cock', 'coon', 'cracker', 'cum', 'cunt', 'dick',
+    'dyke', 'homo', 'negro', 'rape', 'retard', 'semen', 'sex', 'spic', 'tit',
+];
+function leetNormalize(name) {
+    return String(name).toLowerCase()
         .replace(/[0]/g, 'o').replace(/[1|!]/g, 'i').replace(/[3]/g, 'e')
-        .replace(/[4@]/g, 'a').replace(/[5$]/g, 's').replace(/[7]/g, 't')
-        .replace(/[^a-z]/g, '');
-    return BLOCKED_WORDS.some(w => norm.includes(w));
+        .replace(/[4@]/g, 'a').replace(/[5$]/g, 's').replace(/[7]/g, 't');
+}
+function containsBlockedWord(name) {
+    const norm = leetNormalize(name);
+    const stripped = norm.replace(/[^a-z]/g, '');
+    if (SEVERE_WORDS.some(w => stripped.includes(w))) return true;
+    // Whole-token match for the false-positive-prone list: split on anything that
+    // isn't a letter, and also consider the fully-stripped name as one token.
+    const tokens = new Set(norm.split(/[^a-z]+/).filter(Boolean));
+    tokens.add(stripped);
+    return MODERATE_WORDS.some(w => tokens.has(w));
 }
 
 /**
@@ -199,32 +217,46 @@ export const submitGame = onCall(CALLABLE_OPTS, async (request) => {
     const scoreRef = db.collection('scores').doc(scoreDocId);
 
     const outcome = await db.runTransaction(async (tx) => {
+        // Re-read the session INSIDE the transaction and flip active->submitted
+        // atomically. The check at the top of the function is a fast reject; this is
+        // what actually prevents two racing submits of the same session from BOTH
+        // recording (which would double-count gamesSubmitted). All reads precede writes.
+        const sessionSnap = await tx.get(sessionRef);
         const existing = await tx.get(scoreRef);
-        if (existing.exists && existing.data().score >= score) {
-            return { isNewBest: false };
+        if (!sessionSnap.exists || sessionSnap.data().status !== 'active') {
+            return { alreadySubmitted: true };
         }
+        const isNewBest = !(existing.exists && existing.data().score >= score);
         // The previous video (if any) is about to be superseded and unreferenced.
         const oldVideoPath = existing.exists ? (existing.data().videoPath || null) : null;
-        tx.set(scoreRef, {
-            uid,
-            displayName: cleanName,
-            mode: session.mode,
-            dailyDate: session.dailyDate || null,
-            score,
-            scoreFormatted: formatScore(score),
-            mirrorCount: placements.length,
-            spawnerCount: session.spawners.length,
-            // A new best gets a fresh replay: null the video now and let the client
-            // stamp the new path once its upload finishes (setReplayVideoPath). If we
-            // carried the previous video forward and the re-upload then failed, the
-            // leaderboard would play the OLD, lower run under this higher score.
-            videoPath: null,
-            timestamp: FieldValue.serverTimestamp(),
-        });
-        return { isNewBest: true, oldVideoPath };
+        if (isNewBest) {
+            tx.set(scoreRef, {
+                uid,
+                displayName: cleanName,
+                mode: session.mode,
+                dailyDate: session.dailyDate || null,
+                score,
+                scoreFormatted: formatScore(score),
+                mirrorCount: placements.length,
+                spawnerCount: session.spawners.length,
+                // A new best gets a fresh replay: null the video now and let the client
+                // stamp the new path once its upload finishes (setReplayVideoPath). If we
+                // carried the previous video forward and the re-upload then failed, the
+                // leaderboard would play the OLD, lower run under this higher score.
+                videoPath: null,
+                timestamp: FieldValue.serverTimestamp(),
+            });
+        }
+        tx.update(sessionRef, { status: 'submitted', score });
+        return { isNewBest, oldVideoPath };
     });
 
-    await sessionRef.update({ status: 'submitted', score });
+    // A concurrent/duplicate call already recorded this exact session — return the
+    // same (idempotent) score without bumping stats again.
+    if (outcome.alreadySubmitted) {
+        return { verified: true, score, scoreFormatted: formatScore(score), isNewBest: false };
+    }
+
     bumpStats({ gamesSubmitted: 1 });
 
     // Reclaim the now-unreferenced previous replay so old videos don't pile up in
