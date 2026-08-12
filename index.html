@@ -685,6 +685,117 @@
             }
         }
 
+        function roundRectPath(ctx, x, y, w, h, r) {
+            ctx.beginPath();
+            ctx.moveTo(x + r, y);
+            ctx.arcTo(x + w, y, x + w, y + h, r);
+            ctx.arcTo(x + w, y + h, x, y + h, r);
+            ctx.arcTo(x, y + h, x, y, r);
+            ctx.arcTo(x, y, x + w, y, r);
+            ctx.closePath();
+        }
+
+        // Draw centered text with manual letter-spacing (canvas letterSpacing is spotty).
+        function drawSpacedText(ctx, text, cx, y, spacing) {
+            const chars = [...text];
+            const widths = chars.map(ch => ctx.measureText(ch).width + spacing);
+            const total = widths.reduce((a, b) => a + b, 0) - spacing;
+            const prevAlign = ctx.textAlign;
+            ctx.textAlign = 'left';
+            let x = cx - total / 2;
+            for (let i = 0; i < chars.length; i++) { ctx.fillText(chars[i], x, y); x += widths[i]; }
+            ctx.textAlign = prevAlign;
+        }
+
+        // Compose a branded, self-contained 1080x1080 share card from the end-of-game
+        // board snapshot: wordmark + the framed board + the score as hero + the URL.
+        // Baking all of it into the image means the share still "sells" even when a
+        // platform strips the accompanying text (Instagram, LinkedIn, iMessage).
+        async function buildShareCard(snapshotSrc, scoreText, isDaily) {
+            const S = 1080;
+            const accent = isDaily ? '#32FFB4' : '#ffb020';
+            const glowRGBA = isDaily ? 'rgba(50,255,180,0.11)' : 'rgba(255,176,32,0.13)';
+            const frameRGBA = isDaily ? 'rgba(50,255,180,0.35)' : 'rgba(255,176,32,0.35)';
+            const VOID = '#0a0906', INK = '#ece7dd', DIM = '#8b8f99';
+
+            try {
+                await Promise.all([
+                    document.fonts.load('800 54px Orbitron'),
+                    document.fonts.load('700 96px Orbitron'),
+                    document.fonts.load('600 26px Rajdhani'),
+                    document.fonts.load('500 24px "Share Tech Mono"'),
+                ]);
+            } catch { /* fall back to default fonts */ }
+
+            const board = await new Promise((resolve, reject) => {
+                const im = new Image();
+                im.onload = () => resolve(im);
+                im.onerror = reject;
+                im.src = snapshotSrc;
+            });
+
+            const c = document.createElement('canvas');
+            c.width = S; c.height = S;
+            const ctx = c.getContext('2d');
+            const cx = S / 2;
+
+            // Background + soft top glow.
+            ctx.fillStyle = VOID;
+            ctx.fillRect(0, 0, S, S);
+            const glow = ctx.createRadialGradient(cx, -120, 60, cx, -120, 760);
+            glow.addColorStop(0, glowRGBA);
+            glow.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = glow;
+            ctx.fillRect(0, 0, S, S);
+
+            // Hairline outer frame.
+            ctx.strokeStyle = 'rgba(150,156,172,0.16)';
+            ctx.lineWidth = 2;
+            roundRectPath(ctx, 24, 24, S - 48, S - 48, 30);
+            ctx.stroke();
+
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            // Wordmark + subtitle.
+            ctx.fillStyle = accent;
+            ctx.font = '800 54px Orbitron, system-ui, sans-serif';
+            drawSpacedText(ctx, 'REFLECTIONS', cx, 102, 8);
+            ctx.fillStyle = DIM;
+            ctx.font = '500 24px "Share Tech Mono", monospace';
+            drawSpacedText(ctx, isDaily ? 'DAILY CHALLENGE' : 'GEOMETRIC LASER DEFENSE', cx, 152, 6);
+
+            // Board snapshot, framed with an accent edge.
+            const bw = 760, bh = bw * (board.height / board.width), bx = (S - bw) / 2, by = 196;
+            ctx.save();
+            roundRectPath(ctx, bx, by, bw, bh, 18);
+            ctx.clip();
+            ctx.drawImage(board, bx, by, bw, bh);
+            ctx.restore();
+            ctx.strokeStyle = frameRGBA;
+            ctx.lineWidth = 2;
+            roundRectPath(ctx, bx, by, bw, bh, 18);
+            ctx.stroke();
+
+            // Score: dim label + hero time.
+            const labelY = by + bh + 66;
+            ctx.fillStyle = DIM;
+            ctx.font = '600 26px Rajdhani, system-ui, sans-serif';
+            drawSpacedText(ctx, 'SURVIVED', cx, labelY, 8);
+            ctx.fillStyle = accent;
+            ctx.font = '700 96px Orbitron, system-ui, sans-serif';
+            ctx.fillText(scoreText, cx, labelY + 80);
+
+            // Footer URL.
+            ctx.fillStyle = INK;
+            ctx.globalAlpha = 0.85;
+            ctx.font = '500 24px "Share Tech Mono", monospace';
+            ctx.fillText('wesleyarcade.com/reflections', cx, S - 60);
+            ctx.globalAlpha = 1;
+
+            return await new Promise(res => c.toBlob(res, 'image/png'));
+        }
+
         // Share screenshot with score
         async function shareReplay() {
             const isVictory = !document.getElementById('victoryModal').classList.contains('hidden');
@@ -712,26 +823,36 @@
                 const score = scoreEl ? scoreEl.textContent : 'Unknown';
                 const time = score.replace(/:/g, '-').replace(/\./g, '-');
 
-                // Convert the snapshot image to a blob
-                const response = await fetch(snapshotImg.src);
-                const blob = await response.blob();
-                const file = new File([blob], `reflections-score-${time}.png`, { type: 'image/png' });
+                const isDaily = !!(window.game && window.game.isDailyChallenge);
 
-                // Share with image and text
+                // Build the branded share card; fall back to the raw snapshot if the
+                // compose fails for any reason so the share never breaks.
+                let file;
+                try {
+                    const cardBlob = await buildShareCard(snapshotImg.src, score, isDaily);
+                    file = new File([cardBlob], `reflections-${time}.png`, { type: 'image/png' });
+                } catch (composeErr) {
+                    console.warn('Share card compose failed, using raw snapshot:', composeErr);
+                    const response = await fetch(snapshotImg.src);
+                    file = new File([await response.blob()], `reflections-${time}.png`, { type: 'image/png' });
+                }
+
+                const shareText = isDaily
+                    ? `I survived ${score} in today's REFLECTIONS Daily Challenge. Can you beat it? https://wesleyarcade.com/reflections`
+                    : `I survived ${score} defending the core in REFLECTIONS. Think you can last longer? https://wesleyarcade.com/reflections`;
+
                 if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-                    await navigator.share({
-                        files: [file],
-                        title: 'REFLECTIONS',
-                        text: `I survived ${score} in REFLECTIONS — try to beat it: https://wesleyarcade.com/reflections`
-                    });
+                    await navigator.share({ files: [file], title: 'REFLECTIONS', text: shareText });
                 } else if (navigator.share) {
-                    // Fallback: share without file
-                    await navigator.share({
-                        title: 'REFLECTIONS',
-                        text: `I survived ${score} in REFLECTIONS — try to beat it: https://wesleyarcade.com/reflections`
-                    });
+                    await navigator.share({ title: 'REFLECTIONS', text: shareText });
                 } else {
-                    showToast('Sharing is not supported on this device.');
+                    // Desktop / no Web Share: save the branded card so they can post it anywhere.
+                    const url = URL.createObjectURL(file);
+                    const a = document.createElement('a');
+                    a.href = url; a.download = file.name;
+                    document.body.appendChild(a); a.click(); a.remove();
+                    URL.revokeObjectURL(url);
+                    showToast('Share image saved — post it anywhere!');
                 }
             } catch (error) {
                 if (error.name !== 'AbortError') {
