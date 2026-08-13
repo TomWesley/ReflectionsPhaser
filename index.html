@@ -18,11 +18,11 @@
     <link rel="manifest" href="/manifest.json">
     <!-- Open Graph / Social Sharing -->
     <meta property="og:type" content="website">
-    <meta property="og:title" content="REFLECTIONS — Geometric Laser Defense">
+    <meta property="og:title" content="Reflections — Geometric Laser Defense">
     <meta property="og:description" content="Place mirrors to reflect incoming lasers and protect the core as long as you can.">
     <meta property="og:image" content="/public/og-image.png?v=3">
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="REFLECTIONS — Geometric Laser Defense">
+    <meta name="twitter:title" content="Reflections — Geometric Laser Defense">
     <meta name="twitter:description" content="Place mirrors to reflect incoming lasers and protect the core as long as you can.">
     <meta name="twitter:image" content="/public/og-image.png?v=3">
     <meta name="description" content="Place mirrors to reflect incoming lasers and protect the core as long as you can.">
@@ -98,7 +98,7 @@
             <div id="canvasLoader" class="canvas-loader">
                 <div class="loader-ring"></div>
             </div>
-            <canvas id="gameCanvas" width="800" height="600" role="img" aria-label="REFLECTIONS game board - place mirrors to deflect lasers"></canvas>
+            <canvas id="gameCanvas" width="800" height="600" role="img" aria-label="Reflections game board - place mirrors to deflect lasers"></canvas>
             <!-- Rotation Control - appears when a mirror is selected -->
             <div id="rotationControl" class="rotation-control hidden">
                 <div class="rotation-control-label">ROTATE</div>
@@ -274,7 +274,7 @@
     <div id="mobileMenuOverlay" class="mobile-menu-overlay hidden" onclick="closeMobileMenu()"></div>
     <div id="mobileMenu" class="mobile-menu">
         <div class="mobile-menu-header">
-            <h2 class="mobile-menu-title">REFLECTIONS</h2>
+            <h2 class="mobile-menu-title">Reflections</h2>
             <button class="mobile-menu-close" onclick="closeMobileMenu()">
                 <i class="iconoir-xmark"></i>
             </button>
@@ -760,7 +760,7 @@
             // Wordmark + subtitle.
             ctx.fillStyle = accent;
             ctx.font = '800 54px Orbitron, system-ui, sans-serif';
-            drawSpacedText(ctx, 'REFLECTIONS', cx, 102, 8);
+            drawSpacedText(ctx, 'Reflections', cx, 102, 4);
             ctx.fillStyle = DIM;
             ctx.font = '500 24px "Share Tech Mono", monospace';
             drawSpacedText(ctx, isDaily ? 'DAILY CHALLENGE' : 'GEOMETRIC LASER DEFENSE', cx, 152, 6);
@@ -838,13 +838,13 @@
                 }
 
                 const shareText = isDaily
-                    ? `REFLECTIONS Daily Challenge — survived ${score}. https://wesleyarcade.com/reflections`
-                    : `REFLECTIONS — survived ${score}. https://wesleyarcade.com/reflections`;
+                    ? `Reflections Daily Challenge — survived ${score}. https://wesleyarcade.com/reflections`
+                    : `Reflections — survived ${score}. https://wesleyarcade.com/reflections`;
 
                 if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-                    await navigator.share({ files: [file], title: 'REFLECTIONS', text: shareText });
+                    await navigator.share({ files: [file], title: 'Reflections', text: shareText });
                 } else if (navigator.share) {
-                    await navigator.share({ title: 'REFLECTIONS', text: shareText });
+                    await navigator.share({ title: 'Reflections', text: shareText });
                 } else {
                     // Desktop / no Web Share: save the branded card so they can post it anywhere.
                     const url = URL.createObjectURL(file);

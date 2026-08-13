@@ -432,10 +432,10 @@ export const onFeedbackCreated = onDocumentCreated(
         ].join('\n');
 
         await transporter.sendMail({
-            from: `REFLECTIONS Feedback <${NOTIFY_EMAIL}>`,
+            from: `Reflections Feedback <${NOTIFY_EMAIL}>`,
             to: NOTIFY_EMAIL,
             replyTo: replyTo || undefined,
-            subject: `New REFLECTIONS feedback from ${who}`,
+            subject: `New Reflections feedback from ${who}`,
             text: body,
         });
     }
