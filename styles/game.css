@@ -2109,6 +2109,28 @@ h1 {
         color: #16130C;
     }
 
+    /* Daily toggle = mint (the daily theme color), distinct from the amber Snap
+       and the green menu button below it. */
+    .mobile-daily-btn {
+        width: 34px;
+        height: 34px;
+        border-radius: 8px;
+        border: 1px solid rgba(50, 255, 180, 0.5);
+        background: rgba(50, 255, 180, 0.2);
+        color: #32FFB4;
+        font-size: 16px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .mobile-daily-btn.daily-active {
+        background: #32FFB4;
+        border-color: #32FFB4;
+        color: #08351f;
+    }
+
     /* Game Container - fills remaining space */
     #gameContainer {
         position: relative !important;

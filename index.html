@@ -64,15 +64,15 @@
                 <canvas class="btn-eng-icon" data-eng-icon="shuffle" data-eng-color="200,208,225" width="36" height="36"></canvas>
                 <span>Shuffle</span>
             </button>
+            <button id="dailyChallengeToggle" class="navbar-btn-daily" title="Toggle Daily Challenge">
+                <canvas class="btn-eng-icon" data-eng-icon="daily" data-eng-color="255,255,255" width="36" height="36"></canvas>
+                <span>Daily</span>
+            </button>
             <div class="nav-menu-wrap">
                 <button id="navMenuBtn" class="nav-menu-btn" onclick="toggleNavMenu()" aria-label="Menu" aria-haspopup="true" aria-expanded="false">
                     <i class="iconoir-menu"></i>
                 </button>
                 <div id="navMenu" class="nav-dropdown hidden" role="menu">
-                    <button id="dailyChallengeToggle" class="nav-dropdown-item" title="Daily Challenge" role="menuitem">
-                        <canvas class="btn-eng-icon" data-eng-icon="daily" data-eng-color="127,255,212" width="36" height="36"></canvas>
-                        <span>Daily</span>
-                    </button>
                     <a href="/leaderboard" class="nav-dropdown-item" title="Leaderboard" role="menuitem">
                         <canvas class="btn-eng-icon" data-eng-icon="leaderboard" data-eng-color="244,244,250" width="36" height="36"></canvas>
                         <span>Leaderboard</span>
@@ -265,6 +265,9 @@
         <button id="mobileSnapBtn" class="mobile-snap-btn" title="Mirror Snapping">
             <i class="iconoir-align-horizontal-centers"></i>
         </button>
+        <button id="mobileDailyChallengeToggle" class="mobile-daily-btn" title="Toggle Daily Challenge">
+            <i class="iconoir-calendar"></i>
+        </button>
         <button class="hamburger-btn" onclick="toggleMobileMenu()" aria-label="Menu">
             <i class="iconoir-menu"></i>
         </button>
@@ -282,10 +285,6 @@
         <div class="mobile-menu-content">
             <!-- Menu Links -->
             <div class="mobile-menu-section">
-                <button id="mobileDailyChallengeToggle" class="mobile-menu-item">
-                    <i class="iconoir-calendar"></i>
-                    <span>Daily Challenge</span>
-                </button>
                 <button id="mobileSnapToggle" class="mobile-menu-item">
                     <i class="iconoir-align-horizontal-centers"></i>
                     <span>Mirror Snapping</span>
