@@ -838,8 +838,8 @@
                 }
 
                 const shareText = isDaily
-                    ? `I survived ${score} in today's REFLECTIONS Daily Challenge. Can you beat it? https://wesleyarcade.com/reflections`
-                    : `I survived ${score} defending the core in REFLECTIONS. Think you can last longer? https://wesleyarcade.com/reflections`;
+                    ? `REFLECTIONS Daily Challenge — survived ${score}. https://wesleyarcade.com/reflections`
+                    : `REFLECTIONS — survived ${score}. https://wesleyarcade.com/reflections`;
 
                 if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
                     await navigator.share({ files: [file], title: 'REFLECTIONS', text: shareText });
