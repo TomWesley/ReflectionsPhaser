@@ -1166,8 +1166,11 @@
             }
         });
 
-        document.getElementById('authModal').addEventListener('click', function(e) {
-            if (e.target === this) {
+        // authModal is injected later by AuthUI.js, so it doesn't exist yet when this
+        // inline script runs — delegate from document instead of binding it directly
+        // (binding null here threw and halted the rest of this script block).
+        document.addEventListener('click', function(e) {
+            if (e.target && e.target.id === 'authModal') {
                 closeAuthModal();
             }
         });
