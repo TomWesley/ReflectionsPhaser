@@ -120,8 +120,10 @@ export class DailyChallenge {
      * Generate today's challenge configuration (mirrors + spawners)
      * Returns { mirrors: [...configs], spawners: [...configs], theme: string }
      */
-    static generateDailyConfig() {
-        const today = DailyChallenge.getTodayString();
+    static generateDailyConfig(dateStr = DailyChallenge.getTodayString()) {
+        // dateStr (YYYY-MM-DD) lets tools generate any day's puzzle deterministically
+        // (e.g. the SEO archive builder); live play passes nothing and gets today's.
+        const today = dateStr;
         const rng = new SeededRandom(today);
 
         // Pick theme using day-of-year for even distribution, then shuffle order with seed

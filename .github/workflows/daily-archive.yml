@@ -1,0 +1,64 @@
+name: Daily Archive
+
+# Regenerate the SEO daily-archive pages once a day (adds yesterday's finished
+# puzzle) and, if anything changed, commit and trigger the Wesley Arcade deploy.
+on:
+  schedule:
+    - cron: '20 8 * * *'   # 08:20 UTC daily (early morning in the Americas)
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  build-archive:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # Keep functions/js in sync with js/ so the generator uses the latest game
+      # code, then build the archive pages + sitemap + robots.
+      - name: Generate archive
+        run: |
+          node functions/copy-shared.js
+          node seo/generate.mjs
+
+      - name: Commit if changed
+        id: commit
+        run: |
+          git config user.name "reflections-bot"
+          git config user.email "noreply@wesleyarcade.com"
+          git add daily sitemap.xml robots.txt
+          if git diff --cached --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No archive changes."
+          else
+            git commit -m "chore(seo): daily archive $(date -u +%Y-%m-%d)"
+            git push
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # A push made with GITHUB_TOKEN doesn't trigger trigger-deploy.yml, so fire
+      # the WesleyArcadeSite deploy explicitly (same app-token as that workflow).
+      - name: Generate deploy token
+        if: steps.commit.outputs.changed == 'true'
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: TomWesley
+          repositories: WesleyArcadeSite
+
+      - name: Trigger site deploy
+        if: steps.commit.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          gh api repos/TomWesley/WesleyArcadeSite/dispatches \
+            --method POST \
+            -f event_type=deploy
