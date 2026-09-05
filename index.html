@@ -905,17 +905,30 @@
 
             // Show username if signed in
             if (identityEl) {
-                identityEl.textContent = auth.isAnonymous() ? '' : auth.getDisplayNameOrDefault();
+                // For an anonymous run, show the uid-derived placeholder the SERVER
+                // will actually put on the board — not the locally-typed name, which
+                // submitGame ignores for unclaimed rows.
+                identityEl.textContent = auth.isAnonymous()
+                    ? auth.generateDefaultName()
+                    : auth.getDisplayNameOrDefault();
             }
 
-            // Anonymous users: show sign-in prompt (score isn't ranked until they do)
-            if (auth.isAnonymous()) {
-                statusEl.innerHTML = '<span class="leaderboard-signin-link" onclick="openAuthModal()"><i class="iconoir-user"></i> Sign In To Join the Leaderboard</span>';
-                return;
-            }
+            // Anonymous players submit too. Gating submission on sign-up put the
+            // wall in front of the reward and produced a 0% submit rate — the score
+            // goes on the board now, and the account is offered afterwards to claim
+            // it (server: submitGame marks the row `unclaimed`, reserveUsername
+            // renames it once they sign up on this same, uid-preserving session).
 
             // Don't re-submit if already submitted this game
-            if (statusEl.dataset.submitted === 'true') return;
+            if (statusEl.dataset.submitted === 'true') {
+                // They signed in AFTER an anonymous submit: reserveUsername has
+                // already renamed the row server-side, so just retire the claim CTA.
+                if (!auth.isAnonymous()) {
+                    statusEl.querySelector('.leaderboard-claim')?.remove();
+                    if (identityEl) identityEl.textContent = auth.getDisplayNameOrDefault();
+                }
+                return;
+            }
 
             const mode = game.isDailyChallenge ? 'daily' : 'main';
 
@@ -923,7 +936,7 @@
                 statusEl.textContent = 'Submitting score...';
                 statusEl.style.color = 'var(--text-secondary)';
 
-                let score, scoreFormatted, isNewBest, docId;
+                let score, scoreFormatted, isNewBest, docId, unclaimed = false;
 
                 // Daily is scoped to a single date's puzzle; compute it once so the
                 // rank query below counts only today's players, not every past day.
@@ -948,6 +961,7 @@
                     score = res.score;
                     scoreFormatted = res.scoreFormatted;
                     isNewBest = res.isNewBest;
+                    unclaimed = !!res.unclaimed;
                     docId = mode === 'daily' ? `${auth.getUID()}_${dailyDate}` : `${auth.getUID()}_main`;
                 } else {
                     // Unranked: the server board couldn't be issued (offline, or a
@@ -986,6 +1000,21 @@
                     bestSpan.className = 'leaderboard-best';
                     bestSpan.textContent = ' New personal best!';
                     statusEl.appendChild(bestSpan);
+                }
+
+                // The score is already on the board under a placeholder name. Offer
+                // the account as a way to put their own name on it, not as a toll
+                // gate they had to pay before seeing the rank.
+                if (unclaimed) {
+                    const claim = document.createElement('span');
+                    claim.className = 'leaderboard-signin-link leaderboard-claim';
+                    claim.onclick = () => window.openAuthModal();
+                    const icon = document.createElement('i');
+                    icon.className = 'iconoir-user';
+                    claim.appendChild(icon);
+                    claim.appendChild(document.createTextNode(' Claim this score with a username'));
+                    statusEl.appendChild(document.createElement('br'));
+                    statusEl.appendChild(claim);
                 }
 
                 // Video upload for main-game top 10. Non-fatal: a failure here (e.g.

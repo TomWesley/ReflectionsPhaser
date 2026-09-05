@@ -24,6 +24,18 @@ export class GameService {
         this._setVideoPath = functions.httpsCallable('setReplayVideoPath');
         this._reserveUsername = functions.httpsCallable('reserveUsername');
         this._releaseUsername = functions.httpsCallable('releaseUsername');
+        this._logGameEvent = functions.httpsCallable('logGameEvent');
+    }
+
+    /**
+     * Bump a funnel counter for the /analytics dashboard ('launched' | 'finished').
+     * Fire-and-forget: never awaited by gameplay, never throws.
+     */
+    logGameEvent(event) {
+        try {
+            this._ensure();
+            this._logGameEvent({ event }).catch(() => {});
+        } catch (e) { /* analytics is best-effort */ }
     }
 
     /**

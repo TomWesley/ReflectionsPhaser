@@ -915,6 +915,9 @@ export class Game {
             this.isPlaying = true;
             this._launching = false;
             this.gameOver = false;
+            // Funnel counter: a board being issued is not a game being played, so
+            // this (not gamesStarted) is what a completion rate divides by.
+            window.gameService?.logGameEvent('launched');
             this.startTime = Date.now();
             this.gameTime = 0;
             this.lasers = [];
@@ -1850,6 +1853,10 @@ export class Game {
             return;
         }
 
+        // Funnel counter: a run that actually reached an end state. Placed after
+        // the isReplayMode guard above so watching a replay isn't counted twice.
+        window.gameService?.logGameEvent('finished');
+
         // Capture the final game time before any async work (prevents reset race)
         const finalGameTime = this.gameTime;
 
@@ -1912,6 +1919,10 @@ export class Game {
             document.getElementById('victoryModal').classList.remove('hidden');
             return;
         }
+
+        // Funnel counter: a run that actually reached an end state. Placed after
+        // the isReplayMode guard above so watching a replay isn't counted twice.
+        window.gameService?.logGameEvent('finished');
 
         // Capture the final game time before any async work (prevents reset race)
         const finalGameTime = this.gameTime;

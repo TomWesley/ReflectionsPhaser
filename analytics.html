@@ -153,7 +153,7 @@
         let currentRange = 'all';
 
         // The metric fields we sum across daily buckets.
-        const FIELDS = ['pageViews', 'gamesStarted', 'gamesSubmitted', 'accounts'];
+        const FIELDS = ['pageViews', 'gamesStarted', 'gamesLaunched', 'gamesFinished', 'gamesSubmitted', 'accounts'];
 
         function startForDays(days) {
             const d = new Date();
@@ -188,20 +188,30 @@
             return { s, sub: `${label} — buckets summed per UTC day`, note: noteText };
         }
 
+        // A ratio is only meaningful when its denominator was actually counted —
+        // the launched/finished buckets are empty for any window that predates
+        // their deploy, and 0% there would read as a catastrophe rather than a gap.
+        const pct = (num, den) => den ? Math.round((num / den) * 100) + '%' : '—';
+        const ratio = (num, den) => den ? (num / den).toFixed(1) : '—';
+
         function render(s) {
-            const started = s.gamesStarted || 0, submitted = s.gamesSubmitted || 0;
+            // gamesStarted counts BOARDS ISSUED — page load, every shuffle, every
+            // mode toggle, every Play Again — so it is never a completion
+            // denominator. gamesLaunched is the count of runs a player actually started.
+            const issued = s.gamesStarted || 0, launched = s.gamesLaunched || 0;
+            const finished = s.gamesFinished || 0, submitted = s.gamesSubmitted || 0;
             const views = s.pageViews || 0, accts = s.accounts || 0;
-            const rate = started ? Math.round((submitted / started) * 100) : 0;
-            const boards = submitted ? (started / submitted).toFixed(1) : '—';
-            const perView = views ? (started / views).toFixed(1) : '—';
             const tiles = [
                 { k: 'Page Views', v: fmt(views) },
-                { k: 'Games Started', v: fmt(started) },
+                { k: 'Boards Issued<small>page load + every shuffle</small>', v: fmt(issued) },
+                { k: 'Games Launched', v: fmt(launched) },
+                { k: 'Games Finished', v: fmt(finished) },
                 { k: 'Games Submitted', v: fmt(submitted) },
                 { k: 'Accounts Created', v: fmt(accts) },
-                { k: 'Completion Rate<small>submitted ÷ started</small>', v: rate + '%', wide: true },
-                { k: 'Boards Per Finished Game<small>started ÷ submitted — shuffles before a run</small>', v: boards, wide: true },
-                { k: 'Boards Per Visit<small>started ÷ page views — engagement</small>', v: perView, wide: true },
+                { k: 'Launch Rate<small>launched ÷ page views — did they press Launch?</small>', v: pct(launched, views), wide: true },
+                { k: 'Finish Rate<small>finished ÷ launched — did they play it out?</small>', v: pct(finished, launched), wide: true },
+                { k: 'Submit Rate<small>submitted ÷ finished — the real completion rate</small>', v: pct(submitted, finished), wide: true },
+                { k: 'Boards Per Launch<small>issued ÷ launched — shuffles before a run</small>', v: ratio(issued, launched), wide: true },
             ];
             grid.innerHTML = tiles.map(t =>
                 '<div class="tile' + (t.wide ? ' wide' : '') + '">' +

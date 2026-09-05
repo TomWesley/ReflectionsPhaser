@@ -209,9 +209,17 @@ export const submitGame = onCall(CALLABLE_OPTS, async (request) => {
     // whatever the client sent — so it can't be spoofed. Fall back to a sanitized
     // client name only if no username is on file.
     const userSnap = await db.collection('users').doc(uid).get();
-    const cleanName = (userSnap.exists && userSnap.data().username)
-        ? userSnap.data().username
-        : sanitizeName(displayName);
+    const reserved = userSnap.exists ? userSnap.data().username : null;
+    // Anonymous players submit too — the score lands on the board immediately and
+    // the account is offered afterwards to CLAIM it. Gating submission on sign-up
+    // put the wall in front of the reward and produced a literal 0% submit rate.
+    // Their name is derived from the uid (not client-supplied) so an unclaimed row
+    // can't impersonate a registered player; reserveUsername renames it on claim.
+    const isAnon = request.auth?.token?.firebase?.sign_in_provider === 'anonymous';
+    const unclaimed = isAnon && !reserved;
+    const cleanName = reserved
+        ? reserved
+        : (unclaimed ? `Player_${uid.slice(-4)}` : sanitizeName(displayName));
     const isDaily = session.mode === 'daily';
     const scoreDocId = isDaily ? `${uid}_${session.dailyDate}` : `${uid}_main`;
     const scoreRef = db.collection('scores').doc(scoreDocId);
@@ -237,6 +245,9 @@ export const submitGame = onCall(CALLABLE_OPTS, async (request) => {
                 dailyDate: session.dailyDate || null,
                 score,
                 scoreFormatted: formatScore(score),
+                // An unclaimed row belongs to an anonymous uid: real and ranked, but
+                // renameable by whoever signs up on that same browser session.
+                unclaimed,
                 mirrorCount: placements.length,
                 spawnerCount: session.spawners.length,
                 // A new best gets a fresh replay: null the video now and let the client
@@ -254,7 +265,7 @@ export const submitGame = onCall(CALLABLE_OPTS, async (request) => {
     // A concurrent/duplicate call already recorded this exact session — return the
     // same (idempotent) score without bumping stats again.
     if (outcome.alreadySubmitted) {
-        return { verified: true, score, scoreFormatted: formatScore(score), isNewBest: false };
+        return { verified: true, score, scoreFormatted: formatScore(score), isNewBest: false, unclaimed };
     }
 
     bumpStats({ gamesSubmitted: 1 });
@@ -274,6 +285,7 @@ export const submitGame = onCall(CALLABLE_OPTS, async (request) => {
         score,
         scoreFormatted: formatScore(score),
         isNewBest: outcome.isNewBest,
+        unclaimed,
     };
 });
 
@@ -354,6 +366,25 @@ export const reserveUsername = onCall(CALLABLE_OPTS, async (request) => {
     });
 
     if (outcome.isNew) bumpStats({ accounts: 1 });
+
+    // Claim the scores this browser already put on the board while anonymous.
+    // Sign-up links the anonymous credential (FirebaseAuth.linkWithCredential /
+    // linkWithPopup), so the uid carries over and those rows are already ours —
+    // they just need the new name stamped on them. This doubles as the rename path
+    // when an existing player changes their username. Best-effort: a failure here
+    // must never fail the reservation the sign-up flow is waiting on.
+    try {
+        const mine = await db.collection('scores').where('uid', '==', uid).limit(500).get();
+        const stale = mine.docs.filter(d => d.data().displayName !== username);
+        if (stale.length) {
+            const batch = db.batch();
+            stale.forEach(d => batch.update(d.ref, { displayName: username, unclaimed: false }));
+            await batch.commit();
+        }
+    } catch (e) {
+        console.warn(`Score claim backfill failed for ${uid}: ${e.message}`);
+    }
+
     return { ok: true, username };
 });
 
@@ -387,6 +418,27 @@ export const releaseUsername = onCall(CALLABLE_OPTS, async (request) => {
  */
 export const logVisit = onCall(CALLABLE_OPTS, async () => {
     await bumpStats({ pageViews: 1 });
+    return { ok: true };
+});
+
+// The funnel steps the server can't observe on its own. `gamesStarted` counts
+// BOARDS ISSUED (page load, every shuffle, every mode toggle, every Play Again),
+// so it can never be a completion denominator. These two are the real ones:
+//   launched - the player actually pressed Launch
+//   finished - the run ended (core breached, or survived to the win)
+// Without them you can't tell "nobody plays" from "everybody plays and nobody
+// submits", which need opposite fixes.
+const GAME_EVENT_FIELDS = { launched: 'gamesLaunched', finished: 'gamesFinished' };
+
+/**
+ * logGameEvent - bump one whitelisted funnel counter. Best-effort, like logVisit;
+ * App Check is the only gate (an unauthenticated caller can still be mid-game).
+ * Input: { event: 'launched' | 'finished' }
+ */
+export const logGameEvent = onCall(CALLABLE_OPTS, async (request) => {
+    const field = GAME_EVENT_FIELDS[String(request.data?.event || '')];
+    if (!field) throw new HttpsError('invalid-argument', 'Unknown event.');
+    await bumpStats({ [field]: 1 });
     return { ok: true };
 });
 
